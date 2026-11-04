@@ -14,6 +14,7 @@ export interface DeviceStaff {
   display_name: string
   photo_url: string | null
   locked: boolean
+  is_owner?: boolean
 }
 
 interface PinLoginResponse {
@@ -77,6 +78,20 @@ export function useStaffDevice() {
     return res
   }
 
+  /** เจ้าของร้าน: PIN อย่างเดียว (ไม่ต้องใช้เครื่องที่ผูก) */
+  async function ownerPinLogin(pin: string): Promise<PinLoginResponse> {
+    const res = await call<PinLoginResponse>('owner-pin-login', {
+      company_code: config.public.companyCode,
+      pin,
+    })
+    const { error } = await supabase.auth.setSession({
+      access_token: res.session.access_token,
+      refresh_token: res.session.refresh_token,
+    })
+    if (error) throw error
+    return res
+  }
+
   function savePairing(deviceToken: string) {
     token.value = deviceToken
   }
@@ -85,5 +100,5 @@ export function useStaffDevice() {
     token.value = null
   }
 
-  return { token, listStaff, pinLogin, savePairing, forget, errorMessage }
+  return { token, listStaff, pinLogin, ownerPinLogin, savePairing, forget, errorMessage }
 }

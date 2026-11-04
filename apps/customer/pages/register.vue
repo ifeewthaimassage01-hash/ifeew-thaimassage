@@ -4,6 +4,8 @@ import { z } from 'zod'
 
 // สมัครสมาชิก: signUp (Auth) -> register_customer (DB: ลูกค้า + ความยินยอม)
 // ถ้าเปิดยืนยันอีเมล จะยังไม่มี session -> หลังยืนยันและ login ระบบพาไปหน้า /complete-profile
+useHead({ title: "สมัครสมาชิก — Ifeew's Thaimassage" })
+
 const supabase = useSupabaseClient()
 const { code } = useCompany()
 const { refresh: refreshCustomer } = useCustomer()
@@ -81,35 +83,27 @@ async function submit() {
 </script>
 
 <template>
-  <v-card class="mx-auto max-w-md p-6">
-    <h1 class="m-0 mb-6 text-xl font-semibold text-cocoa">สมัครสมาชิก</h1>
+  <AuthShell title="สมัครสมาชิก" subtitle="ใช้เวลาไม่ถึงนาที จองครั้งต่อไปไม่ต้องกรอกข้อมูลซ้ำ">
+    <Alert v-if="done" variant="success"><AlertDescription>สมัครเรียบร้อย กรุณายืนยันอีเมล แล้วเข้าสู่ระบบเพื่อใช้งาน</AlertDescription></Alert>
 
-    <v-alert v-if="done" type="success" variant="tonal" text="สมัครเรียบร้อย กรุณายืนยันอีเมล แล้วเข้าสู่ระบบเพื่อใช้งาน" />
-
-    <v-form v-else @submit.prevent="submit">
-      <div class="grid grid-cols-2 gap-x-3">
-        <v-text-field v-model="form.firstName" label="ชื่อ" autocomplete="given-name" />
-        <v-text-field v-model="form.lastName" label="นามสกุล" autocomplete="family-name" />
+    <form v-else class="grid gap-4" novalidate @submit.prevent="submit">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="grid gap-1.5"><Label for="r-first">ชื่อ</Label><Input id="r-first" v-model="form.firstName" autocomplete="given-name" required /></div>
+        <div class="grid gap-1.5"><Label for="r-last">นามสกุล</Label><Input id="r-last" v-model="form.lastName" autocomplete="family-name" /></div>
       </div>
-      <v-text-field v-model="form.phone" label="เบอร์โทร" type="tel" inputmode="tel" autocomplete="tel" />
-      <v-text-field v-model="form.email" label="อีเมล" type="email" autocomplete="email" />
-      <v-text-field
-        v-model="form.password"
-        label="รหัสผ่าน"
-        type="password"
-        autocomplete="new-password"
-        hint="อย่างน้อย 10 ตัว มีตัวพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข"
-        persistent-hint
-        class="mb-2"
-      />
-      <v-text-field v-model="form.confirm" label="ยืนยันรหัสผ่าน" type="password" autocomplete="new-password" />
+      <div class="grid gap-1.5"><Label for="r-phone">เบอร์โทร</Label><Input id="r-phone" v-model="form.phone" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+      <div class="grid gap-1.5"><Label for="r-email">อีเมล</Label><Input id="r-email" v-model="form.email" type="email" autocomplete="email" required /></div>
+      <div class="grid gap-1.5">
+        <Label for="r-pass">รหัสผ่าน</Label>
+        <Input id="r-pass" v-model="form.password" type="password" autocomplete="new-password" required aria-describedby="r-pass-hint" />
+        <p id="r-pass-hint" class="m-0 text-sm text-muted-foreground">อย่างน้อย 10 ตัว มีตัวพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข</p>
+      </div>
+      <div class="grid gap-1.5"><Label for="r-confirm">ยืนยันรหัสผ่าน</Label><Input id="r-confirm" v-model="form.confirm" type="password" autocomplete="new-password" required /></div>
       <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
-      <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-      <v-btn type="submit" color="primary" block :loading="loading">สมัครสมาชิก</v-btn>
-    </v-form>
+      <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
+      <Button type="submit" size="lg" class="w-full" :disabled="loading">{{ loading ? 'กำลังสมัคร…' : 'สมัครสมาชิก' }}</Button>
+    </form>
 
-    <p class="mb-0 mt-4 text-center text-sm">
-      มีบัญชีแล้ว? <NuxtLink to="/login" class="text-light-brown">เข้าสู่ระบบ</NuxtLink>
-    </p>
-  </v-card>
+    <template #footer>มีบัญชีแล้ว? <NuxtLink to="/login">เข้าสู่ระบบ</NuxtLink></template>
+  </AuthShell>
 </template>

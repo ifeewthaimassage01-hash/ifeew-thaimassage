@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ตั้งรหัสผ่านจากลิงก์อีเมล (เชิญเจ้าของร้านครั้งแรก / ลืมรหัสผ่าน) แล้วไปยืนยันด้วยแอป Authenticator
+// ตั้งรหัสผ่านจากลิงก์อีเมล (เชิญเจ้าของร้านครั้งแรก / ลืมรหัสผ่าน) แล้วเข้าสู่ระบบ
 import { passwordSchema } from '@ifeew/shared'
 
 definePageMeta({ layout: 'blank' })
@@ -40,7 +40,7 @@ async function save() {
     password.value = ''
     confirm.value = ''
     clearAccess()
-    await navigateTo('/mfa')
+    await navigateTo('/')
   } finally {
     saving.value = false
   }
@@ -58,7 +58,7 @@ async function save() {
           <v-text-field v-model="password" label="รหัสผ่านใหม่" type="password" autocomplete="new-password" />
           <v-text-field v-model="confirm" label="ยืนยันรหัสผ่าน" type="password" autocomplete="new-password" />
           <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-          <v-btn type="submit" color="primary" block :loading="saving">บันทึกและไปยืนยันตัวตน</v-btn>
+          <v-btn type="submit" color="primary" block :loading="saving">บันทึกรหัสผ่าน</v-btn>
         </v-form>
       </template>
       <v-progress-linear v-else-if="waiting" indeterminate color="primary" />

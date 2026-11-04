@@ -3,6 +3,7 @@ import { personNameSchema, thaiPhoneSchema } from '@ifeew/shared'
 
 // ผู้ใช้ที่มีบัญชีแล้วแต่ยังไม่เป็นลูกค้าของบริษัทนี้ (เช่น เพิ่งยืนยันอีเมล)
 definePageMeta({ middleware: 'auth' })
+useHead({ title: "ข้อมูลของคุณ — Ifeew's Thaimassage" })
 
 const supabase = useSupabaseClient()
 const route = useRoute()
@@ -58,18 +59,16 @@ async function submit() {
 </script>
 
 <template>
-  <v-card class="mx-auto max-w-md p-6">
-    <h1 class="m-0 mb-1 text-xl font-semibold text-cocoa">ข้อมูลของคุณ</h1>
-    <p class="m-0 mb-6 text-sm text-light-brown">กรอกข้อมูลเพื่อเริ่มใช้งานการจอง</p>
-    <v-form @submit.prevent="submit">
-      <div class="grid grid-cols-2 gap-x-3">
-        <v-text-field v-model="form.firstName" label="ชื่อ" autocomplete="given-name" />
-        <v-text-field v-model="form.lastName" label="นามสกุล" autocomplete="family-name" />
+  <AuthShell title="ข้อมูลของคุณ" subtitle="กรอกชื่อและเบอร์โทรเพื่อเริ่มจองคิว ร้านใช้เบอร์นี้ติดต่อเรื่องนัดเท่านั้น">
+    <form class="grid gap-4" novalidate @submit.prevent="submit">
+      <div class="grid grid-cols-2 gap-3">
+        <div class="grid gap-1.5"><Label for="c-first">ชื่อ</Label><Input id="c-first" v-model="form.firstName" autocomplete="given-name" required /></div>
+        <div class="grid gap-1.5"><Label for="c-last">นามสกุล</Label><Input id="c-last" v-model="form.lastName" autocomplete="family-name" /></div>
       </div>
-      <v-text-field v-model="form.phone" label="เบอร์โทร" type="tel" inputmode="tel" autocomplete="tel" />
+      <div class="grid gap-1.5"><Label for="c-phone">เบอร์โทร</Label><Input id="c-phone" v-model="form.phone" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
       <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
-      <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-      <v-btn type="submit" color="primary" block :loading="loading">บันทึก</v-btn>
-    </v-form>
-  </v-card>
+      <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
+      <Button type="submit" size="lg" class="w-full" :disabled="loading">{{ loading ? 'กำลังบันทึก…' : 'บันทึกและเริ่มใช้งาน' }}</Button>
+    </form>
+  </AuthShell>
 </template>

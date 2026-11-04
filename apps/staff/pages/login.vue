@@ -6,7 +6,7 @@ definePageMeta({ layout: 'blank' })
 
 const route = useRoute()
 const supabase = useSupabaseClient()
-const { token, listStaff, pinLogin, forget, errorMessage } = useStaffDevice()
+const { token, listStaff, pinLogin, ownerPinLogin, forget, errorMessage } = useStaffDevice()
 const { clear: clearAccess } = useAccess()
 
 const mode = ref<'staff' | 'owner'>(token.value ? 'staff' : 'owner')
@@ -92,7 +92,7 @@ async function ownerLogin() {
       return
     }
     password.value = ''
-    await navigateTo('/mfa')
+    await navigateTo('/')
   } finally {
     ownerLoading.value = false
   }
@@ -111,6 +111,28 @@ async function forgotPassword() {
   try {
     await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo: `${window.location.origin}/set-password` })
     resetSent.value = true
+  } finally {
+    ownerLoading.value = false
+  }
+}
+
+// เจ้าของร้าน: PIN อย่างเดียว (ไม่ต้องใช้เครื่องที่ผูก)
+const useEmail = ref(false)
+const ownerPad = ref<{ reset: () => void } | null>(null)
+async function submitOwnerPin(pin: string) {
+  ownerLoading.value = true
+  ownerError.value = null
+  try {
+    clearAccess()
+    await ownerPinLogin(pin)
+    await navigateTo('/')
+  } catch (e) {
+    const err = errorMessage(e)
+    ownerError.value =
+      err.code === 'INVALID_CREDENTIALS' && err.attemptsLeft != null
+        ? `${err.message} (เหลืออีก ${err.attemptsLeft} ครั้ง)`
+        : err.code === 'INVALID_CREDENTIALS' ? 'PIN ไม่ถูกต้อง หรือยังไม่ได้ตั้ง PIN เจ้าของร้าน' : err.message
+    ownerPad.value?.reset()
   } finally {
     ownerLoading.value = false
   }
@@ -173,15 +195,23 @@ onMounted(loadStaff)
                 <span v-else class="text-xl">{{ s.display_name.slice(0, 1) }}</span>
               </v-avatar>
               <p class="m-0 font-medium">{{ s.display_name }}</p>
+              <p v-if="s.is_owner" class="m-0 mt-1 text-xs text-light-brown">เจ้าของร้าน</p>
               <p v-if="s.locked" class="m-0 mt-1 text-xs text-red-700">ล็อกชั่วคราว</p>
             </v-card>
           </div>
         </template>
       </v-card>
 
-      <!-- เจ้าของร้าน: อีเมล + รหัสผ่าน แล้วต่อด้วย MFA -->
+      <!-- เจ้าของร้าน: PIN อย่างเดียว (สำรอง: อีเมล + รหัสผ่าน สำหรับครั้งแรก/ลืม PIN) -->
       <v-card v-else class="mx-auto max-w-md p-6">
-        <v-form @submit.prevent="ownerLogin">
+        <template v-if="!useEmail">
+          <p class="m-0 mb-4 text-center text-lg font-medium">กรอก PIN เจ้าของร้าน</p>
+          <PinPad ref="ownerPad" :loading="ownerLoading" :error="ownerError" @submit="submitOwnerPin" />
+          <v-btn variant="text" block class="mt-4" size="small" @click="useEmail = true; ownerError = null">
+            เข้าด้วยอีเมล (ครั้งแรก / ลืม PIN)
+          </v-btn>
+        </template>
+        <v-form v-else @submit.prevent="ownerLogin">
           <v-text-field v-model="email" label="อีเมล" type="email" autocomplete="username" class="mb-2" />
           <v-text-field
             v-model="password"
@@ -195,8 +225,9 @@ onMounted(loadStaff)
           <v-btn variant="text" block class="mt-2" :disabled="ownerLoading" @click="forgotPassword">ลืมรหัสผ่าน</v-btn>
           <v-alert v-if="resetSent" type="info" variant="tonal" class="mt-2"
             text="ถ้ามีบัญชีนี้ในระบบ จะได้รับอีเมลลิงก์ตั้งรหัสผ่านใหม่ (ตรวจกล่องจดหมายขยะด้วย)" />
+          <v-btn variant="text" block class="mt-2" size="small" @click="useEmail = false; ownerError = null">กลับไปใช้ PIN</v-btn>
+          <p class="mb-0 mt-2 text-center text-xs text-light-brown">เข้าแล้วตั้ง PIN ที่เมนู “ตั้งค่าเครื่อง” → “PIN เจ้าของร้าน”</p>
         </v-form>
-        <p class="mb-0 mt-4 text-center text-sm text-light-brown">บัญชีเจ้าของร้านต้องยืนยันด้วยแอป Authenticator ทุกครั้ง</p>
       </v-card>
     </div>
 

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // ติดตามการจองด้วย Tracking Token (Guest / ลิงก์ที่ร้านส่งให้) — ดูสถานะ + ชำระมัดจำเท่านั้น
+import { RefreshCw } from '@lucide/vue'
 import type { BookingView } from '@ifeew/shared'
 
 useHead({
@@ -32,15 +33,16 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">สถานะการจอง</h1>
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
-    <v-alert v-else-if="error" type="info" variant="tonal" :text="error" />
-    <template v-else-if="booking">
-      <v-alert type="info" variant="tonal" class="mb-4" density="compact"
-        text="เก็บลิงก์หน้านี้ไว้เพื่อดูสถานะการจอง (อย่าส่งต่อให้ผู้อื่น)" />
-      <BookingDetail :booking="booking" :token="token" @updated="(v) => (booking = { ...booking!, ...v })" />
-      <v-btn variant="text" prepend-icon="mdi-refresh" class="mt-2" @click="load">โหลดสถานะล่าสุด</v-btn>
-    </template>
+  <div class="grid gap-4">
+    <div class="flex flex-wrap items-end justify-between gap-3">
+      <div>
+        <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">สถานะการจอง</h1>
+        <p class="m-0 mt-1 text-muted-foreground">เก็บลิงก์หน้านี้ไว้ดูสถานะ และอย่าส่งต่อให้ผู้อื่น</p>
+      </div>
+      <Button variant="outline" :disabled="loading" @click="load"><RefreshCw :class="loading ? 'animate-spin' : ''" /> โหลดสถานะล่าสุด</Button>
+    </div>
+    <div v-if="loading && !booking" class="grid gap-4 md:grid-cols-2"><Skeleton class="h-80 rounded-xl" /><Skeleton class="h-80 rounded-xl" /></div>
+    <Alert v-else-if="error" variant="info"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <BookingDetail v-else-if="booking" :booking="booking" :token="token" @updated="(v) => (booking = { ...booking!, ...v })" />
   </div>
 </template>

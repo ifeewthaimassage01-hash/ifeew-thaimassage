@@ -12,7 +12,8 @@ export function useAccess() {
   // เฟสแรกมีบริษัทเดียว: ใช้บริษัทแรกที่เป็นสมาชิก
   const company = computed<AccessCompany | null>(() => access.value?.companies[0] ?? null)
   const branches = computed<AccessBranch[]>(() => company.value?.branches ?? [])
-  const isOwner = computed(() => company.value?.role === 'OWNER' && access.value?.aal === 'aal2')
+  // ตั้งแต่ migration 028 เจ้าของร้านไม่บังคับ MFA (login ด้วย PIN บนเครื่องสาขาได้)
+  const isOwner = computed(() => company.value?.role === 'OWNER')
   const needsMfa = computed(() => company.value?.owner_mfa_required === true)
   const activeBranch = computed(() => branches.value.find((b) => b.branch_id === activeBranchId.value) ?? null)
 

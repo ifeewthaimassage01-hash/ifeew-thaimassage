@@ -84,7 +84,40 @@ async function confirmRevoke() {
   await load()
 }
 
-onMounted(load)
+// PIN ของเจ้าของร้าน (ใช้ login บนเครื่องสาขาที่ผูกแล้ว)
+const ownerPin = ref({ has_pin: false, pin_updated_at: null as string | null })
+const pinForm = reactive({ pin: '', confirm: '' })
+const pinSaving = ref(false)
+
+async function loadOwnerPin() {
+  if (!company.value) return
+  const { data } = await supabase.rpc('my_owner_pin_status', { p_company_id: company.value.company_id })
+  if (data) ownerPin.value = data as unknown as typeof ownerPin.value
+}
+
+async function saveOwnerPin() {
+  if (!company.value) return
+  if (!/^[0-9]{6}$/.test(pinForm.pin) || pinForm.pin !== pinForm.confirm) {
+    message.value = { type: 'error', text: 'PIN ต้องเป็นตัวเลข 6 หลัก และกรอกให้ตรงกันทั้งสองช่อง' }
+    return
+  }
+  pinSaving.value = true
+  const { error } = await supabase.rpc('set_my_owner_pin', { p_company_id: company.value.company_id, p_pin: pinForm.pin })
+  pinSaving.value = false
+  pinForm.pin = ''
+  pinForm.confirm = ''
+  if (error) {
+    message.value = { type: 'error', text: error.message }
+    return
+  }
+  message.value = { type: 'success', text: 'บันทึก PIN เจ้าของร้านแล้ว — ใช้ได้บนทุกเครื่องที่ผูกกับสาขา' }
+  await loadOwnerPin()
+}
+
+onMounted(() => {
+  load()
+  loadOwnerPin()
+})
 </script>
 
 <template>
@@ -92,6 +125,19 @@ onMounted(load)
     <h1 class="m-0 mb-6 text-2xl font-semibold text-cocoa">ตั้งค่าเครื่องประจำสาขา</h1>
 
     <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-6" closable :text="message.text" @click:close="message = null" />
+
+    <v-card class="mb-6 p-6">
+      <p class="m-0 mb-1 text-lg font-medium">PIN เจ้าของร้าน</p>
+      <p class="m-0 mb-4 text-sm text-light-brown">
+        {{ ownerPin.has_pin ? 'ตั้ง PIN แล้ว — ที่หน้าเข้าสู่ระบบของเครื่องสาขา กดชื่อเจ้าของร้านแล้วใส่ PIN' : 'ยังไม่ได้ตั้ง PIN' }}
+        · ตัวเลข 6 หลัก ห้ามเลขซ้ำ/เรียง · อย่าให้ใครเห็นตอนกด เพราะ PIN นี้เข้าถึงข้อมูลการเงินทั้งหมด
+      </p>
+      <v-form class="grid gap-x-4 md:grid-cols-3" @submit.prevent="saveOwnerPin">
+        <v-text-field v-model="pinForm.pin" label="PIN ใหม่" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+        <v-text-field v-model="pinForm.confirm" label="ยืนยัน PIN" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+        <v-btn type="submit" color="primary" :loading="pinSaving" class="!h-auto">{{ ownerPin.has_pin ? 'เปลี่ยน PIN' : 'ตั้ง PIN' }}</v-btn>
+      </v-form>
+    </v-card>
 
     <v-card class="mb-6 p-6">
       <p class="m-0 mb-1 text-lg font-medium">ผูกเครื่องนี้กับสาขา</p>

@@ -48,7 +48,7 @@ pnpm exec supabase db push
 | --- | --- |
 | Site URL | URL ของ Customer App เช่น `https://ifeew.vercel.app` |
 | Redirect URLs | `https://ifeew.vercel.app/**`, `https://ifeew-staff.vercel.app/set-password`, `https://ifeew-staff.vercel.app/**` |
-| Multi-Factor → TOTP | เปิด |
+| Multi-Factor → TOTP | เปิดไว้ได้ (ตั้งแต่ migration 028 เจ้าของร้านไม่บังคับ MFA — login ด้วย PIN บนเครื่องสาขา) |
 | Password | ขั้นต่ำ 10 ตัว, ต้องมีตัวพิมพ์เล็ก/ใหญ่/ตัวเลข, เปิด "Prevent leaked passwords" (ถ้ามีในแพ็กเกจ) |
 | Email confirmations | เปิด |
 | Secure password change | เปิด |
@@ -77,7 +77,7 @@ cd tools/bootstrap && npm install && cp company.example.json company.json
 SUPABASE_URL=https://<ref>.supabase.co SUPABASE_SECRET_KEY=<secret key> STAFF_APP_URL=https://ifeew-staff.vercel.app node create-company.mjs company.json
 ```
 
-OWNER จะได้อีเมลเชิญ → ตั้งรหัสผ่าน (`/set-password`) → ผูกแอป Authenticator
+OWNER จะได้อีเมลเชิญ → ตั้งรหัสผ่าน (`/set-password`) → เข้าระบบ → ผูกแท็บเล็ตหน้าร้าน → ตั้ง “PIN เจ้าของร้าน” ที่หน้าตั้งค่าเครื่อง
 
 ## 2. Vercel (ทำ 2 โปรเจกต์จาก repo เดียว)
 
@@ -105,7 +105,7 @@ Environment Variables
 ## 3. รายการตรวจก่อนเปิดใช้ (ทำบน Staging ก่อน)
 
 - [ ] `pnpm db:test` ผ่าน (ต่อ staging ด้วย `supabase test db --linked`) และ `tools/dbtest` ผ่านในเครื่อง
-- [ ] OWNER: รับอีเมลเชิญ → ตั้งรหัสผ่าน → ผูก TOTP → เข้าระบบได้, ลืมรหัสผ่านได้
+- [ ] OWNER: รับอีเมลเชิญ → ตั้งรหัสผ่าน → เข้าระบบได้, ลืมรหัสผ่านได้, ตั้ง PIN เจ้าของร้าน → login ด้วย PIN บนเครื่องสาขาได้
 - [ ] ตั้งเวลาทำการ, บริการ/ราคา, เตียงและอุปกรณ์, บัญชี PromptPay + SlipOK Branch ID, พนักงาน + PIN
 - [ ] ผูกแท็บเล็ตหน้าร้าน → พนักงาน login ด้วยชื่อ + PIN → ลงเวลาเข้างาน
 - [ ] ลูกค้า: สมัครสมาชิก (ได้อีเมลยืนยัน), จองแบบ Guest (Turnstile จริง) → สแกน QR โอนมัดจำจริง 1 รายการ → SlipOK ตรวจผ่าน

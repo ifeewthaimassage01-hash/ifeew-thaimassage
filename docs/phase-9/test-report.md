@@ -1,4 +1,4 @@
-# Phase 9 — ผลการทดสอบ (รอบที่ 1: ในเครื่อง)
+# Phase 9 — ผลการทดสอบ
 
 ทดสอบบน PostgreSQL 18 จริง (embedded, หลายการเชื่อมต่อพร้อมกัน) ด้วย `tools/dbtest` และ PGlite
 ยังไม่ได้ทดสอบบน Supabase จริง (Auth, Edge Functions, Storage, Realtime, pg_cron, SlipOK, Turnstile, หน้าจอ) — รอ staging
@@ -67,3 +67,23 @@
 - SlipOK และ Turnstile ด้วย key จริง
 - หน้าจอในเบราว์เซอร์ (Playwright) บนมือถือ/แท็บเล็ต/คอมพิวเตอร์ และกล้องถ่ายสลิป
 - ความเร็วบนเครื่องของ Supabase Free
+
+## รอบที่ 2: Supabase staging (ifeew / yyfpuzufkeazjhvyobhf)
+
+- `supabase db push`: migrations 001–027 ผ่านทั้งหมดบน Postgres 17 ของ Supabase (ไม่รัน seed)
+- pgTAP 358 ข้อผ่านบน staging ด้วย `tools/dbtest/run-remote.mjs` (โหลด seed + test ใน transaction แล้ว rollback — staging ไม่มีข้อมูลทดสอบค้าง)
+- พบและแก้บน staging: ความยินยอมล่าสุดเลือกผิดได้เมื่อบันทึก 2 ครั้งใน transaction เดียว (migration 026)
+- `supabase db lint`: แก้ STABLE ที่เรียก VOLATILE (migration 027); เหลือ false positive 1 ข้อ และตัวแปรไม่ได้ใช้ 2 ข้อ
+- pg_cron: `expire-stale-bookings` (ทุกนาที), `sync-commissions` (ทุกชั่วโมง) ทำงาน
+- Realtime: `queue_items`, `service_orders`, `invoices`; Storage buckets 5 อันถูกต้อง (มีแค่รูปบริการที่เป็น public)
+- Edge Functions 10 ตัว deploy แล้ว (verify_jwt ตรงกับ config); ทดสอบคำขอผิดรูปแบบ/ไม่มีสิทธิ์ได้ผลถูกต้องทุกตัว และ CORS ปฏิเสธ origin อื่น
+- ยังไม่ทดสอบ: login/TOTP จริง, อัปโหลดสลิปจริง, SlipOK/Turnstile key จริง, หน้าจอบนเบราว์เซอร์
+
+## เปลี่ยนจากสเปก: เจ้าของร้าน login ด้วย PIN (migration 028, ตามที่ผู้ใช้เลือก)
+
+- OWNER ไม่บังคับ MFA และงานเสี่ยงสูงไม่ขอยืนยันตัวตนซ้ำ (สเปกข้อ 2 กำหนดให้ใช้ TOTP)
+- OWNER ตั้ง PIN 6 หลักของตัวเอง แล้ว login บนเครื่องสาขาที่ผูกไว้ได้ทุกสาขา (กฎ PIN และการล็อกเหมือนพนักงาน)
+- Login ด้วยอีเมล + รหัสผ่านยังใช้ได้ (นอกร้าน)
+- ความเสี่ยงที่ยอมรับ: ใครเห็น PIN เจ้าของร้านจะเข้าถึงข้อมูลการเงินทั้งหมดจากเครื่องที่ผูกไว้
+- Test: assertion ที่เคยตรวจ “ต้องยืนยันตัวตนซ้ำ” เปลี่ยนเป็นตรวจว่า STAFF ทำไม่ได้ และเพิ่ม test PIN เจ้าของร้าน (รวม 361 ข้อ ผ่านทั้ง PGlite และ Postgres จริง)
+- migration 029: เจ้าของร้าน login ด้วย PIN อย่างเดียวจากเครื่องใดก็ได้ (Edge Function `owner-pin-login`, rate limit ต่อ IP 10 ครั้ง/15 นาที และต่อบริษัท 30 ครั้ง/15 นาที + ล็อก PIN) — อีเมลเหลือไว้เป็นทางสำรองครั้งแรก/ลืม PIN; test PIN เจ้าของร้าน 4 ข้อ (รวม 365 ข้อ)

@@ -1271,6 +1271,8 @@ export type Database = {
       owner_dashboard: { Args: { p_company_id: string }; Returns: Json }
       abnormal_expenses: { Args: { p_company_id: string; p_from: string; p_to: string }; Returns: Json }
       my_earnings: { Args: { p_from: string; p_to: string }; Returns: Json }
+      set_my_owner_pin: { Args: { p_company_id: string; p_pin: string }; Returns: undefined }
+      my_owner_pin_status: { Args: { p_company_id: string }; Returns: Json }
       merge_customers: {
         Args: { p_source_id: string; p_target_id: string; p_reason: string }
         Returns: undefined

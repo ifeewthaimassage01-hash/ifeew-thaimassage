@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "staff",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm@10.34.9", "--filter", "@ifeew/staff", "dev"],
+      "port": 3001
+    },
+    {
+      "name": "customer",
+      "runtimeExecutable": "npx",
+      "runtimeArgs": ["pnpm@10.34.9", "--filter", "@ifeew/customer", "dev"],
+      "port": 3000
+    }
+  ]
+}

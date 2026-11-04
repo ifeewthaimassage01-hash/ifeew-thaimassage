@@ -1,27 +1,34 @@
 <script setup lang="ts">
+import { MapPin, Phone } from '@lucide/vue'
 import type { PublicBranch } from '~/composables/useBranches'
+import type { TodayHours } from '~/composables/useOpenToday'
 
-defineProps<{ branch: PublicBranch }>()
+const props = defineProps<{ branch: PublicBranch; hours?: TodayHours | null }>()
+// วางสองคอลัมน์เฉพาะเมื่อมีแถบเวลาเปิดให้วาด (วันนี้เปิด) ไม่งั้นป้าย 'วันนี้ปิด' จะลอยอยู่กลางการ์ด
+const wide = computed(() => !!props.hours && !props.hours.closed)
+const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
 </script>
 
 <template>
-  <v-card class="p-5">
-    <div class="flex items-start gap-4">
-      <v-avatar size="48" class="bg-pastel-green">
-        <v-icon icon="mdi-spa-outline" color="primary" />
-      </v-avatar>
-      <div class="min-w-0 flex-1">
-        <NuxtLink :to="`/branches/${branch.id}`" class="text-lg font-medium text-cocoa no-underline">{{ branch.name }}</NuxtLink>
-        <p v-if="branch.address" class="m-0 mt-1 text-sm text-light-brown">{{ branch.address }}</p>
-        <div class="mt-3 flex flex-wrap gap-2">
-          <v-btn v-if="branch.phone" :href="`tel:${branch.phone.replace(/\s|-/g, '')}`" variant="tonal" color="primary" prepend-icon="mdi-phone-outline">
-            {{ branch.phone }}
-          </v-btn>
-          <v-btn v-if="branch.map_url" :href="branch.map_url" target="_blank" rel="noopener" variant="text" prepend-icon="mdi-map-marker-outline">
-            แผนที่
-          </v-btn>
-        </div>
+  <!-- @container: การ์ดกว้าง (สาขาเดียวเต็มแถว) วางข้อมูลซ้าย เวลาเปิดขวา; การ์ดแคบเรียงลงมา -->
+  <Card class="@container gap-4 py-5">
+    <CardContent class="grid gap-4 px-5" :class="wide ? '@2xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)] @2xl:gap-x-10' : ''">
+      <div class="min-w-0">
+        <h3 class="m-0 text-lg font-semibold leading-snug">
+          <NuxtLink :to="`/branches/${branch.id}`" class="text-foreground no-underline hover:underline">{{ branch.name }}</NuxtLink>
+        </h3>
+        <p v-if="branch.address" class="m-0 mt-0.5 text-[15px] text-muted-foreground">{{ branch.address }}</p>
       </div>
-    </div>
-  </v-card>
+      <OpenToday :hours="hours" :class="wide ? '@2xl:row-span-2 @2xl:self-center' : ''" />
+      <div class="flex flex-wrap gap-2" :class="wide ? '@2xl:col-start-1' : ''">
+        <Button as-child size="sm"><NuxtLink :to="{ path: '/book', query: { branch: branch.id } }">จองสาขานี้</NuxtLink></Button>
+        <Button v-if="branch.phone" as-child variant="outline" size="sm">
+          <a :href="tel(branch.phone)"><Phone /> <span class="num">{{ branch.phone }}</span></a>
+        </Button>
+        <Button v-if="branch.map_url" as-child variant="ghost" size="sm">
+          <a :href="branch.map_url" target="_blank" rel="noopener"><MapPin /> แผนที่</a>
+        </Button>
+      </div>
+    </CardContent>
+  </Card>
 </template>

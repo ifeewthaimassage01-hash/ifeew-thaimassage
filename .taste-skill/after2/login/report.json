@@ -1,0 +1,1165 @@
+{
+ "url": "http://localhost:3010/login",
+ "at": "2026-11-04T19:50:14.783Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 1,
+   "filled": [
+    0.23
+   ],
+   "motion": {
+    "elements": 0,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 900,
+     "screens": 1,
+     "words": 35,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 2,
+     "sections": 1,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "chars": 11,
+     "lines": 1,
+     "size": 24,
+     "vw": 1.7,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": 0,
+     "leading": 1.33,
+     "top": 118,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "lines": 1,
+     "size": 24,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      20,
+      24
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 15,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 11.7
+     },
+     "measureChars": 29,
+     "max": {
+      "size": 24,
+      "vw": 1.7,
+      "font": "Noto Sans Thai",
+      "text": "เข้าสู่ระบบ"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf6ee",
+     "bodyBgHsl": {
+      "h": 37,
+      "s": 0.62,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#3e3128",
+       "share": 0.69
+      },
+      {
+       "color": "#6e5a4a",
+       "share": 0.22
+      },
+      {
+       "color": "#8a6240",
+       "share": 0.06
+      },
+      {
+       "color": "#fffdf9",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#5b4636",
+      "hsl": {
+       "h": 26,
+       "s": 0.26,
+       "l": 0.28
+      },
+      "fg": "#fffdf9"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 2,
+     "inHero": 2,
+     "radius": 10,
+     "height": 44,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "จองคิว",
+      "เข้าสู่ระบบ"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 3,
+     "hairlineSamples": [
+      "header.sticky.top-0 1440px",
+      "div.border-t.border-border/70 438px",
+      "footer.border-t.border-border/70 1440px"
+     ],
+     "outlinedBoxes": 1,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 2,
+     "boxRadius": 20,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 5,
+     "fixed": true,
+     "height": 57,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 900,
+    "margins": {
+     "left": 257,
+     "right": 252
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "เข้าสู่ระบบ",
+      "size": 24,
+      "top": 118,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 257,
+      "n": 1
+     },
+     {
+      "x": 736,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 2,
+    "bodySize": 15,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.27,
+    "voidBox": {
+     "x": 0,
+     "y": 660,
+     "w": 1440,
+     "h": 240
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#fbf6ee",
+    "sidebar": null,
+    "topbar": {
+     "h": 57
+    },
+    "canvas": {
+     "left": 232,
+     "right": 232
+    },
+    "hero": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "chars": 11,
+     "lines": 1,
+     "size": 24,
+     "vw": 1.7,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": 0,
+     "leading": 1.33,
+     "top": 118,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 1,
+     "firstScreen": 1,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 1,
+     "radii": [
+      [
+       20,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      20,
+      24
+     ]
+    },
+    "title": {
+     "text": "เข้าสู่ระบบ",
+     "size": 24,
+     "top": 118
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 1,
+   "filled": [
+    0.41
+   ],
+   "motion": {
+    "elements": 0,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 1024,
+     "screens": 1,
+     "words": 35,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 2,
+     "sections": 1,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "chars": 11,
+     "lines": 1,
+     "size": 24,
+     "vw": 3.1,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": 0,
+     "leading": 1.33,
+     "top": 118,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "lines": 1,
+     "size": 24,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [],
+    "headingSummary": {
+     "count": 0,
+     "maxLines": 0,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      20,
+      24
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 15,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 11.7
+     },
+     "measureChars": 26,
+     "max": {
+      "size": 24,
+      "vw": 3.1,
+      "font": "Noto Sans Thai",
+      "text": "เข้าสู่ระบบ"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.09,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf6ee",
+     "bodyBgHsl": {
+      "h": 37,
+      "s": 0.62,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#3e3128",
+       "share": 0.69
+      },
+      {
+       "color": "#6e5a4a",
+       "share": 0.22
+      },
+      {
+       "color": "#8a6240",
+       "share": 0.06
+      },
+      {
+       "color": "#fffdf9",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#5b4636",
+      "hsl": {
+       "h": 26,
+       "s": 0.26,
+       "l": 0.28
+      },
+      "fg": "#fffdf9"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 2,
+     "inHero": 2,
+     "radius": 10,
+     "height": 44,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "จองคิว",
+      "เข้าสู่ระบบ"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 3,
+     "hairlineSamples": [
+      "header.sticky.top-0 768px",
+      "div.border-t.border-border/70 438px",
+      "footer.border-t.border-border/70 768px"
+     ],
+     "outlinedBoxes": 1,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 2,
+     "boxRadius": 20,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 5,
+     "fixed": true,
+     "height": 57,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 1024,
+    "margins": {
+     "left": 49,
+     "right": 44
+    },
+    "sections": [],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "เข้าสู่ระบบ",
+      "size": 24,
+      "top": 118,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 49,
+      "n": 1
+     },
+     {
+      "x": 528,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 2,
+    "bodySize": 15,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#fbf6ee",
+    "sidebar": null,
+    "topbar": {
+     "h": 57
+    },
+    "canvas": {
+     "left": 24,
+     "right": 24
+    },
+    "hero": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "chars": 11,
+     "lines": 1,
+     "size": 24,
+     "vw": 3.1,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": 0,
+     "leading": 1.33,
+     "top": 118,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 1,
+     "firstScreen": 1,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 1,
+     "radii": [
+      [
+       20,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      20,
+      24
+     ]
+    },
+    "title": {
+     "text": "เข้าสู่ระบบ",
+     "size": 24,
+     "top": 118
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.91,
+    0.67
+   ],
+   "motion": {
+    "elements": 0,
+    "css": 0,
+    "transitions": 0,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 1093,
+     "screens": 1.3,
+     "words": 32,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 2,
+     "sections": 1,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "chars": 11,
+     "lines": 1,
+     "size": 24,
+     "vw": 6.2,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": 0,
+     "leading": 1.33,
+     "top": 106,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "lines": 1,
+     "size": 24,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "เข้าสู่ระบบ",
+      "words": 1,
+      "chars": 11,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.33,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.79,
+      "top": 106,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 1,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      20,
+      24
+     ],
+     "sizeCount": 6,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 15,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 11.7
+     },
+     "measureChars": 41,
+     "max": {
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "text": "เข้าสู่ระบบ"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.1,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf6ee",
+     "bodyBgHsl": {
+      "h": 37,
+      "s": 0.62,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#fffdf9",
+       "top": 81,
+       "hsl": {
+        "h": 40,
+        "s": 1,
+        "l": 0.99
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#3e3128",
+       "share": 0.72
+      },
+      {
+       "color": "#6e5a4a",
+       "share": 0.19
+      },
+      {
+       "color": "#8a6240",
+       "share": 0.07
+      },
+      {
+       "color": "#fffdf9",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#5b4636",
+      "hsl": {
+       "h": 26,
+       "s": 0.26,
+       "l": 0.28
+      },
+      "fg": "#fffdf9"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 2,
+     "inHero": 2,
+     "radius": 10,
+     "height": 44,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "จองคิว",
+      "เข้าสู่ระบบ"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 3,
+     "hairlineSamples": [
+      "header.sticky.top-0 390px",
+      "div.border-t.border-border/70 356px",
+      "footer.border-t.border-border/70 390px"
+     ],
+     "outlinedBoxes": 1,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 2,
+     "boxRadius": 20,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 2,
+     "fixed": true,
+     "height": 57,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 1093,
+    "margins": {
+     "left": 16,
+     "right": 16
+    },
+    "sections": [
+     {
+      "sel": "div.bg-card.text-card-foreground",
+      "tag": "div",
+      "top": 81,
+      "height": 401,
+      "words": 10,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "เข้าสู่ระบบ",
+       "size": 24,
+       "tag": "h1"
+      },
+      "left": 41,
+      "right": 41,
+      "textLeft": 41,
+      "textRight": 45,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 506,
+      "height": 426,
+      "words": 21,
+      "media": 0,
+      "middle": 0,
+      "heading": {
+       "text": "สมาชิกทำอะไรได้บ้าง",
+       "size": 20,
+       "tag": "h2"
+      },
+      "left": 40,
+      "right": 46,
+      "textLeft": 40,
+      "textRight": 46,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "เข้าสู่ระบบ",
+      "size": 24,
+      "top": 106,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 40,
+      "n": 2
+     }
+    ],
+    "leftBlocks": 2,
+    "bodySize": 15,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#fbf6ee",
+    "sidebar": null,
+    "topbar": {
+     "h": 57
+    },
+    "canvas": {
+     "left": 16,
+     "right": 16
+    },
+    "hero": {
+     "text": "เข้าสู่ระบบ",
+     "words": 1,
+     "chars": 11,
+     "lines": 1,
+     "size": 24,
+     "vw": 6.2,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": 0,
+     "leading": 1.33,
+     "top": 106,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 1,
+     "firstScreen": 1,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 1,
+     "radii": [
+      [
+       20,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      14,
+      15,
+      16,
+      17,
+      20,
+      24
+     ]
+    },
+    "title": {
+     "text": "เข้าสู่ระบบ",
+     "size": 24,
+     "top": 106
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "palette-cream",
+   "width": 1440,
+   "message": "Yellow-cream background (page background #fbf6ee, text #fffdf9).",
+   "fix": "Use the drawn palette. If you want warmth, take a low-chroma stone or bone, not a yellow cream.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\after2\\login\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\after2\\login\\desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\after2\\login\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\after2\\login\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\after2\\login\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\after2\\login\\mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

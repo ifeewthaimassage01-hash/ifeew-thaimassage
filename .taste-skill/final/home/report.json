@@ -1,0 +1,1309 @@
+{
+ "url": "http://localhost:3010/",
+ "at": "2026-11-04T19:52:54.350Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 1,
+   "filled": [
+    0.24
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 1,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 900,
+     "screens": 1,
+     "words": 29,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 3,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 30,
+     "lines": 1,
+     "size": 28,
+     "vw": 1.9,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 93,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "lines": 1,
+     "size": 28,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+      "words": 2,
+      "chars": 30,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.68,
+      "top": 93,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 1,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 17,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 11.7
+     },
+     "measureChars": 53,
+     "max": {
+      "size": 28,
+      "vw": 1.9,
+      "font": "Noto Sans Thai",
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf6ee",
+     "bodyBgHsl": {
+      "h": 37,
+      "s": 0.62,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#3e3128",
+       "share": 0.56
+      },
+      {
+       "color": "#6e5a4a",
+       "share": 0.3
+      },
+      {
+       "color": "#fffdf9",
+       "share": 0.07
+      },
+      {
+       "color": "#8a6240",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#5b4636",
+      "hsl": {
+       "h": 26,
+       "s": 0.26,
+       "l": 0.28
+      },
+      "fg": "#fffdf9"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 5,
+     "inHero": 5,
+     "radius": 10,
+     "height": 48,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "จองคิว",
+      "จองคิว",
+      "ดูราคาบริการ",
+      "จองสาขานี้",
+      "02-000-0001"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 2,
+     "hairlineSamples": [
+      "header.sticky.top-0 1440px",
+      "footer.border-t.border-border/70 1440px"
+     ],
+     "outlinedBoxes": 1,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 1,
+     "boxRadius": 20,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 5,
+     "fixed": true,
+     "height": 57,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 900,
+    "margins": {
+     "left": 232,
+     "right": 232
+    },
+    "sections": [
+     {
+      "sel": "section.grid.gap-3",
+      "tag": "section",
+      "top": 93,
+      "height": 165,
+      "words": 11,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 232,
+      "right": 782,
+      "textLeft": 232,
+      "textRight": 782,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.grid.items-start",
+      "tag": "div",
+      "top": 290,
+      "height": 225,
+      "words": 7,
+      "media": 0,
+      "middle": 676,
+      "heading": {
+       "text": "สาขาวันนี้",
+       "size": 20,
+       "tag": "h2"
+      },
+      "left": 232,
+      "right": 232,
+      "textLeft": 232,
+      "textRight": 232,
+      "fullBleed": false,
+      "footer": true,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+      "size": 28,
+      "top": 93,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 232,
+      "n": 3
+     },
+     {
+      "x": 253,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 4,
+    "bodySize": 17,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.28,
+    "voidBox": {
+     "x": 540,
+     "y": 240,
+     "w": 540,
+     "h": 660
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#fbf6ee",
+    "sidebar": null,
+    "topbar": {
+     "h": 57
+    },
+    "canvas": {
+     "left": 232,
+     "right": 232
+    },
+    "hero": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 30,
+     "lines": 1,
+     "size": 28,
+     "vw": 1.9,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 93,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 1,
+     "firstScreen": 1,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 1,
+     "radii": [
+      [
+       20,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      28
+     ]
+    },
+    "title": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "size": 28,
+     "top": 93
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 1,
+   "filled": [
+    0.29
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 1,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 1024,
+     "screens": 1,
+     "words": 29,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 3,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 30,
+     "lines": 1,
+     "size": 28,
+     "vw": 3.6,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 93,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "lines": 1,
+     "size": 28,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+      "words": 2,
+      "chars": 30,
+      "lines": 1,
+      "size": 28,
+      "vw": 3.6,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.94,
+      "top": 93,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 1,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 17,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 11.7
+     },
+     "measureChars": 53,
+     "max": {
+      "size": 28,
+      "vw": 3.6,
+      "font": "Noto Sans Thai",
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf6ee",
+     "bodyBgHsl": {
+      "h": 37,
+      "s": 0.62,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#3e3128",
+       "share": 0.56
+      },
+      {
+       "color": "#6e5a4a",
+       "share": 0.3
+      },
+      {
+       "color": "#fffdf9",
+       "share": 0.07
+      },
+      {
+       "color": "#8a6240",
+       "share": 0.07
+      }
+     ],
+     "button": {
+      "bg": "#5b4636",
+      "hsl": {
+       "h": 26,
+       "s": 0.26,
+       "l": 0.28
+      },
+      "fg": "#fffdf9"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 5,
+     "inHero": 5,
+     "radius": 10,
+     "height": 48,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "จองคิว",
+      "จองคิว",
+      "ดูราคาบริการ",
+      "จองสาขานี้",
+      "02-000-0001"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 2,
+     "hairlineSamples": [
+      "header.sticky.top-0 768px",
+      "footer.border-t.border-border/70 768px"
+     ],
+     "outlinedBoxes": 1,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 1,
+     "boxRadius": 20,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 5,
+     "fixed": true,
+     "height": 57,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 1024,
+    "margins": {
+     "left": 24,
+     "right": 24
+    },
+    "sections": [
+     {
+      "sel": "section.grid.gap-3",
+      "tag": "section",
+      "top": 93,
+      "height": 165,
+      "words": 11,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 24,
+      "right": 318,
+      "textLeft": 24,
+      "textRight": 318,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.grid.items-start",
+      "tag": "div",
+      "top": 290,
+      "height": 225,
+      "words": 7,
+      "media": 0,
+      "middle": 420,
+      "heading": {
+       "text": "สาขาวันนี้",
+       "size": 20,
+       "tag": "h2"
+      },
+      "left": 24,
+      "right": 24,
+      "textLeft": 24,
+      "textRight": 24,
+      "fullBleed": false,
+      "footer": true,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+      "size": 28,
+      "top": 93,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 24,
+      "n": 3
+     },
+     {
+      "x": 45,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 4,
+    "bodySize": 17,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#fbf6ee",
+    "sidebar": null,
+    "topbar": {
+     "h": 57
+    },
+    "canvas": {
+     "left": 24,
+     "right": 24
+    },
+    "hero": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 30,
+     "lines": 1,
+     "size": 28,
+     "vw": 3.6,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 93,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 1,
+     "firstScreen": 1,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 1,
+     "radii": [
+      [
+       20,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      28
+     ]
+    },
+    "title": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "size": 28,
+     "top": 93
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 1,
+   "filled": [
+    0.49
+   ],
+   "motion": {
+    "elements": 1,
+    "css": 0,
+    "transitions": 1,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 844,
+     "screens": 1,
+     "words": 26,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 3,
+     "sections": 2,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 30,
+     "lines": 2,
+     "size": 28,
+     "vw": 7.2,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 81,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "lines": 2,
+     "size": 28,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+      "words": 2,
+      "chars": 30,
+      "lines": 2,
+      "size": 28,
+      "vw": 7.2,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.92,
+      "top": 81,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 1,
+     "maxLines": 2,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 17,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 11.7
+     },
+     "measureChars": 42,
+     "max": {
+      "size": 28,
+      "vw": 7.2,
+      "font": "Noto Sans Thai",
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#fbf6ee",
+     "bodyBgHsl": {
+      "h": 37,
+      "s": 0.62,
+      "l": 0.96
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#3e3128",
+       "share": 0.6
+      },
+      {
+       "color": "#6e5a4a",
+       "share": 0.24
+      },
+      {
+       "color": "#fffdf9",
+       "share": 0.08
+      },
+      {
+       "color": "#8a6240",
+       "share": 0.08
+      }
+     ],
+     "button": {
+      "bg": "#5b4636",
+      "hsl": {
+       "h": 26,
+       "s": 0.26,
+       "l": 0.28
+      },
+      "fg": "#fffdf9"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 5,
+     "inHero": 5,
+     "radius": 10,
+     "height": 48,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "จองคิว",
+      "จองคิว",
+      "ดูราคาบริการ",
+      "จองสาขานี้",
+      "02-000-0001"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 2,
+     "hairlineSamples": [
+      "header.sticky.top-0 390px",
+      "footer.border-t.border-border/70 390px"
+     ],
+     "outlinedBoxes": 1,
+     "dashed": 0,
+     "blurred": 0,
+     "roundedBoxes": 1,
+     "boxRadius": 20,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 2,
+     "fixed": true,
+     "height": 57,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 844,
+    "margins": {
+     "left": 16,
+     "right": 16
+    },
+    "sections": [
+     {
+      "sel": "section.grid.gap-3",
+      "tag": "section",
+      "top": 81,
+      "height": 200,
+      "words": 11,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 16,
+      "right": 41,
+      "textLeft": 16,
+      "textRight": 41,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "div.grid.items-start",
+      "tag": "div",
+      "top": 313,
+      "height": 225,
+      "words": 7,
+      "media": 0,
+      "middle": 58,
+      "heading": {
+       "text": "สาขาวันนี้",
+       "size": 20,
+       "tag": "h2"
+      },
+      "left": 16,
+      "right": 16,
+      "textLeft": 16,
+      "textRight": 16,
+      "fullBleed": false,
+      "footer": true,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+      "size": 28,
+      "top": 81,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 16,
+      "n": 3
+     },
+     {
+      "x": 37,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 4,
+    "bodySize": 17,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#fbf6ee",
+    "sidebar": null,
+    "topbar": {
+     "h": 57
+    },
+    "canvas": {
+     "left": 16,
+     "right": 16
+    },
+    "hero": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 30,
+     "lines": 2,
+     "size": 28,
+     "vw": 7.2,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 81,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 1,
+     "firstScreen": 1,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 1,
+     "radii": [
+      [
+       20,
+       1
+      ]
+     ],
+     "heavyBorders": 0,
+     "borderSamples": [],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 0,
+     "tabularShare": null,
+     "kpiMax": null
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      20,
+      28
+     ]
+    },
+    "title": {
+     "text": "นวดไทย จองคิวออนไลน์ได้ทุกสาขา",
+     "size": 28,
+     "top": 81
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "palette-cream",
+   "width": 1440,
+   "message": "Yellow-cream background (page background #fbf6ee, text #fffdf9).",
+   "fix": "Use the drawn palette. If you want warmth, take a low-chroma stone or bone, not a yellow cream.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  },
+  {
+   "level": "WARN",
+   "id": "hero-void",
+   "width": 1440,
+   "message": "28% of the first screen is one empty block (540×660px at 540,240).",
+   "fix": "Place the void on purpose or fill it: move the picture, the film or one fact into it, grow the headline to meet it, or shrink the screen to its content. A void reads as placed only when something closes it on the far side and it is the screen's one rest."
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\final\\home\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\final\\home\\desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\final\\home\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\final\\home\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\final\\home\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\final\\home\\mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

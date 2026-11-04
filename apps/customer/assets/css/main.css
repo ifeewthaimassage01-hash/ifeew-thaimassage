@@ -1,0 +1,133 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/*
+ * Ifeew customer app — tokens
+ * สไตล์: pastel-consumer (taste-skill) + สีแบรนด์เดิม (--keep palette)
+ *   พื้นครีม #FBF6EE, การ์ด #FFFDF9, หมึก #3E3128, ปุ่มหลักโกโก้ #5B4636
+ *   สีน้ำตาลอ่อน #A9805B ใช้กับ "ข้อมูล" เท่านั้น (เวลาที่เลือก, จุดบนแถบเวลา) — เป็นตัวหนังสือไม่ผ่าน 4.5:1
+ *   ตัวหนังสือลิงก์ใช้ #8A6240 (5.0:1 บนพื้นครีม)
+ *   สีอ่อนของแบรนด์ (ชมพู/เขียว/เบจ) เป็น "tile" ขนาดเล็ก ตัวหนังสือเป็นสีเข้มของเฉดเดียวกัน
+ * รัศมี: การ์ด 20 → ภายใน 10 / 8 / 5 ; ปุ่มและช่องกรอก 10
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  --background: #fbf6ee;
+  --foreground: #3e3128;
+  --card: #fffdf9;
+  --card-foreground: #3e3128;
+  --popover: #fffdf9;
+  --popover-foreground: #3e3128;
+
+  --primary: #5b4636;
+  --primary-foreground: #fffdf9;
+  --secondary: #efe3d3;
+  --secondary-foreground: #3e3128;
+  --muted: #f4ece1;
+  --muted-foreground: #6e5a4a;
+  --accent: #f4ece1;
+  --accent-foreground: #3e3128;
+  --destructive: #b3261e;
+
+  --border: #eadfd0;
+  --input: #d9cbb8;
+  --ring: #a9805b;
+
+  /* ข้อมูลและลิงก์ */
+  --data: #a9805b;
+  --link: #8a6240;
+
+  /* tile สีอ่อน + หมึกเฉดเดียวกัน */
+  --tint-pink: #f4d6d6;
+  --tint-pink-ink: #6e2b2b;
+  --tint-green: #d7e9d3;
+  --tint-green-ink: #24452a;
+  --tint-beige: #efe3d3;
+  --tint-beige-ink: #5b4636;
+  --tint-warn: #fbebd0;
+  --tint-warn-ink: #7a4a0e;
+  --tint-danger: #fbe3e1;
+  --tint-danger-ink: #7f1d17;
+
+  --radius: 1.25rem;
+}
+
+@theme inline {
+  --font-sans: 'Noto Sans Thai', system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-data: var(--data);
+  --color-link: var(--link);
+
+  --color-tint-pink: var(--tint-pink);
+  --color-tint-pink-ink: var(--tint-pink-ink);
+  --color-tint-green: var(--tint-green);
+  --color-tint-green-ink: var(--tint-green-ink);
+  --color-tint-beige: var(--tint-beige);
+  --color-tint-beige-ink: var(--tint-beige-ink);
+  --color-tint-warn: var(--tint-warn);
+  --color-tint-warn-ink: var(--tint-warn-ink);
+  --color-tint-danger: var(--tint-danger);
+  --color-tint-danger-ink: var(--tint-danger-ink);
+
+  /* การ์ด 20 / ปุ่ม-ช่องกรอก 10 / ภายใน 8 / ชิป 5 */
+  --radius-xl: var(--radius);
+  --radius-lg: 0.625rem;
+  --radius-md: 0.5rem;
+  --radius-sm: 0.3125rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  h1,
+  h2,
+  h3 {
+    text-wrap: balance;
+  }
+  a {
+    color: var(--link);
+  }
+}
+
+/* ตัวเลขเงิน เวลา และจำนวนต้องเรียงหลักตรงกัน */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

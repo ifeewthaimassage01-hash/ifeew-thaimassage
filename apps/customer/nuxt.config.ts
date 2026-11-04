@@ -1,7 +1,8 @@
-import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
+import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 
 // Customer App — Mobile first, SSR สำหรับหน้า public
+// UI: shadcn-vue (reka-ui) + Tailwind v4 — คอมโพเนนต์อยู่ใน components/ui
 export default defineNuxtConfig({
   compatibilityDate: '2026-11-01',
   ssr: true,
@@ -17,28 +18,24 @@ export default defineNuxtConfig({
       ],
       link: [
         { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
+        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
         { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap' },
       ],
     },
   },
 
-  modules: [
-    '@nuxtjs/supabase',
-    '@nuxtjs/tailwindcss',
-    '@pinia/nuxt',
-    '@vueuse/nuxt',
-    (_options, nuxt) => {
-      nuxt.hooks.hook('vite:extendConfig', (config) => {
-        config.plugins?.push(vuetify({ autoImport: true }))
-      })
-    },
-  ],
+  css: ['~/assets/css/main.css'],
 
-  build: { transpile: ['vuetify', '@ifeew/shared'] },
+  modules: ['@nuxtjs/supabase', '@pinia/nuxt', '@vueuse/nuxt', 'shadcn-nuxt'],
 
-  vite: {
-    vue: { template: { transformAssetUrls } },
-  },
+  // คอมโพเนนต์ของแอปลงทะเบียนอัตโนมัติ ยกเว้น components/ui ที่ shadcn-nuxt ลงทะเบียนเอง (ไม่มี prefix)
+  components: [{ path: '~/components', ignore: ['ui/**'] }],
+
+  shadcn: { prefix: '', componentDir: './components/ui' },
+
+  build: { transpile: ['@ifeew/shared'] },
+
+  vite: { plugins: [tailwindcss()] },
 
   supabase: {
     types: fileURLToPath(new URL('../../packages/shared/src/database.types.ts', import.meta.url)),

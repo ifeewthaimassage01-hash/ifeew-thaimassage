@@ -432,6 +432,9 @@ verify_jwt = false
 [functions.staff-pin-login]
 verify_jwt = false
 
+[functions.owner-pin-login]
+verify_jwt = false
+
 # Phase 4: endpoint สาธารณะของลูกค้า (ตรวจ CAPTCHA / Token / JWT สมาชิกภายในฟังก์ชัน)
 [functions.guest-booking]
 verify_jwt = false

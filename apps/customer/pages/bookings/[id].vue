@@ -1,8 +1,10 @@
 <script setup lang="ts">
 // รายละเอียดการจองของสมาชิก + ชำระมัดจำ + ยกเลิก (ก่อนนัดตามนโยบาย)
+import { ArrowLeft } from '@lucide/vue'
 import type { BookingView } from '@ifeew/shared'
 
 definePageMeta({ middleware: 'auth' })
+useHead({ title: "การจอง — Ifeew's Thaimassage" })
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -11,7 +13,7 @@ const id = computed(() => String(route.params.id))
 
 const booking = ref<BookingView | null>(null)
 const loading = ref(true)
-const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
+const message = ref<{ type: 'success' | 'destructive'; text: string } | null>(null)
 const cancelDialog = ref(false)
 const cancelReason = ref('')
 const cancelling = ref(false)
@@ -34,7 +36,7 @@ async function cancel() {
   cancelling.value = false
   cancelDialog.value = false
   if (error) {
-    message.value = { type: 'error', text: error.message }
+    message.value = { type: 'destructive', text: error.message }
     return
   }
   booking.value = data as unknown as BookingView
@@ -48,23 +50,31 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/bookings" class="mb-2">การจองของฉัน</v-btn>
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" :text="message.text" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
-    <v-alert v-else-if="!booking" type="info" variant="tonal" text="ไม่พบการจอง" />
+  <div class="grid gap-4">
+    <NuxtLink to="/bookings" class="inline-flex w-fit items-center gap-1.5 text-[15px] text-muted-foreground no-underline hover:text-foreground">
+      <ArrowLeft class="size-4" /> การจองของฉัน
+    </NuxtLink>
+    <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">รายละเอียดการจอง</h1>
+    <Alert v-if="message" :variant="message.type"><AlertDescription>{{ message.text }}</AlertDescription></Alert>
+    <div v-if="loading" class="grid gap-4 md:grid-cols-2"><Skeleton class="h-80 rounded-xl" /><Skeleton class="h-80 rounded-xl" /></div>
+    <Alert v-else-if="!booking" variant="info"><AlertDescription>ไม่พบการจองนี้</AlertDescription></Alert>
     <BookingDetail v-else :booking="booking" :can-cancel="canCancel" @updated="(v) => (booking = { ...booking!, ...v })" @cancel="cancelDialog = true" />
 
-    <v-dialog v-model="cancelDialog" max-width="420">
-      <v-card class="p-6">
-        <p class="m-0 mb-2 text-lg font-medium">ยกเลิกการจอง?</p>
-        <p class="m-0 mb-4 text-sm text-light-brown">ยกเลิกได้ก่อนเวลานัดตามนโยบายของร้าน และรับมัดจำคืน (ถ้าชำระแล้ว)</p>
-        <v-textarea v-model="cancelReason" label="เหตุผล (ไม่บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="cancelDialog = false">ไม่ยกเลิก</v-btn>
-          <v-btn color="error" :loading="cancelling" @click="cancel">ยืนยันยกเลิก</v-btn>
+    <Dialog v-model:open="cancelDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ยกเลิกการจองนี้?</DialogTitle>
+          <DialogDescription>ยกเลิกได้ก่อนเวลานัดตามนโยบายของร้าน ถ้าโอนมัดจำแล้ว ร้านจะโอนคืนให้</DialogDescription>
+        </DialogHeader>
+        <div class="grid gap-1.5">
+          <Label for="cancel-reason">เหตุผล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label>
+          <Textarea id="cancel-reason" v-model="cancelReason" rows="2" />
         </div>
-      </v-card>
-    </v-dialog>
+        <DialogFooter class="gap-2">
+          <Button variant="outline" @click="cancelDialog = false">ไม่ยกเลิก</Button>
+          <Button variant="destructive" :disabled="cancelling" @click="cancel">{{ cancelling ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิก' }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

@@ -5,6 +5,24 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(41);
 
+-- (migration 028) งานเจ้าของร้านไม่ขอยืนยันตัวตนซ้ำแล้ว — ตรวจว่า STAFF ทำไม่ได้แทน
+create or replace function pg_temp.denied_for_staff(p_sql text) returns boolean language plpgsql as $f$
+declare
+  v_old text := current_setting('request.jwt.claims', true);
+begin
+  perform set_config('request.jwt.claims',
+    '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal1"}', true);
+  begin
+    execute p_sql;
+  exception when insufficient_privilege then
+    perform set_config('request.jwt.claims', coalesce(v_old, ''), true);
+    return true;
+  end;
+  perform set_config('request.jwt.claims', coalesce(v_old, ''), true);
+  return false;
+end;
+$f$;
+
 -- เวลาเปิดร้านครอบตอนนี้ / กะวันนี้ของหมอทั้งสอง
 update public.branch_holidays set is_active = false;
 update public.branch_opening_hours
@@ -68,8 +86,7 @@ select throws_ok($$select public.set_employee_guarantee('40000000-0000-4000-8000
 reset role;
 select pg_temp.as_user('10000000-0000-4000-8000-000000000001', 'aal2');
 set local role authenticated;
-select throws_ok(format($$select public.set_employee_guarantee('40000000-0000-4000-8000-000000000002', 500, %L, 'เริ่มประกัน')$$, pg_temp.v('bd')),
-  '42501', 'STEP_UP_REQUIRED', 'ตั้งประกันมือต้องยืนยันตัวตนซ้ำ');
+select ok(pg_temp.denied_for_staff(format($$select public.set_employee_guarantee('40000000-0000-4000-8000-000000000002', 500, %L, 'เริ่มประกัน')$$, pg_temp.v('bd'))), 'STAFF ทำไม่ได้ (ตั้งประกันมือต้องยืนยันตัวตนซ้ำ)');
 reset role;
 select pg_temp.owner_step_up();
 set local role authenticated;
@@ -176,8 +193,7 @@ select ok((pg_temp.j('p1') ->> 'total')::numeric = 520 and jsonb_array_length(pg
   'รอบจ่าย: นภา 120 + ดาว (ประกันมือ) 400 = 520');
 select throws_ok(format($$select public.create_commission_payout('20000000-0000-4000-8000-000000000001', %L)$$, pg_temp.yd()),
   '23514', null, 'มีร่างรอบจ่ายค้างอยู่ สร้างซ้ำไม่ได้');
-select throws_ok(format($$select public.confirm_commission_payout(%L, 'BANK_TRANSFER', 'TRX123', null)$$, pg_temp.j('p1') ->> 'payout_id'),
-  '42501', 'STEP_UP_REQUIRED', 'ยืนยันจ่ายต้องยืนยันตัวตนซ้ำ');
+select ok(pg_temp.denied_for_staff(format($$select public.confirm_commission_payout(%L, 'BANK_TRANSFER', 'TRX123', null)$$, pg_temp.j('p1') ->> 'payout_id')), 'STAFF ทำไม่ได้ (ยืนยันจ่ายต้องยืนยันตัวตนซ้ำ)');
 reset role;
 select pg_temp.owner_step_up();
 set local role authenticated;
@@ -255,8 +271,7 @@ reset role;
 -- ---------------------------------------------------------------------------
 select pg_temp.as_user('10000000-0000-4000-8000-000000000001', 'aal2');
 set local role authenticated;
-select throws_ok(format($$select public.lock_financial_period('20000000-0000-4000-8000-000000000001', %L)$$, pg_temp.v('bd')),
-  '42501', 'STEP_UP_REQUIRED', 'ล็อกงวดต้องยืนยันตัวตนซ้ำ');
+select ok(pg_temp.denied_for_staff(format($$select public.lock_financial_period('20000000-0000-4000-8000-000000000001', %L)$$, pg_temp.v('bd'))), 'STAFF ทำไม่ได้ (ล็อกงวดต้องยืนยันตัวตนซ้ำ)');
 reset role;
 select pg_temp.owner_step_up();
 set local role authenticated;

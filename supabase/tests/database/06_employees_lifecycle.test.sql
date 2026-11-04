@@ -4,6 +4,24 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(24);
 
+-- (migration 028) งานเจ้าของร้านไม่ขอยืนยันตัวตนซ้ำแล้ว — ตรวจว่า STAFF ทำไม่ได้แทน
+create or replace function pg_temp.denied_for_staff(p_sql text) returns boolean language plpgsql as $f$
+declare
+  v_old text := current_setting('request.jwt.claims', true);
+begin
+  perform set_config('request.jwt.claims',
+    '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal1"}', true);
+  begin
+    execute p_sql;
+  exception when insufficient_privilege then
+    perform set_config('request.jwt.claims', coalesce(v_old, ''), true);
+    return true;
+  end;
+  perform set_config('request.jwt.claims', coalesce(v_old, ''), true);
+  return false;
+end;
+$f$;
+
 -- บัญชีทดสอบ: 04 = พนักงานใหม่ (อีเมลภายใน), 05 = ลูกค้า, 06 = พนักงานใหม่อีกคน
 insert into auth.users (
   instance_id, id, aud, role, email, encrypted_password, email_confirmed_at,
@@ -28,19 +46,15 @@ set local role authenticated;
 -- OWNER aal2 แต่ไม่มี amr totp
 select set_config('request.jwt.claims',
   '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}', true);
-select throws_ok(
-  $$select public.create_staff_member('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000004',
-      '30000000-0000-4000-8000-000000000001', 'SKV-02', 'มะลิ', '2026-11-01', '482913')$$,
-  '42501', 'STEP_UP_REQUIRED', 'ไม่ได้ยืนยัน TOTP ซ้ำ สร้างพนักงานไม่ได้');
+select ok(pg_temp.denied_for_staff($$select public.create_staff_member('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000004',
+      '30000000-0000-4000-8000-000000000001', 'SKV-02', 'มะลิ', '2026-11-01', '482913')$$), 'STAFF ทำไม่ได้ (ไม่ได้ยืนยัน TOTP ซ้ำ สร้างพนักงานไม่ได้)');
 
 -- amr เก่าเกิน 5 นาที
 select set_config('request.jwt.claims', json_build_object(
   'sub', '10000000-0000-4000-8000-000000000001', 'role', 'authenticated', 'aal', 'aal2',
   'amr', json_build_array(json_build_object('method', 'totp', 'timestamp', extract(epoch from now())::bigint - 600))
 )::text, true);
-select throws_ok(
-  $$select public.assert_can_manage_staff('20000000-0000-4000-8000-000000000001')$$,
-  '42501', 'STEP_UP_REQUIRED', 'TOTP เกิน 5 นาทีต้องยืนยันใหม่');
+select ok(pg_temp.denied_for_staff($$select public.assert_can_manage_staff('20000000-0000-4000-8000-000000000001')$$), 'STAFF ทำไม่ได้ (TOTP เกิน 5 นาทีต้องยืนยันใหม่)');
 
 -- amr ล่าสุด
 select set_config('request.jwt.claims', json_build_object(
@@ -116,9 +130,7 @@ select throws_ok(
 -- ตั้ง PIN ต้อง step-up
 select set_config('request.jwt.claims',
   '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}', true);
-select throws_ok(
-  $$select public.set_staff_pin('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000003', '975318')$$,
-  '42501', 'STEP_UP_REQUIRED', 'ตั้ง PIN ต้องยืนยัน TOTP ซ้ำ');
+select ok(pg_temp.denied_for_staff($$select public.set_staff_pin('20000000-0000-4000-8000-000000000001', '10000000-0000-4000-8000-000000000003', '975318')$$), 'STAFF ทำไม่ได้ (ตั้ง PIN ต้องยืนยัน TOTP ซ้ำ)');
 
 -- ตรวจผลในฐานะ postgres
 reset role;

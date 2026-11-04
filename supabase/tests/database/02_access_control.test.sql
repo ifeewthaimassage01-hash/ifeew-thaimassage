@@ -42,17 +42,17 @@ reset role;
 select is((select name from public.branches where code = 'SKV'), 'สาขาสุขุมวิท', 'STAFF แก้ข้อมูลสาขาไม่ได้');
 
 -- -----------------------------------------------------------------------------
--- OWNER ยังไม่ผ่าน MFA (aal1)
+-- OWNER ที่ไม่ได้ยืนยัน MFA (aal1) — ตั้งแต่ migration 028 ไม่บังคับ MFA
 -- -----------------------------------------------------------------------------
 select set_config('request.jwt.claims',
   '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal1"}', true);
 set local role authenticated;
 
-select ok(not private.is_company_owner('20000000-0000-4000-8000-000000000001'), 'OWNER aal1 ยังไม่ได้สิทธิ์เจ้าของ');
-select is((select count(*)::int from public.company_memberships), 1, 'OWNER aal1 เห็นเฉพาะ membership ตัวเอง');
+select ok(private.is_company_owner('20000000-0000-4000-8000-000000000001'), 'OWNER ได้สิทธิ์เจ้าของโดยไม่ต้องผ่าน MFA');
+select is((select count(*)::int from public.company_memberships), 4, 'OWNER (aal1) เห็น membership ทั้งบริษัท');
 select ok(
-  (public.my_access() -> 'companies' -> 0 ->> 'owner_mfa_required')::boolean,
-  'my_access แจ้งว่าต้องยืนยัน MFA');
+  not (public.my_access() -> 'companies' -> 0 ->> 'owner_mfa_required')::boolean,
+  'my_access ไม่บังคับ MFA สำหรับ OWNER');
 
 -- -----------------------------------------------------------------------------
 -- OWNER ผ่าน MFA (aal2)

@@ -4,6 +4,24 @@ create extension if not exists pgtap with schema extensions;
 
 select plan(20);
 
+-- (migration 028) งานเจ้าของร้านไม่ขอยืนยันตัวตนซ้ำแล้ว — ตรวจว่า STAFF ทำไม่ได้แทน
+create or replace function pg_temp.denied_for_staff(p_sql text) returns boolean language plpgsql as $f$
+declare
+  v_old text := current_setting('request.jwt.claims', true);
+begin
+  perform set_config('request.jwt.claims',
+    '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal1"}', true);
+  begin
+    execute p_sql;
+  exception when insufficient_privilege then
+    perform set_config('request.jwt.claims', coalesce(v_old, ''), true);
+    return true;
+  end;
+  perform set_config('request.jwt.claims', coalesce(v_old, ''), true);
+  return false;
+end;
+$f$;
+
 -- ---------------------------------------------------------------------------
 -- anon: แคตตาล็อกสาธารณะ
 -- ---------------------------------------------------------------------------
@@ -54,12 +72,10 @@ select is(
     where bs ->> 'service_id' = '51000000-0000-4000-8000-000000000001' and (x ->> 'duration_minutes')::int = 90),
   180.00::numeric, 'OWNER เห็นค่าแรงช่วง 90 นาที');
 
-select throws_ok(
-  $$select public.save_branch_service_pricing(array['30000000-0000-4000-8000-000000000001']::uuid[],
+select ok(pg_temp.denied_for_staff($$select public.save_branch_service_pricing(array['30000000-0000-4000-8000-000000000001']::uuid[],
       '51000000-0000-4000-8000-000000000001',
       '[{"duration_minutes":60,"price":320,"therapist_fee":130},{"duration_minutes":90,"price":450,"therapist_fee":180},{"duration_minutes":120,"price":550,"therapist_fee":240}]',
-      null, 'ปรับราคา')$$,
-  '42501', 'STEP_UP_REQUIRED', 'แก้ราคาเดิมต้องยืนยัน TOTP ซ้ำ');
+      null, 'ปรับราคา')$$), 'STAFF ทำไม่ได้ (แก้ราคาเดิมต้องยืนยัน TOTP ซ้ำ)');
 
 -- step-up
 select set_config('request.jwt.claims', json_build_object(

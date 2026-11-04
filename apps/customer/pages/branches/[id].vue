@@ -1,5 +1,7 @@
 <script setup lang="ts">
+import { ArrowLeft, MapPin, Phone } from '@lucide/vue'
 import { bangkokToday, isoDowLabels, type Tables } from '@ifeew/shared'
+import { isoDow } from '~/composables/useOpenToday'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
@@ -24,62 +26,88 @@ const { data: detail } = await useAsyncData(`branch-${branchId.value}`, async ()
   return { branch: b.data, hours: (h.data ?? []) as Hours[], holidays: (hol.data ?? []) as Holiday[] }
 })
 
+const ids = computed(() => [branchId.value])
+const { data: today } = await useOpenToday(ids)
 const { data: services } = await useCatalog(branchId)
 
 const grouped = computed(() => {
   const map = new Map<string, NonNullable<typeof services.value>>()
-  for (const s of services.value ?? []) {
-    const list = map.get(s.category_name) ?? []
-    list.push(s)
-    map.set(s.category_name, list)
-  }
+  for (const s of services.value ?? []) map.set(s.category_name, [...(map.get(s.category_name) ?? []), s])
   return [...map.entries()]
 })
 
+const todayDow = isoDow(bangkokToday())
 const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
 const timeText = (r: { is_closed: boolean; opens_at: string | null; closes_at: string | null }) =>
-  r.is_closed ? 'ปิด' : `${hhmm(r.opens_at)} – ${hhmm(r.closes_at)}${(r.closes_at ?? '') < (r.opens_at ?? '') ? ' (วันถัดไป)' : ''}`
+  r.is_closed ? 'ปิด' : `${hhmm(r.opens_at)}–${hhmm(r.closes_at)}${(r.closes_at ?? '') < (r.opens_at ?? '') ? ' (ถึงวันถัดไป)' : ''}`
+const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
 
 useHead({ title: () => `${detail.value?.branch?.name ?? 'สาขา'} — Ifeew's Thaimassage` })
 </script>
 
 <template>
-  <div v-if="detail?.branch">
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/branches" class="mb-2">สาขาทั้งหมด</v-btn>
-    <h1 class="m-0 mb-1 text-2xl font-semibold text-cocoa">{{ detail.branch.name }}</h1>
-    <p class="m-0 mb-4 text-sm text-light-brown">{{ detail.branch.address }}</p>
-    <div class="mb-6 flex flex-wrap gap-2">
-      <v-btn v-if="detail.branch.phone" :href="`tel:${detail.branch.phone.replace(/\s|-/g, '')}`" variant="tonal" color="primary" prepend-icon="mdi-phone-outline">
-        {{ detail.branch.phone }}
-      </v-btn>
-      <v-btn v-if="detail.branch.map_url" :href="detail.branch.map_url" target="_blank" rel="noopener" variant="text" prepend-icon="mdi-map-marker-outline">
-        แผนที่
-      </v-btn>
-    </div>
+  <div class="grid gap-4">
+    <NuxtLink to="/branches" class="inline-flex w-fit items-center gap-1.5 text-[15px] text-muted-foreground no-underline hover:text-foreground">
+      <ArrowLeft class="size-4" /> สาขาทั้งหมด
+    </NuxtLink>
 
-    <v-card class="mb-6 p-5">
-      <p class="m-0 mb-3 font-medium">เวลาทำการ</p>
-      <div v-for="h in detail.hours" :key="h.iso_dow" class="flex justify-between py-1 text-sm">
-        <span>{{ isoDowLabels[h.iso_dow] }}</span>
-        <span :class="h.is_closed ? 'text-red-700' : ''">{{ timeText(h) }}</span>
-      </div>
-      <template v-if="detail.holidays.length">
-        <p class="m-0 mb-2 mt-4 font-medium">วันหยุด / เวลาพิเศษ</p>
-        <div v-for="h in detail.holidays" :key="h.holiday_date" class="flex justify-between py-1 text-sm">
-          <span>{{ new Date(`${h.holiday_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }} · {{ h.name }}</span>
-          <span :class="h.is_closed ? 'text-red-700' : ''">{{ timeText(h) }}</span>
+    <template v-if="detail?.branch">
+      <div class="flex flex-wrap items-end justify-between gap-4">
+        <div class="min-w-0">
+          <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">{{ detail.branch.name }}</h1>
+          <p v-if="detail.branch.address" class="m-0 mt-1 text-muted-foreground">{{ detail.branch.address }}</p>
         </div>
-      </template>
-    </v-card>
-
-    <h2 class="m-0 mb-4 text-lg font-semibold text-cocoa">บริการ</h2>
-    <p v-if="!services?.length" class="text-light-brown">ยังไม่มีบริการที่เปิดจอง</p>
-    <div v-for="[category, items] in grouped" :key="category" class="mb-6">
-      <p class="m-0 mb-2 text-sm font-medium text-light-brown">{{ category }}</p>
-      <div class="grid gap-3">
-        <ServiceCard v-for="s in items" :key="s.branch_service_id" :item="s" />
+        <div class="flex flex-wrap gap-2">
+          <Button as-child><NuxtLink :to="{ path: '/book', query: { branch: detail.branch.id } }">จองสาขานี้</NuxtLink></Button>
+          <Button v-if="detail.branch.phone" as-child variant="outline">
+            <a :href="tel(detail.branch.phone)"><Phone /> <span class="num">{{ detail.branch.phone }}</span></a>
+          </Button>
+          <Button v-if="detail.branch.map_url" as-child variant="ghost">
+            <a :href="detail.branch.map_url" target="_blank" rel="noopener"><MapPin /> แผนที่</a>
+          </Button>
+        </div>
       </div>
-    </div>
+
+      <div class="grid items-start gap-6 md:grid-cols-[320px_minmax(0,1fr)]">
+        <Card class="gap-4 py-5">
+          <CardHeader class="px-5"><CardTitle>เวลาทำการ</CardTitle></CardHeader>
+          <CardContent class="grid gap-4 px-5">
+            <OpenToday :hours="today?.[detail.branch.id] ?? null" />
+            <dl class="m-0 grid">
+              <div
+                v-for="h in detail.hours"
+                :key="h.iso_dow"
+                class="-mx-2 flex justify-between rounded-md px-2 py-1.5 text-[15px]"
+                :class="h.iso_dow === todayDow ? 'bg-muted font-medium' : ''"
+              >
+                <dt>{{ isoDowLabels[h.iso_dow] }}<span v-if="h.iso_dow === todayDow" class="text-muted-foreground"> · วันนี้</span></dt>
+                <dd class="num m-0" :class="h.is_closed ? 'text-muted-foreground' : ''">{{ timeText(h) }}</dd>
+              </div>
+            </dl>
+            <template v-if="detail.holidays.length">
+              <h3 class="m-0 text-base font-semibold">วันหยุดและเวลาพิเศษ</h3>
+              <dl class="m-0 grid gap-1">
+                <div v-for="h in detail.holidays" :key="h.holiday_date" class="flex justify-between gap-3 text-[15px]">
+                  <dt>{{ new Date(`${h.holiday_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' }) }} · {{ h.name }}</dt>
+                  <dd class="num m-0 shrink-0" :class="h.is_closed ? 'text-tint-danger-ink' : ''">{{ timeText(h) }}</dd>
+                </div>
+              </dl>
+            </template>
+          </CardContent>
+        </Card>
+
+        <section class="grid gap-4" aria-labelledby="svc-h">
+          <h2 id="svc-h" class="m-0 text-xl font-semibold">บริการที่สาขานี้</h2>
+          <p v-if="!services?.length" class="m-0 rounded-lg border border-dashed px-4 py-3 text-muted-foreground">ยังไม่มีบริการที่เปิดจอง</p>
+          <div v-for="[category, items] in grouped" :key="category" class="grid gap-3">
+            <h3 class="m-0 flex items-center gap-2 text-base font-semibold">
+              <span class="size-2.5 rounded-full" :class="categoryTint(category)" aria-hidden="true" />{{ category }}
+            </h3>
+            <ServiceCard v-for="s in items" :key="s.branch_service_id" :item="s" />
+          </div>
+        </section>
+      </div>
+    </template>
+    <Alert v-else variant="info"><AlertDescription>ไม่พบสาขานี้</AlertDescription></Alert>
   </div>
-  <v-alert v-else type="info" variant="tonal" text="ไม่พบสาขานี้" />
 </template>

@@ -52,6 +52,8 @@ export default defineNuxtConfig({
   runtimeConfig: {
     public: {
       // ติดตาม error (ว่าง = ปิด) และชื่อสภาพแวดล้อม (staging/production)
+      // รหัสบริษัท (companies.code) ใช้ตอนเจ้าของร้าน login ด้วย PIN
+      companyCode: 'IFEEW',
       sentryDsn: '',
       appEnv: '',
       // URL ของ Edge Functions (ปกติ = {SUPABASE_URL}/functions/v1)

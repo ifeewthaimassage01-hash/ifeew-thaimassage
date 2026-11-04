@@ -2,7 +2,7 @@
 begin;
 create extension if not exists pgtap with schema extensions;
 
-select plan(17);
+select plan(24);
 
 -- -----------------------------------------------------------------------------
 -- รูปแบบ PIN
@@ -13,14 +13,14 @@ select throws_ok($$select private.assert_valid_pin('999999')$$, '22023', null, '
 select lives_ok($$select private.assert_valid_pin('246810')$$, 'PIN ปกติผ่าน');
 
 -- -----------------------------------------------------------------------------
--- ผูกเครื่อง: OWNER aal1 ไม่ได้, aal2 ได้
+-- ผูกเครื่อง: STAFF ไม่ได้, OWNER ได้
 -- -----------------------------------------------------------------------------
 select set_config('request.jwt.claims',
-  '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal1"}', true);
+  '{"sub":"10000000-0000-4000-8000-000000000002","role":"authenticated","aal":"aal1"}', true);
 set local role authenticated;
 select throws_ok(
   $$select public.pair_branch_device('30000000-0000-4000-8000-000000000001', 'iPad หน้าร้าน')$$,
-  '42501', null, 'OWNER ที่ยังไม่ผ่าน MFA ผูกเครื่องไม่ได้');
+  '42501', null, 'STAFF ผูกเครื่องไม่ได้');
 
 select set_config('request.jwt.claims',
   '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}', true);
@@ -78,6 +78,33 @@ select ok(
   (select count(*) from public.audit_logs where action = 'STAFF_PIN_LOGIN_FAILED') >= 4
   and exists (select 1 from public.audit_logs where action = 'STAFF_PIN_LOCKED'),
   'การ login ผิดและการล็อกถูกบันทึก audit');
+
+-- -----------------------------------------------------------------------------
+-- เจ้าของร้าน login ด้วย PIN บนเครื่องสาขา (migration 028)
+-- -----------------------------------------------------------------------------
+select set_config('request.jwt.claims',
+  '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal1"}', true);
+set local role authenticated;
+select lives_ok($$select public.set_my_owner_pin('20000000-0000-4000-8000-000000000001', '581472')$$,
+  'OWNER ตั้ง PIN ของตัวเองได้ (ไม่ต้องใช้ MFA)');
+reset role;
+set local role service_role;
+select ok((select bool_or((x ->> 'is_owner')::boolean) from jsonb_array_elements(
+            public.device_list_staff(current_setting('test.device_token')) -> 'staff') x),
+  'รายชื่อบนเครื่องสาขามีเจ้าของร้าน');
+select ok((public.device_verify_staff_pin(current_setting('test.device_token'),
+            '10000000-0000-4000-8000-000000000001', '581472') ->> 'ok')::boolean,
+  'เจ้าของร้าน login ด้วย PIN บนเครื่องสาขาได้');
+select ok((public.owner_verify_pin('IFEEW', '581472') ->> 'ok')::boolean,
+  'เจ้าของร้าน login ด้วย PIN อย่างเดียว (ไม่ต้องใช้เครื่องที่ผูก)');
+select is(public.owner_verify_pin('IFEEW', '111111') ->> 'error_code', 'INVALID_CREDENTIALS',
+  'PIN เจ้าของร้านผิด เข้าไม่ได้');
+select count(public.owner_verify_pin('IFEEW', '111111')) from generate_series(1, 4);
+select is(public.owner_verify_pin('IFEEW', '581472') ->> 'error_code', 'PIN_LOCKED',
+  'PIN เจ้าของร้านผิดหลายครั้ง = ล็อก (PIN ถูกก็เข้าไม่ได้)');
+select is(public.owner_verify_pin('NOPE', '581472') ->> 'error_code', 'INVALID_CREDENTIALS',
+  'รหัสบริษัทผิด เข้าไม่ได้');
+reset role;
 
 -- -----------------------------------------------------------------------------
 -- ยกเลิกเครื่อง

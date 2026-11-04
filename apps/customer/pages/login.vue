@@ -1,6 +1,8 @@
 <script setup lang="ts">
 import { emailSchema } from '@ifeew/shared'
 
+useHead({ title: "เข้าสู่ระบบ — Ifeew's Thaimassage" })
+
 const supabase = useSupabaseClient()
 const route = useRoute()
 const { clear: clearCustomer } = useCustomer()
@@ -36,16 +38,17 @@ async function submit() {
 </script>
 
 <template>
-  <v-card class="mx-auto max-w-md p-6">
-    <h1 class="m-0 mb-6 text-xl font-semibold text-cocoa">เข้าสู่ระบบ</h1>
-    <v-form @submit.prevent="submit">
-      <v-text-field v-model="email" label="อีเมล" type="email" autocomplete="email" />
-      <v-text-field v-model="password" label="รหัสผ่าน" type="password" autocomplete="current-password" />
-      <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-      <v-btn type="submit" color="primary" block :loading="loading">เข้าสู่ระบบ</v-btn>
-    </v-form>
-    <p class="mb-0 mt-4 text-center text-sm">
-      ยังไม่มีบัญชี? <NuxtLink to="/register" class="text-light-brown">สมัครสมาชิก</NuxtLink>
-    </p>
-  </v-card>
+  <AuthShell title="เข้าสู่ระบบ" subtitle="ดูการจอง ประวัติการนวด และจองครั้งต่อไปได้เร็วขึ้น">
+    <form class="grid gap-4" novalidate @submit.prevent="submit">
+      <div class="grid gap-1.5"><Label for="email">อีเมล</Label><Input id="email" v-model="email" type="email" autocomplete="email" required /></div>
+      <div class="grid gap-1.5"><Label for="password">รหัสผ่าน</Label><Input id="password" v-model="password" type="password" autocomplete="current-password" required /></div>
+      <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
+      <Button type="submit" size="lg" class="w-full" :disabled="loading">{{ loading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ' }}</Button>
+    </form>
+    <template #footer>
+      ยังไม่มีบัญชี? <NuxtLink to="/register">สมัครสมาชิก</NuxtLink>
+      <span class="mx-1.5 text-muted-foreground">·</span>
+      <NuxtLink to="/book">จองโดยไม่สมัคร</NuxtLink>
+    </template>
+  </AuthShell>
 </template>
