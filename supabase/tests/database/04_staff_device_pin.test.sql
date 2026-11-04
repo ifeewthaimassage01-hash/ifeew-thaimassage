@@ -38,7 +38,7 @@ set local role service_role;
 select is(
   public.device_list_staff('dvc_invalid') ->> 'error_code', 'DEVICE_INVALID', 'token ผิดไม่ได้รายชื่อ');
 select is(
-  jsonb_array_length(public.device_list_staff(current_setting('test.device_token')) -> 'staff'), 1,
+  jsonb_array_length(public.device_list_staff(current_setting('test.device_token')) -> 'staff'), 2,
   'เครื่องสาขา SKV เห็นเฉพาะพนักงานสาขา SKV');
 
 -- -----------------------------------------------------------------------------

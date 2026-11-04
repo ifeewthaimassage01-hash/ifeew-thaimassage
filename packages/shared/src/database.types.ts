@@ -573,6 +573,7 @@ export type Database = {
           branch_id: string
           resource_type_id: string
           booking_item_id: string | null
+          service_order_item_id: string | null
           quantity: number
           starts_at: string
           ends_at: string
@@ -580,6 +581,259 @@ export type Database = {
           expires_at: string | null
           released_at: string | null
           release_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      pos_sessions: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          status: 'OPEN' | 'CLOSED'
+          business_date: string
+          opened_at: string
+          opened_by: string
+          opening_cash: number
+          opening_note: string | null
+          closed_at: string | null
+          closed_by: string | null
+          review_status: 'PENDING' | 'APPROVED' | 'REJECTED' | null
+          reviewed_by: string | null
+          reviewed_at: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      service_orders: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          customer_id: string | null
+          booking_id: string | null
+          channel: 'ONLINE' | 'WALK_IN' | 'STAFF'
+          business_date: string
+          status: 'OPEN' | 'COMPLETED' | 'CANCELLED'
+          note: string | null
+          completed_at: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancel_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      service_order_items: {
+        // therapist_fee ไม่ grant ให้ Client
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          service_order_id: string
+          booking_item_id: string | null
+          branch_service_option_id: string
+          service_id: string
+          service_name: string
+          service_name_en: string | null
+          duration_minutes: number
+          unit_price: number
+          quantity: number
+          discount_amount: number
+          line_total: number
+          status: 'ACTIVE' | 'CANCELLED'
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancel_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      queue_items: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          service_order_item_id: string
+          queue_date: string
+          queue_number: number
+          follows_queue_id: string | null
+          status: 'WAITING' | 'CALLED' | 'ACCEPTED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED'
+          planned_starts_at: string
+          planned_ends_at: string
+          called_at: string | null
+          called_by: string | null
+          accepted_at: string | null
+          accepted_by: string | null
+          started_at: string | null
+          started_by: string | null
+          completed_at: string | null
+          completed_by: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancel_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      service_assignments: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          queue_item_id: string
+          employee_id: string
+          status: 'ASSIGNED' | 'ACCEPTED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED'
+          off_shift_confirmed: boolean
+          handover_reason: string | null
+          assigned_at: string
+          assigned_by: string | null
+          accepted_at: string | null
+          accepted_by: string | null
+          started_at: string | null
+          completed_at: string | null
+          cancelled_at: string | null
+          cancelled_by: string | null
+          cancel_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      invoices: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          service_order_id: string
+          customer_id: string | null
+          business_date: string
+          invoice_number: string | null
+          receipt_number: string | null
+          status: 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID'
+          subtotal: number
+          discount_total: number
+          total: number
+          paid_amount: number
+          refunded_amount: number
+          issued_at: string | null
+          issued_by: string | null
+          paid_at: string | null
+          void_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      invoice_items: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          invoice_id: string
+          service_order_item_id: string
+          description: string
+          duration_minutes: number
+          unit_price: number
+          discount_amount: number
+          discount_reason: string | null
+          line_total: number
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      payments: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          invoice_id: string
+          pos_session_id: string | null
+          method: 'CASH' | 'BANK_TRANSFER' | 'QR' | 'DEPOSIT'
+          amount: number
+          status: 'SUCCESS' | 'VOID'
+          verification: 'AUTO' | 'MANUAL' | null
+          slip_check_id: string | null
+          slip_trans_ref: string | null
+          manual_reason: string | null
+          booking_deposit_id: string | null
+          received_by: string | null
+          received_at: string
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      tips: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          invoice_id: string | null
+          payment_id: string | null
+          employee_id: string
+          pos_session_id: string
+          method: 'CASH' | 'BANK_TRANSFER' | 'QR'
+          amount: number
+          status: 'RECORDED' | 'PAID_OUT' | 'VOID'
+          paid_out_at: string | null
+          paid_out_by: string | null
+          payout_movement_id: string | null
+          voided_at: string | null
+          void_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      expenses: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string | null
+          expense_scope: 'BRANCH' | 'HQ'
+          amount: number
+          note: string
+          photo_path: string
+          occurred_on: string
+          payment_source: 'CASH_DRAWER' | 'OTHER'
+          pos_session_id: string | null
+          is_large: boolean
+          status: 'RECORDED' | 'VOID'
+          recorded_by: string | null
+          void_requested_at: string | null
+          void_requested_by: string | null
+          void_request_reason: string | null
+          voided_at: string | null
+          voided_by: string | null
+          void_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      pos_cash_movements: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          pos_session_id: string
+          movement_type: 'CASH_IN' | 'CASH_OUT'
+          category: 'ADJUSTMENT' | 'EXPENSE' | 'EXPENSE_REVERSAL' | 'TIP_PAYOUT'
+          amount: number
+          reason: string
+          expense_id: string | null
         }
         Insert: never
         Update: never
@@ -779,6 +1033,94 @@ export type Database = {
       mark_no_show: { Args: { p_booking_id: string }; Returns: undefined }
       record_deposit_refund: { Args: { p_booking_id: string; p_reference: string }; Returns: undefined }
       set_booking_staff_note: { Args: { p_booking_id: string; p_note: string | null }; Returns: undefined }
+      pos_open_session: {
+        Args: { p_branch_id: string; p_opening_cash: number; p_note: string | null }
+        Returns: string
+      }
+      pos_available_starts: { Args: { p_branch_id: string; p_option_ids: string[] }; Returns: Json }
+      pos_create_walkin: {
+        Args: {
+          p_branch_id: string
+          p_customer_id: string | null
+          p_starts_at: string
+          p_option_ids: string[]
+          p_note: string | null
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      pos_add_order_items: {
+        Args: { p_order_id: string; p_starts_at: string; p_option_ids: string[]; p_idempotency_key: string }
+        Returns: Json
+      }
+      pos_check_in_booking: { Args: { p_booking_id: string }; Returns: Json }
+      queue_call: {
+        Args: { p_queue_id: string; p_employee_id: string; p_confirm_off_shift?: boolean; p_reason?: string | null }
+        Returns: Json
+      }
+      queue_accept: { Args: { p_queue_id: string }; Returns: Json }
+      queue_start: { Args: { p_queue_id: string }; Returns: Json }
+      queue_complete: { Args: { p_queue_id: string }; Returns: Json }
+      queue_cancel: { Args: { p_queue_id: string; p_reason: string }; Returns: Json }
+      pos_board: { Args: { p_branch_id: string; p_date?: string | null }; Returns: Json }
+      queue_extend: { Args: { p_queue_id: string; p_option_id: string; p_idempotency_key: string }; Returns: Json }
+      queue_handover: {
+        Args: { p_queue_id: string; p_employee_id: string; p_reason: string; p_confirm_off_shift?: boolean }
+        Returns: Json
+      }
+      queue_undo_start: { Args: { p_queue_id: string; p_reason: string }; Returns: Json }
+      queue_undo_complete: { Args: { p_queue_id: string; p_reason: string }; Returns: Json }
+      my_service_history: { Args: { p_company_code: string }; Returns: Json }
+      my_work_history: { Args: { p_from: string; p_to: string }; Returns: Json }
+      therapist_work_summary: {
+        Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }
+        Returns: Json
+      }
+      staff_dashboard: { Args: { p_branch_id: string }; Returns: Json }
+      pos_create_invoice: { Args: { p_order_id: string }; Returns: Json }
+      pos_set_invoice_discount: { Args: { p_invoice_item_id: string; p_amount: number; p_reason: string | null }; Returns: Json }
+      pos_issue_invoice: { Args: { p_invoice_id: string }; Returns: Json }
+      pos_record_payment: {
+        Args: {
+          p_invoice_id: string
+          p_method: string
+          p_amount: number
+          p_slip_check_id: string | null
+          p_manual_reason: string | null
+          p_tip_amount: number
+          p_tip_employee_id: string | null
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
+      pos_void_invoice: { Args: { p_invoice_id: string; p_reason: string; p_idempotency_key: string }; Returns: Json }
+      pos_refund_payment: {
+        Args: { p_payment_id: string; p_amount: number; p_method: string; p_reference: string | null; p_reason: string; p_idempotency_key: string }
+        Returns: Json
+      }
+      pos_cash_adjustment: { Args: { p_branch_id: string; p_type: string; p_amount: number; p_reason: string }; Returns: string }
+      pos_pay_out_tips: { Args: { p_branch_id: string; p_employee_id: string }; Returns: Json }
+      pos_close_session: { Args: { p_session_id: string; p_actual_cash: number; p_note: string | null }; Returns: Json }
+      pos_review_session: { Args: { p_session_id: string; p_approve: boolean; p_note: string | null }; Returns: undefined }
+      pos_sessions_list: { Args: { p_branch_id: string; p_from: string; p_to: string }; Returns: Json }
+      pos_record_expense: {
+        Args: {
+          p_company_id: string
+          p_branch_id: string | null
+          p_amount: number
+          p_note: string
+          p_photo_path: string
+          p_from_drawer: boolean
+          p_occurred_on: string | null
+        }
+        Returns: string
+      }
+      pos_void_expense: { Args: { p_expense_id: string; p_reason: string }; Returns: string }
+      pos_reject_expense_void: { Args: { p_expense_id: string; p_note: string | null }; Returns: undefined }
+      expenses_list: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
+      pos_invoice: { Args: { p_invoice_id: string }; Returns: Json }
+      pos_finance_board: { Args: { p_branch_id: string }; Returns: Json }
+      staff_dashboard_finance: { Args: { p_branch_id: string }; Returns: Json }
       merge_customers: {
         Args: { p_source_id: string; p_target_id: string; p_reason: string }
         Returns: undefined

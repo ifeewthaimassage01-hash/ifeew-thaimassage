@@ -38,11 +38,17 @@ watch(idle, (isIdle) => {
 
 const menu = computed(() => [
   { title: 'แดชบอร์ด', icon: 'mdi-view-dashboard-outline', to: '/' },
+  { title: 'หน้าร้าน (POS)', icon: 'mdi-cash-register', to: '/pos' },
+  { title: 'คิว', icon: 'mdi-format-list-numbered', to: '/queue' },
+  { title: 'รายจ่าย', icon: 'mdi-receipt-text-minus-outline', to: '/expenses' },
+  { title: 'กะและเงินสด', icon: 'mdi-cash-multiple', to: '/sessions' },
   { title: 'การจอง', icon: 'mdi-calendar-check-outline', to: '/bookings' },
   { title: 'ตารางงาน', icon: 'mdi-calendar-clock-outline', to: '/schedules' },
   { title: 'ลูกค้า', icon: 'mdi-account-heart-outline', to: '/customers' },
+  { title: 'งานของฉัน', icon: 'mdi-hand-heart-outline', to: '/my-work' },
   ...(isOwner.value
     ? [
+        { title: 'สรุปงานหมอ', icon: 'mdi-chart-box-outline', to: '/reports/therapists' },
         { title: 'บริการและราคา', icon: 'mdi-spa-outline', to: '/services' },
         { title: 'เตียงและอุปกรณ์', icon: 'mdi-bed-outline', to: '/resources' },
         { title: 'พนักงาน', icon: 'mdi-account-group-outline', to: '/employees' },

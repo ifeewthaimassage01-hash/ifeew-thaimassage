@@ -320,3 +320,295 @@ export function bangkokDateLong(iso: string): string {
 export function newIdempotencyKey(): string {
   return crypto.randomUUID()
 }
+
+// -----------------------------------------------------------------------------
+// Phase 5: POS & คิว
+// -----------------------------------------------------------------------------
+export type QueueStatus = 'WAITING' | 'CALLED' | 'ACCEPTED' | 'IN_SERVICE' | 'COMPLETED' | 'CANCELLED'
+export type OrderStatus = 'OPEN' | 'COMPLETED' | 'CANCELLED'
+export type OrderChannel = 'ONLINE' | 'WALK_IN' | 'STAFF'
+
+export const queueStatusLabels: Record<QueueStatus, string> = {
+  WAITING: 'รอเรียก',
+  CALLED: 'เรียกแล้ว รอหมอรับ',
+  ACCEPTED: 'หมอรับแล้ว',
+  IN_SERVICE: 'กำลังให้บริการ',
+  COMPLETED: 'เสร็จแล้ว',
+  CANCELLED: 'ยกเลิก',
+}
+
+export const orderChannelLabels: Record<OrderChannel, string> = {
+  ONLINE: 'จองออนไลน์',
+  WALK_IN: 'Walk-in',
+  STAFF: 'จองผ่านร้าน',
+}
+
+/** เลขคิวแสดงผล 3 หลัก เช่น 007 */
+export function formatQueueNumber(n: number): string {
+  return String(n).padStart(3, '0')
+}
+
+export interface PosOrderItem {
+  item_id: string
+  service_name: string
+  duration_minutes: number
+  unit_price: number
+  item_status: 'ACTIVE' | 'CANCELLED'
+  queue_id: string
+  queue_number: number
+  queue_status: QueueStatus
+  follows_queue_id: string | null
+  planned_starts_at: string
+  planned_ends_at: string
+  called_at: string | null
+  started_at: string | null
+  completed_at: string | null
+  cancel_reason: string | null
+  therapist: {
+    employee_id: string
+    nickname: string
+    user_id: string
+    assignment_status: 'ASSIGNED' | 'ACCEPTED' | 'IN_SERVICE' | 'COMPLETED'
+    off_shift_confirmed: boolean
+    started_at: string | null
+  } | null
+  handovers: Array<{ nickname: string; started_at: string; ended_at: string; reason: string }>
+}
+
+export interface PosOrder {
+  order_id: string
+  channel: OrderChannel
+  status: OrderStatus
+  business_date: string
+  booking_id: string | null
+  booking_code: string | null
+  customer_id: string | null
+  customer_name: string | null
+  phone_masked: string | null
+  note: string | null
+  cancel_reason: string | null
+  created_at: string
+  items: PosOrderItem[]
+}
+
+export interface PosTherapist {
+  employee_id: string
+  nickname: string
+  user_id: string
+  photo_path: string | null
+  on_shift: boolean
+  busy_queue_number: number | null
+  busy_status: 'ASSIGNED' | 'ACCEPTED' | 'IN_SERVICE' | null
+}
+
+export interface PosBoard {
+  business_date: string
+  is_today: boolean
+  session: {
+    session_id: string
+    opened_at: string
+    opening_cash: number
+    opened_by_name: string | null
+    business_date: string
+  } | null
+  orders: PosOrder[]
+  therapists: PosTherapist[]
+}
+
+// -----------------------------------------------------------------------------
+// Phase 6: Service Management
+// -----------------------------------------------------------------------------
+/** ย้อนเริ่ม/จบบริการได้ภายในเวลานี้ (ตรงกับ DB) */
+export const QUEUE_UNDO_MINUTES = 15
+/** เตือนบนกระดานเมื่อเลยเวลาจบเกินนี้ */
+export const QUEUE_OVERDUE_MINUTES = 10
+
+export interface ServiceHistoryRow {
+  business_date: string
+  branch_name: string
+  service_name: string
+  service_name_en: string | null
+  duration_minutes: number
+  unit_price: number
+  line_total: number
+  started_at: string
+  completed_at: string
+  therapists: string[]
+}
+
+export interface WorkHistoryRow {
+  assignment_id: string
+  business_date: string
+  branch_name: string
+  queue_number: number
+  service_name: string
+  duration_minutes: number
+  started_at: string
+  ended_at: string
+  worked_minutes: number
+  handover: boolean
+  off_shift: boolean
+  fee_estimate: number | null
+}
+
+export interface WorkHistory {
+  rows: WorkHistoryRow[]
+  total_count: number
+  total_minutes: number
+  total_fee_estimate: number
+}
+
+export interface TherapistSummaryRow {
+  employee_id: string
+  employee_code: string
+  nickname: string
+  services: number
+  worked_minutes: number
+  off_shift_count: number
+  handover_count: number
+  fee_estimate: number
+}
+
+export interface StaffDashboard {
+  business_date: string
+  queue: { waiting: number; called: number; in_service: number; completed: number; overdue: number }
+  bookings: { total: number; awaiting_check_in: number; checked_in: number; slip_review: number }
+  walk_in_orders: number
+  resources: Array<{ resource_type_id: string; name: string; status: string; total: number; in_use: number }>
+  session: { session_id: string; opened_at: string; opening_cash: number } | null
+  my_queue: Array<{ queue_id: string; queue_number: number; status: QueueStatus; service_name: string; duration_minutes: number }>
+}
+
+// -----------------------------------------------------------------------------
+// Phase 7: การเงินหน้าร้าน
+// -----------------------------------------------------------------------------
+export type InvoiceStatus = 'DRAFT' | 'ISSUED' | 'PARTIALLY_PAID' | 'PAID' | 'VOID'
+export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'QR' | 'DEPOSIT'
+
+export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
+  DRAFT: 'ร่าง',
+  ISSUED: 'รอชำระ',
+  PARTIALLY_PAID: 'จ่ายบางส่วน',
+  PAID: 'จ่ายครบ',
+  VOID: 'ยกเลิก (Void)',
+}
+
+export const paymentMethodLabels: Record<PaymentMethod, string> = {
+  CASH: 'เงินสด',
+  BANK_TRANSFER: 'โอน',
+  QR: 'QR',
+  DEPOSIT: 'มัดจำ',
+}
+
+export interface InvoiceView {
+  invoice_id: string
+  service_order_id: string
+  invoice_number: string | null
+  receipt_number: string | null
+  status: InvoiceStatus
+  business_date: string
+  customer_name: string | null
+  subtotal: number
+  discount_total: number
+  total: number
+  paid_amount: number
+  refunded_amount: number
+  balance: number
+  issued_at: string | null
+  paid_at: string | null
+  void_reason: string | null
+  max_staff_discount_percent: number
+  items: Array<{
+    invoice_item_id: string
+    description: string
+    duration_minutes: number
+    unit_price: number
+    discount_amount: number
+    discount_reason: string | null
+    line_total: number
+  }>
+  payments: Array<{
+    payment_id: string
+    method: PaymentMethod
+    amount: number
+    status: 'SUCCESS' | 'VOID'
+    verification: 'AUTO' | 'MANUAL' | null
+    slip_path: string | null
+    slip_trans_ref: string | null
+    manual_reason: string | null
+    received_at: string
+    received_by_name: string | null
+    refunded: number
+    void_reason: string | null
+  }>
+  tips: Array<{ tip_id: string; nickname: string; method: string; amount: number; status: string }>
+  deposit_available: number | null
+}
+
+export interface SlipCheck {
+  slip_check_id: string
+  outcome: 'VERIFIED' | 'REJECTED' | 'REVIEW'
+  message: string | null
+  slip_amount: number | null
+  slip_path: string
+}
+
+export interface FinanceBoard {
+  business_date: string
+  session_id: string | null
+  invoices: Array<{
+    invoice_id: string
+    service_order_id: string
+    invoice_number: string | null
+    status: InvoiceStatus
+    business_date: string
+    total: number
+    paid_amount: number
+    balance: number
+    customer_name: string | null
+  }>
+  outstanding: number
+  today_sales: number
+  unpaid_cash_tips: Array<{ employee_id: string; nickname: string; amount: number }>
+}
+
+export interface SessionRow {
+  session_id: string
+  status: 'OPEN' | 'CLOSED'
+  business_date: string
+  opened_at: string
+  opened_by_name: string | null
+  opening_cash: number
+  closed_at: string | null
+  closed_by_name: string | null
+  actual_cash: number | null
+  cash_difference: number | null
+  close_note: string | null
+  review_status: 'PENDING' | 'APPROVED' | 'REJECTED' | null
+  review_note: string | null
+  cash_sales?: number
+  transfer_sales?: number
+  qr_sales?: number
+  cash_tips?: number
+  cash_in?: number
+  cash_out?: number
+  cash_refunds?: number
+  expected_cash?: number
+}
+
+export interface ExpenseRow {
+  expense_id: string
+  amount: number
+  note: string
+  photo_path: string
+  occurred_on: string
+  payment_source: 'CASH_DRAWER' | 'OTHER'
+  is_large: boolean
+  status: 'RECORDED' | 'VOID'
+  recorded_by_name: string | null
+  created_at: string
+  session_open: boolean | null
+  void_requested_at: string | null
+  void_request_reason: string | null
+  void_reason: string | null
+}

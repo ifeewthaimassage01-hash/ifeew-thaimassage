@@ -20,6 +20,7 @@ async function logout() {
       <v-btn to="/book" variant="flat" color="primary" class="mr-1">จอง</v-btn>
       <template v-if="user">
         <v-btn to="/bookings" variant="text" icon="mdi-calendar-check-outline" aria-label="การจองของฉัน" />
+        <v-btn to="/history" variant="text" icon="mdi-history" aria-label="ประวัติการใช้บริการ" />
         <v-btn to="/profile" variant="text" icon="mdi-account-circle-outline" aria-label="โปรไฟล์" />
         <v-btn variant="text" icon="mdi-logout" aria-label="ออกจากระบบ" @click="logout" />
       </template>

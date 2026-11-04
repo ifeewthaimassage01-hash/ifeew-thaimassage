@@ -10,7 +10,7 @@ packages/
   shared/          Database types, Zod schema, ค่าคงที่ร่วม
 supabase/
   migrations/      Schema ทั้งหมด (แก้ผ่าน migration เท่านั้น)
-  functions/       Edge Functions (device-staff-list, staff-pin-login, staff-create, staff-set-status, customer-erasure, guest-booking, booking-tracking, booking-deposit-slip)
+  functions/       Edge Functions (device-staff-list, staff-pin-login, staff-create, staff-set-status, customer-erasure, guest-booking, booking-tracking, booking-deposit-slip, queue-pin-action, pos-payment-slip)
   tests/database/  pgTAP tests
   seed.sql         ข้อมูลทดสอบ (local/dev เท่านั้น)
 docs/phase-*/      ER Diagram และเอกสารออกแบบแต่ละ Phase
@@ -88,6 +88,26 @@ pnpm dev:customer
 - ถ้ายังไม่ตั้ง `SLIPOK_API_KEY` หรือ SlipOK Branch ID ของสาขา สลิปจะไปที่ Staff App เมนู “การจอง” → แท็บ “รอตรวจสลิป”
 - Staff App เมนู “เตียงและอุปกรณ์” (OWNER): จำนวนต่อสาขา, บริการใช้อะไร, บัญชีรับมัดจำ + SlipOK Branch ID
 
+ขั้นตอนทดสอบ Phase 5 (สาขา SKV มีหมอ 2 คน: นภา PIN 246810, ดาว PIN 482916):
+- เมนู “หน้าร้าน (POS)” → “เปิดกะ” → “รับลูกค้า Walk-in” → เลือกบริการ (ระบบเลือกเวลาว่างเร็วสุดให้) → จอแสดงเลขคิวให้แจ้งลูกค้า
+- ลูกค้าที่จองไว้วันนี้ → “เช็กอิน”
+- เมนู “คิว” → “เรียกคิว” เลือกหมอ → ออกจากระบบแล้ว login เป็นหมอ (PIN) → แท็บ “คิวของฉัน” → รับคิว → เริ่มบริการ → จบบริการ
+- เปิดเมนู “คิว” ไว้สองเครื่อง/สองแท็บ เพื่อดูการอัปเดตแบบ Realtime
+
+ขั้นตอนทดสอบ Phase 6:
+- เมนู “คิว” บนเครื่องที่ผูกสาขาแล้ว: ปุ่ม “หมอกด PIN” ให้หมอรับ/เริ่ม/จบคิวของตัวเองโดยไม่ต้องออกจากระบบหน้าร้าน (ต้อง `pnpm functions:serve`)
+- คิวที่กำลังให้บริการ: “ต่อเวลา” (หมอคนเดิมทำต่อทันทีเมื่อจบรายการเดิม), “เปลี่ยนหมอ” (ค่ามือแบ่งตามเวลา), “ย้อนเริ่ม”; คิวที่เพิ่งจบ: “ย้อนจบบริการ” (ภายใน 15 นาที)
+- เมนู “งานของฉัน” (หมอ) และ “สรุปงานหมอ” (OWNER); แดชบอร์ดหน้าแรก
+- Customer App: ไอคอนประวัติ → ประวัติการใช้บริการ
+
+ขั้นตอนทดสอบ Phase 7:
+- เมนู “หน้าร้าน (POS)” → เปิดกะ → การ์ดลูกค้า “ชำระเงิน” → ส่วนลด (ไม่เกิน 20% สำหรับพนักงาน) → “ออก Invoice” → รับเงินสด/QR/โอน (+ทิป)
+- QR/โอน: “ถ่ายรูปสลิป” → ถ้ายังไม่ตั้ง SlipOK ระบบให้พนักงานยืนยันเองพร้อมเหตุผล (ต้อง `pnpm functions:serve`)
+- ลูกค้าที่จองและจ่ายมัดจำแล้ว: ออก Invoice แล้วระบบหักมัดจำให้อัตโนมัติ
+- “เงินเข้า/ออกลิ้นชัก”, “จ่ายทิป”, “ปิดกะ” (กรอกเงินที่นับได้ก่อน แล้วจึงเห็นยอดที่ควรมี) → เมนู “กะและเงินสด” (OWNER อนุมัติ)
+- เมนู “รายจ่าย”: จำนวนเงิน + หมายเหตุ + รูป; ยกเลิกในกะเดียวกันได้ทันที นอกนั้นส่งคำขอให้ OWNER
+- OWNER: Void Invoice ที่รับเงินแล้ว / คืนเงิน (ต้องยืนยันรหัส Authenticator ซ้ำ)
+
 ## ทดสอบ
 
 ```bash
@@ -110,7 +130,7 @@ pnpm db:types
 
 1. สร้าง Supabase project แยก dev / staging / production (Region Singapore)
 2. `supabase link --project-ref <ref>` แล้ว `supabase db push` (ไม่ push `seed.sql` ไป staging/production)
-3. `supabase functions deploy device-staff-list staff-pin-login staff-create staff-set-status customer-erasure guest-booking booking-tracking booking-deposit-slip` และ `supabase secrets set ALLOWED_ORIGINS=...`
+3. `supabase functions deploy device-staff-list staff-pin-login staff-create staff-set-status customer-erasure guest-booking booking-tracking booking-deposit-slip queue-pin-action pos-payment-slip` และ `supabase secrets set ALLOWED_ORIGINS=...`
 4. `pg_cron`: migration 019 จะ schedule งานปล่อยการจองที่หมดเวลาชำระให้อัตโนมัติถ้าฐานข้อมูลมี pg_cron (Supabase มีให้) — ตรวจใน SQL Editor ด้วย `select * from cron.job;` ถ้าไม่มี ให้เปิด extension `pg_cron` แล้วรัน `select cron.schedule('expire-stale-bookings', '* * * * *', 'select private.expire_stale_bookings()');`
 5. Dashboard → Auth: เปิด TOTP MFA, ปิด/เปิด signup ตามต้องการ, ตั้ง password policy ให้ตรงกับ `config.toml`
 6. Vercel: สร้าง 2 project (root = `apps/customer`, `apps/staff`) ตั้ง env ตามตารางด้านบน

@@ -61,7 +61,7 @@ select set_config('request.jwt.claims',
   '{"sub":"10000000-0000-4000-8000-000000000001","role":"authenticated","aal":"aal2"}', true);
 
 select ok(private.is_company_owner('20000000-0000-4000-8000-000000000001'), 'OWNER aal2 ได้สิทธิ์เจ้าของ');
-select is((select count(*)::int from public.company_memberships), 3, 'OWNER เห็น membership ทั้งบริษัท');
+select is((select count(*)::int from public.company_memberships), 4, 'OWNER เห็น membership ทั้งบริษัท');
 select ok((select count(*) from public.audit_logs) > 0, 'OWNER อ่าน audit_logs ได้');
 
 update public.branches set name = 'สาขาสุขุมวิท 22' where code = 'SKV';
