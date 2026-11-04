@@ -1,0 +1,12 @@
+node_modules
+.nuxt
+.output
+.data
+dist
+.env
+.env.*
+!.env.example
+supabase/functions/.env
+*.log
+.DS_Store
+.claude/settings.local.json
