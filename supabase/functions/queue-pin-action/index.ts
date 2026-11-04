@@ -1,5 +1,6 @@
 // POST /functions/v1/queue-pin-action   (ต้องมี JWT ของผู้ใช้ที่ login อยู่บนเครื่องสาขา)
-// body: { device_token, user_id, pin, queue_id, action: 'ACCEPT' | 'START' | 'COMPLETE' }
+// body: { device_token, user_id, pin, action, queue_id? }
+//   action: 'ACCEPT' | 'START' | 'COMPLETE' (ต้องมี queue_id) | 'CLOCK_IN' | 'CLOCK_OUT' (ลงเวลาเข้า/ออกงาน)
 // หมอกดรับ/เริ่ม/จบคิวของตัวเองบนเครื่องสาขาโดยไม่ต้อง logout คนหน้าร้าน
 // 1) Rate limit ต่อ IP / เครื่อง / หมอ (ชุดเดียวกับ staff-pin-login)
 // 2) device_verify_staff_pin ตรวจเครื่อง + สาขา + PIN (นับครั้งผิด/ล็อก + audit)
@@ -17,7 +18,8 @@ import {
 } from '../_shared/http.ts'
 
 const PIN_RE = /^[0-9]{6}$/
-const ACTIONS = new Set(['ACCEPT', 'START', 'COMPLETE'])
+const QUEUE_ACTIONS = new Set(['ACCEPT', 'START', 'COMPLETE'])
+const CLOCK_ACTIONS = new Set(['CLOCK_IN', 'CLOCK_OUT'])
 
 Deno.serve(async (req) => {
   const early = preflight(req)
@@ -37,7 +39,8 @@ Deno.serve(async (req) => {
   const action = typeof body.action === 'string' ? body.action : ''
 
   if (!DEVICE_TOKEN_RE.test(token)) return json(req, 401, { error_code: 'DEVICE_INVALID' })
-  if (!UUID_RE.test(userId) || !UUID_RE.test(queueId) || !PIN_RE.test(pin) || !ACTIONS.has(action)) {
+  const isClock = CLOCK_ACTIONS.has(action)
+  if (!UUID_RE.test(userId) || !PIN_RE.test(pin) || !(isClock || (QUEUE_ACTIONS.has(action) && UUID_RE.test(queueId)))) {
     return json(req, 400, { error_code: 'INVALID_BODY' })
   }
 
@@ -68,12 +71,14 @@ Deno.serve(async (req) => {
       })
     }
 
-    const { data, error } = await admin.rpc('device_queue_action', {
-      p_device_token: token,
-      p_user_id: userId,
-      p_queue_id: queueId,
-      p_action: action,
-    })
+    const { data, error } = isClock
+      ? await admin.rpc('device_attendance_action', { p_device_token: token, p_user_id: userId, p_action: action })
+      : await admin.rpc('device_queue_action', {
+          p_device_token: token,
+          p_user_id: userId,
+          p_queue_id: queueId,
+          p_action: action,
+        })
     if (error) {
       if (error.code === 'P0001') return json(req, 409, { error_code: 'CAPACITY_FULL', message: error.message })
       return dbErrorResponse(req, error)

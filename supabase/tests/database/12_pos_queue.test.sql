@@ -11,8 +11,10 @@ select plan(40);
 update public.branch_holidays set is_active = false;
 update public.branch_opening_hours
    set is_closed = false,
-       opens_at = date_trunc('minute', (now() at time zone 'Asia/Bangkok') - interval '1 hour')::time,
-       closes_at = date_trunc('minute', (now() at time zone 'Asia/Bangkok') - interval '61 minutes')::time;
+       opens_at = case when extract(hour from now() at time zone 'Asia/Bangkok') < 1 then time '00:00'
+                       else date_trunc('minute', (now() at time zone 'Asia/Bangkok') - interval '1 hour')::time end,
+       closes_at = case when extract(hour from now() at time zone 'Asia/Bangkok') < 1 then time '23:59'
+                       else date_trunc('minute', (now() at time zone 'Asia/Bangkok') - interval '61 minutes')::time end;
 update public.employee_schedules set status = 'CANCELLED'
  where branch_id = '30000000-0000-4000-8000-000000000001' and status = 'SCHEDULED';
 insert into public.employee_schedules (company_id, branch_id, employee_id, starts_at, ends_at)

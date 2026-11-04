@@ -1,0 +1,22 @@
+{
+  "company": { "code": "IFEEW", "name": "Ifeew's Thaimassage", "legal_name": "", "tax_id": "" },
+  "owner_email": "owner@example.com",
+  "owner_display_name": "ชื่อเจ้าของร้าน",
+  "branches": [
+    { "code": "SKV", "name": "สาขาสุขุมวิท", "address": "ที่อยู่สาขา", "phone": "02-000-0001", "sort_order": 1 }
+  ],
+  "policies": [
+    {
+      "type": "PRIVACY_NOTICE",
+      "version": "1.0",
+      "title": "นโยบายความเป็นส่วนตัว",
+      "content": "ใส่ข้อความนโยบายความเป็นส่วนตัวฉบับจริงที่ตรวจกับผู้เชี่ยวชาญกฎหมายแล้ว (อย่างน้อย 50 ตัวอักษร)"
+    },
+    {
+      "type": "MARKETING",
+      "version": "1.0",
+      "title": "การรับข่าวสารและโปรโมชัน",
+      "content": "ใส่ข้อความขอความยินยอมรับข่าวสาร"
+    }
+  ]
+}

@@ -108,6 +108,13 @@ pnpm dev:customer
 - เมนู “รายจ่าย”: จำนวนเงิน + หมายเหตุ + รูป; ยกเลิกในกะเดียวกันได้ทันที นอกนั้นส่งคำขอให้ OWNER
 - OWNER: Void Invoice ที่รับเงินแล้ว / คืนเงิน (ต้องยืนยันรหัส Authenticator ซ้ำ)
 
+ขั้นตอนทดสอบ Phase 8:
+- เมนู “ประกันมือ/ลงเวลา” (OWNER): ตั้งหมอประจำ/หมอวิ่ง และยอดประกันต่อวัน; ตารางผลประกันรายวัน + ให้/ไม่ให้พร้อมเหตุผล
+- เมนู “คิว” บนเครื่องที่ผูกสาขา: ปุ่ม “ลงเวลา” → เลือกชื่อ → PIN (เข้า/ออกงาน)
+- เมนู “ปิดยอดรายวัน”: ปิดกะครบแล้วกด “ส่งปิดยอด” → OWNER ตรวจ/อนุมัติ (ใส่ยอดปรับปรุงได้)
+- เมนู “ค่ามือหมอ” (OWNER): สร้างรอบจ่าย → ยืนยันจ่าย (ยืนยันรหัส Authenticator) / ปรับค่ามือ
+- เมนู “ภาพรวมทุกสาขา”, “รายงาน” (ส่งออก CSV), “งวดบัญชี” (ล็อก/เปิดงวด); หมอดูรายได้ที่ “งานของฉัน”
+
 ## ทดสอบ
 
 ```bash
@@ -126,12 +133,33 @@ pnpm typecheck
 pnpm db:types
 ```
 
-## Deploy (สรุป)
+## ทดสอบบน PostgreSQL จริง (ไม่ต้องใช้ Docker)
 
-1. สร้าง Supabase project แยก dev / staging / production (Region Singapore)
-2. `supabase link --project-ref <ref>` แล้ว `supabase db push` (ไม่ push `seed.sql` ไป staging/production)
-3. `supabase functions deploy device-staff-list staff-pin-login staff-create staff-set-status customer-erasure guest-booking booking-tracking booking-deposit-slip queue-pin-action pos-payment-slip` และ `supabase secrets set ALLOWED_ORIGINS=...`
-4. `pg_cron`: migration 019 จะ schedule งานปล่อยการจองที่หมดเวลาชำระให้อัตโนมัติถ้าฐานข้อมูลมี pg_cron (Supabase มีให้) — ตรวจใน SQL Editor ด้วย `select * from cron.job;` ถ้าไม่มี ให้เปิด extension `pg_cron` แล้วรัน `select cron.schedule('expire-stale-bookings', '* * * * *', 'select private.expire_stale_bookings()');`
-5. Dashboard → Auth: เปิด TOTP MFA, ปิด/เปิด signup ตามต้องการ, ตั้ง password policy ให้ตรงกับ `config.toml`
-6. Vercel: สร้าง 2 project (root = `apps/customer`, `apps/staff`) ตั้ง env ตามตารางด้านบน
-7. สร้างบริษัท/OWNER คนแรกของ staging/production — ยังไม่มีสคริปต์ (ต้องทำก่อนขึ้น Production)
+`tools/dbtest` เปิด PostgreSQL ในเครื่อง (embedded) แล้วรัน migrations + seed:
+
+```bash
+cd tools/dbtest && npm install
+```
+
+```bash
+npm test
+```
+
+```bash
+npm run concurrency
+```
+
+```bash
+npm run perf
+```
+
+```bash
+node lint.mjs ../..
+```
+
+ผลรอบล่าสุด: [docs/phase-9/test-report.md](docs/phase-9/test-report.md)
+
+## Deploy
+
+ดู [docs/deploy.md](docs/deploy.md) (Supabase, Edge Functions, Vercel, สร้าง OWNER แรกด้วย `tools/bootstrap`, รายการตรวจก่อนเปิดใช้, สำรองข้อมูล)
+คู่มือผู้ใช้: [docs/manual.md](docs/manual.md)

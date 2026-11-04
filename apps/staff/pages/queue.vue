@@ -281,6 +281,45 @@ async function submitPin(pin: string) {
     pinLoading.value = false
   }
 }
+
+// ---------------------------------------------------------------------------
+// ลงเวลาเข้า/ออกงานด้วย PIN (ใช้ตัดสินประกันมือของหมอประจำ)
+// ---------------------------------------------------------------------------
+type AttendanceToday = { employee_id: string; user_id: string; nickname: string; clock_in_at: string | null; clock_out_at: string | null }
+const clockDialog = ref(false)
+const clockList = ref<AttendanceToday[]>([])
+const clockWho = ref<AttendanceToday | null>(null)
+const clockError = ref<string | null>(null)
+const clockLoading = ref(false)
+const clockPad = ref<{ reset: () => void } | null>(null)
+
+async function openClock() {
+  clockWho.value = null
+  clockError.value = null
+  clockDialog.value = true
+  if (!activeBranch.value) return
+  const { data } = await supabase.rpc('branch_attendance_today', { p_branch_id: activeBranch.value.branch_id })
+  clockList.value = (data ?? []) as unknown as AttendanceToday[]
+}
+
+async function submitClock(pin: string) {
+  const who = clockWho.value
+  if (!who || !device.token.value) return
+  const action = who.clock_in_at ? 'CLOCK_OUT' : 'CLOCK_IN'
+  clockLoading.value = true
+  clockError.value = null
+  try {
+    await callEdge('queue-pin-action', { device_token: device.token.value, user_id: who.user_id, pin, action })
+    clockDialog.value = false
+    ok(`${who.nickname} ลงเวลา${action === 'CLOCK_IN' ? 'เข้า' : 'ออก'}งานแล้ว`)
+  } catch (e) {
+    const data = (e as { data?: { message?: string } }).data
+    clockError.value = data?.message ?? device.errorMessage(e).message
+    clockPad.value?.reset()
+  } finally {
+    clockLoading.value = false
+  }
+}
 </script>
 
 <template>
@@ -292,6 +331,7 @@ async function submitPin(pin: string) {
           <v-btn value="all">คิวทั้งหมด</v-btn>
           <v-btn value="mine">คิวของฉัน <v-badge v-if="mine.length" :content="mine.length" color="error" inline /></v-btn>
         </v-btn-toggle>
+        <v-btn v-if="device.token.value" variant="tonal" prepend-icon="mdi-clock-check-outline" @click="openClock">ลงเวลา</v-btn>
         <v-btn icon="mdi-refresh" variant="text" aria-label="โหลดใหม่" @click="load" />
       </div>
     </div>
@@ -467,6 +507,31 @@ async function submitPin(pin: string) {
           <v-btn variant="text" @click="extendDialog = false">ปิด</v-btn>
           <v-btn color="primary" :disabled="!extendOption" :loading="busy === extendRow.queue_id" @click="submitExtend">ต่อเวลา</v-btn>
         </div>
+      </v-card>
+    </v-dialog>
+
+    <!-- ลงเวลา -->
+    <v-dialog v-model="clockDialog" max-width="420">
+      <v-card class="p-6">
+        <template v-if="!clockWho">
+          <p class="m-0 mb-3 text-lg font-medium">ลงเวลาเข้า/ออกงาน</p>
+          <div class="grid gap-2">
+            <v-btn v-for="a in clockList" :key="a.employee_id" variant="outlined" class="justify-start" :disabled="!!a.clock_out_at"
+              @click="clockWho = a; clockError = null">
+              {{ a.nickname }}
+              <span class="ml-2 text-xs text-light-brown">
+                {{ a.clock_out_at ? `ออกแล้ว ${bangkokTime(a.clock_out_at)}` : a.clock_in_at ? `เข้า ${bangkokTime(a.clock_in_at)} · กดเพื่อลงเวลาออก` : 'กดเพื่อลงเวลาเข้า' }}
+              </span>
+            </v-btn>
+          </div>
+          <div class="mt-4 flex justify-end"><v-btn variant="text" @click="clockDialog = false">ปิด</v-btn></div>
+        </template>
+        <template v-else>
+          <p class="m-0 text-center text-lg font-medium">{{ clockWho.nickname }}</p>
+          <p class="m-0 mb-4 text-center text-sm text-light-brown">ลงเวลา{{ clockWho.clock_in_at ? 'ออก' : 'เข้า' }}งาน · กด PIN ของคุณ</p>
+          <PinPad ref="clockPad" :loading="clockLoading" :error="clockError" @submit="submitClock" />
+          <div class="mt-4 flex justify-center"><v-btn variant="text" @click="clockWho = null">ย้อนกลับ</v-btn></div>
+        </template>
       </v-card>
     </v-dialog>
 

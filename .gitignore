@@ -10,3 +10,6 @@ supabase/functions/.env
 *.log
 .DS_Store
 .claude/settings.local.json
+
+# ข้อมูลจริงสำหรับสร้างบริษัท (มีอีเมล/นโยบายจริง)
+tools/bootstrap/company.json

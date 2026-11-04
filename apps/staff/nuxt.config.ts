@@ -44,13 +44,16 @@ export default defineNuxtConfig({
     redirectOptions: {
       login: '/login',
       callback: '/login',
-      exclude: [],
+      exclude: ['/set-password'],
       saveRedirectToCookie: false,
     },
   },
 
   runtimeConfig: {
     public: {
+      // ติดตาม error (ว่าง = ปิด) และชื่อสภาพแวดล้อม (staging/production)
+      sentryDsn: '',
+      appEnv: '',
       // URL ของ Edge Functions (ปกติ = {SUPABASE_URL}/functions/v1)
       functionsUrl: '',
       // URL ของ Customer App (ใช้สร้างลิงก์ชำระมัดจำ/ติดตามการจอง)

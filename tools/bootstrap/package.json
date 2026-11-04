@@ -1,0 +1,12 @@
+{
+  "name": "@ifeew/bootstrap",
+  "private": true,
+  "type": "module",
+  "description": "สร้างบริษัทแรกและเชิญ OWNER บน Supabase (รันครั้งเดียว)",
+  "scripts": {
+    "create-company": "node create-company.mjs"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.58.0"
+  }
+}

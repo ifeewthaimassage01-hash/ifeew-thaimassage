@@ -612,3 +612,233 @@ export interface ExpenseRow {
   void_request_reason: string | null
   void_reason: string | null
 }
+
+// -----------------------------------------------------------------------------
+// Phase 8: การเงินส่วนกลาง
+// -----------------------------------------------------------------------------
+export type EmploymentType = 'REGULAR' | 'FREELANCE'
+export const employmentTypeLabels: Record<EmploymentType, string> = { REGULAR: 'หมอประจำ', FREELANCE: 'หมอวิ่ง' }
+
+export interface AttendanceToday {
+  employee_id: string
+  user_id: string
+  nickname: string
+  employment_type: EmploymentType
+  clock_in_at: string | null
+  clock_out_at: string | null
+}
+
+export interface AttendanceRow {
+  employee_id: string
+  nickname: string
+  employment_type: EmploymentType
+  branch_id: string
+  business_date: string
+  shift_start: string | null
+  shift_end: string | null
+  clock_in_at: string | null
+  clock_out_at: string | null
+  rate: number
+  earned: number
+  has_shift: boolean
+  attended: boolean
+  override_grant: boolean | null
+  override_reason: string | null
+  qualified: boolean
+  topup: number
+}
+
+export interface PayoutView {
+  payout_id: string
+  period_to: string
+  status: 'DRAFT' | 'PAID' | 'CANCELLED'
+  total: number
+  method: 'BANK_TRANSFER' | 'CASH' | null
+  reference: string | null
+  note: string | null
+  paid_at: string | null
+  created_at: string
+  items: Array<{
+    employee_id: string
+    nickname: string
+    employee_code: string
+    service_total: number
+    guarantee_total: number
+    adjustment_total: number
+    tip_total: number
+    net_amount: number
+  }>
+}
+
+export interface CommissionSummary {
+  employees: Array<{
+    employee_id: string
+    nickname: string
+    employee_code: string
+    employment_type: EmploymentType
+    service: number
+    guarantee: number
+    adjustments: number
+    unpaid: number
+    paid: number
+    unpaid_tips: number
+  }>
+  adjustments: Array<{
+    adjustment_id: string
+    nickname: string
+    business_date: string
+    amount: number
+    source: 'MANUAL' | 'VOID_REVERSAL' | 'GUARANTEE_RECALC'
+    reason: string
+    status: 'OPEN' | 'PAID'
+  }>
+  payouts: PayoutView[]
+}
+
+export const adjustmentSourceLabels = {
+  MANUAL: 'ปรับเอง',
+  VOID_REVERSAL: 'กลับรายการ (Void/คืนเงิน)',
+  GUARANTEE_RECALC: 'ปรับประกันมือ',
+} as const
+
+export interface DailyClosingFigures {
+  cash_sales: number
+  transfer_sales: number
+  qr_sales: number
+  deposit_applied: number
+  refunds: number
+  forfeited_deposits: number
+  expenses: number
+  net_revenue: number
+  sessions: number
+  open_sessions: number
+  cash_difference: number
+  rejected_sessions: number
+  tips: number
+  outstanding: number
+  service_commission: number
+  guarantee_topups: Array<{ employee_id: string; nickname: string; rate: number; earned: number; qualified: boolean; topup: number }>
+}
+
+export interface DailyClosingRow {
+  closing_id: string
+  branch_id: string
+  branch_name: string
+  business_date: string
+  status: 'SUBMITTED' | 'APPROVED' | 'REJECTED'
+  figures: DailyClosingFigures
+  submit_note: string | null
+  submitted_by_name: string | null
+  submitted_at: string
+  review_note: string | null
+  reviewed_at: string | null
+  adjustment_amount: number
+  adjustment_note: string | null
+}
+
+export interface FinancialPeriodRow {
+  period_start: string
+  status: 'LOCKED' | 'OPEN'
+  locked_at: string | null
+  reopened_at: string | null
+  reopen_reason: string | null
+  pending_closings: number
+}
+
+export interface FinanceReportRow {
+  period: string
+  branch_id: string
+  branch_name: string
+  cash_sales: number
+  transfer_sales: number
+  qr_sales: number
+  deposit_applied: number
+  refunds: number
+  forfeited_deposits: number
+  net_revenue: number
+  expenses: number
+  commission_cost: number
+  gross_profit: number
+}
+
+export interface FinanceReport {
+  rows: FinanceReportRow[]
+  hq_expenses: number
+  hq_commission_adjustments: number
+  daily_adjustments: number
+  outstanding: number
+}
+
+export interface OwnerDashboard {
+  today: string
+  kpis: {
+    today: { revenue: number; expenses: number; profit: number }
+    yesterday: { revenue: number }
+    month: { revenue: number; expenses: number; commission: number; profit: number }
+    prev_month_same_period: { revenue: number }
+    year: { revenue: number; profit: number }
+    prev_year_same_period: { revenue: number }
+  }
+  hq_expenses_month: number
+  daily: Array<{ date: string; revenue: number; profit: number }>
+  monthly: Array<{ month: string; revenue: number; profit: number }>
+  branches: Array<{
+    branch_id: string
+    branch_name: string
+    revenue: number
+    expenses: number
+    commission: number
+    profit: number
+    outstanding: number
+    customers: number
+    orders: number
+    walk_ins: number
+    bookings: number
+  }>
+  actions: {
+    sessions_pending: number
+    closings_pending: number
+    expense_void_requests: number
+    large_expenses_month: number
+    unpaid_commission: number
+    deposits_to_refund: number
+  }
+}
+
+export interface AbnormalExpenseRow {
+  expense_id: string
+  branch_name: string
+  occurred_on: string
+  amount: number
+  note: string
+  status: 'RECORDED' | 'VOID'
+  recorded_by_name: string | null
+  created_at: string
+  flags: Array<'LARGE' | 'FREQUENT_VOID' | 'OUTSIDE_HOURS' | 'DUPLICATE'>
+}
+
+export const abnormalFlagLabels = {
+  LARGE: 'ยอดสูง',
+  FREQUENT_VOID: 'ยกเลิกบ่อย',
+  OUTSIDE_HOURS: 'นอกเวลาทำการ',
+  DUPLICATE: 'ยอดซ้ำวันเดียวกัน',
+} as const
+
+export interface MyEarnings {
+  employment_type: EmploymentType
+  days: Array<{ business_date: string; clock_in_at: string | null; clock_out_at: string | null; service: number | null; guarantee: number | null }>
+  unpaid: number
+  unpaid_tips: number
+  payouts: Array<{ paid_at: string; period_to: string; method: string; net_amount: number }>
+}
+
+/** แปลงแถวเป็น CSV (มี BOM ให้ Excel อ่านภาษาไทยถูก) */
+export function toCsv(headers: Array<[key: string, label: string]>, rows: Array<Record<string, unknown>>): string {
+  const esc = (v: unknown) => {
+    const t = v === null || v === undefined ? '' : String(v)
+    return /[",\n]/.test(t) ? '"' + t.replace(/"/g, '""') + '"' : t
+  }
+  const lines = [headers.map(([, l]) => esc(l)).join(',')]
+  for (const r of rows) lines.push(headers.map(([k]) => esc(r[k])).join(','))
+  return '\uFEFF' + lines.join('\r\n')
+}

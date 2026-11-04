@@ -68,6 +68,8 @@ export type Database = {
       }
       company_settings: {
         Row: Stamp & {
+          attendance_grace_minutes: number
+          max_staff_discount_percent: number
           company_id: string
           timezone: string
           cancellation_cutoff_hours: number
@@ -116,6 +118,7 @@ export type Database = {
       }
       branches: {
         Row: Stamp & {
+          default_daily_guarantee: number | null
           id: string
           company_id: string
           code: string
@@ -279,6 +282,7 @@ export type Database = {
       }
       employees: {
         Row: Stamp & {
+          employment_type: 'REGULAR' | 'FREELANCE'
           id: string
           company_id: string
           user_id: string
@@ -296,6 +300,7 @@ export type Database = {
           nickname?: string
           photo_path?: string | null
           start_date?: string
+          employment_type?: 'REGULAR' | 'FREELANCE'
         }
         Relationships: []
       }
@@ -839,6 +844,112 @@ export type Database = {
         Update: never
         Relationships: []
       }
+      employee_guarantee_rates: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          employee_id: string
+          daily_amount: number
+          effective_from: string
+          effective_to: string | null
+          status: 'ACTIVE' | 'CANCELLED'
+          reason: string
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      staff_attendances: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          employee_id: string
+          business_date: string
+          clock_in_at: string
+          clock_out_at: string | null
+          clock_in_by: string | null
+          clock_out_by: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      commissions: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          employee_id: string
+          business_date: string
+          kind: 'SERVICE' | 'GUARANTEE'
+          service_assignment_id: string | null
+          base_amount: number
+          share_ratio: number | null
+          amount: number
+          status: 'ACCRUED' | 'PAID' | 'VOID'
+          payout_id: string | null
+          void_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      commission_adjustments: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string | null
+          employee_id: string
+          business_date: string
+          amount: number
+          source: 'MANUAL' | 'VOID_REVERSAL' | 'GUARANTEE_RECALC'
+          commission_id: string | null
+          reason: string
+          status: 'OPEN' | 'PAID'
+          payout_id: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      branch_daily_closings: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          branch_id: string
+          business_date: string
+          status: 'SUBMITTED' | 'APPROVED' | 'REJECTED'
+          figures: Json
+          submit_note: string | null
+          submitted_by: string | null
+          submitted_at: string
+          reviewed_by: string | null
+          reviewed_at: string | null
+          review_note: string | null
+          adjustment_amount: number
+          adjustment_note: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
+      financial_periods: {
+        Row: Stamp & {
+          id: string
+          company_id: string
+          period_start: string
+          status: 'LOCKED' | 'OPEN'
+          locked_at: string | null
+          locked_by: string | null
+          reopened_at: string | null
+          reopened_by: string | null
+          reopen_reason: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: []
+      }
     }
     Views: {
       v_public_branch_services: {
@@ -1121,6 +1232,45 @@ export type Database = {
       pos_invoice: { Args: { p_invoice_id: string }; Returns: Json }
       pos_finance_board: { Args: { p_branch_id: string }; Returns: Json }
       staff_dashboard_finance: { Args: { p_branch_id: string }; Returns: Json }
+      attendance_clock: { Args: { p_branch_id: string; p_action: string }; Returns: Json }
+      branch_attendance_today: { Args: { p_branch_id: string }; Returns: Json }
+      set_employee_guarantee: {
+        Args: { p_employee_id: string; p_daily_amount: number; p_effective_from: string; p_reason: string }
+        Returns: undefined
+      }
+      set_guarantee_override: {
+        Args: { p_employee_id: string; p_branch_id: string; p_date: string; p_grant: boolean; p_reason: string }
+        Returns: undefined
+      }
+      attendance_report: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
+      create_commission_payout: { Args: { p_company_id: string; p_period_to: string }; Returns: Json }
+      confirm_commission_payout: {
+        Args: { p_payout_id: string; p_method: string; p_reference: string | null; p_note: string | null }
+        Returns: Json
+      }
+      cancel_commission_payout: { Args: { p_payout_id: string }; Returns: undefined }
+      add_commission_adjustment: {
+        Args: { p_employee_id: string; p_branch_id: string | null; p_amount: number; p_reason: string }
+        Returns: string
+      }
+      commission_summary: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
+      daily_closing_preview: { Args: { p_branch_id: string; p_date: string }; Returns: Json }
+      submit_daily_closing: { Args: { p_branch_id: string; p_date: string; p_note: string | null }; Returns: string }
+      review_daily_closing: {
+        Args: { p_closing_id: string; p_approve: boolean; p_note: string | null; p_adjustment_amount: number; p_adjustment_note: string | null }
+        Returns: undefined
+      }
+      daily_closings_list: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
+      lock_financial_period: { Args: { p_company_id: string; p_month: string }; Returns: undefined }
+      reopen_financial_period: { Args: { p_company_id: string; p_month: string; p_reason: string }; Returns: undefined }
+      financial_periods_list: { Args: { p_company_id: string }; Returns: Json }
+      finance_report: {
+        Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string; p_group: string }
+        Returns: Json
+      }
+      owner_dashboard: { Args: { p_company_id: string }; Returns: Json }
+      abnormal_expenses: { Args: { p_company_id: string; p_from: string; p_to: string }; Returns: Json }
+      my_earnings: { Args: { p_from: string; p_to: string }; Returns: Json }
       merge_customers: {
         Args: { p_source_id: string; p_target_id: string; p_reason: string }
         Returns: undefined

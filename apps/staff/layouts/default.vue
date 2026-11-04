@@ -42,12 +42,18 @@ const menu = computed(() => [
   { title: 'คิว', icon: 'mdi-format-list-numbered', to: '/queue' },
   { title: 'รายจ่าย', icon: 'mdi-receipt-text-minus-outline', to: '/expenses' },
   { title: 'กะและเงินสด', icon: 'mdi-cash-multiple', to: '/sessions' },
+  { title: 'ปิดยอดรายวัน', icon: 'mdi-calendar-check', to: '/daily-closings' },
   { title: 'การจอง', icon: 'mdi-calendar-check-outline', to: '/bookings' },
   { title: 'ตารางงาน', icon: 'mdi-calendar-clock-outline', to: '/schedules' },
   { title: 'ลูกค้า', icon: 'mdi-account-heart-outline', to: '/customers' },
   { title: 'งานของฉัน', icon: 'mdi-hand-heart-outline', to: '/my-work' },
   ...(isOwner.value
     ? [
+        { title: 'ภาพรวมทุกสาขา', icon: 'mdi-chart-bar', to: '/owner' },
+        { title: 'รายงาน', icon: 'mdi-file-chart-outline', to: '/reports/finance' },
+        { title: 'ค่ามือหมอ', icon: 'mdi-hand-coin-outline', to: '/commissions' },
+        { title: 'ประกันมือ/ลงเวลา', icon: 'mdi-clock-check-outline', to: '/guarantees' },
+        { title: 'งวดบัญชี', icon: 'mdi-lock-clock', to: '/periods' },
         { title: 'สรุปงานหมอ', icon: 'mdi-chart-box-outline', to: '/reports/therapists' },
         { title: 'บริการและราคา', icon: 'mdi-spa-outline', to: '/services' },
         { title: 'เตียงและอุปกรณ์', icon: 'mdi-bed-outline', to: '/resources' },

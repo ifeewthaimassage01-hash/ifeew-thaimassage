@@ -48,6 +48,9 @@ export default defineNuxtConfig({
 
   runtimeConfig: {
     public: {
+      // ติดตาม error (ว่าง = ปิด) และชื่อสภาพแวดล้อม (staging/production)
+      sentryDsn: '',
+      appEnv: '',
       // รหัสบริษัทที่แอปลูกค้านี้ให้บริการ (NUXT_PUBLIC_COMPANY_CODE)
       companyCode: 'IFEEW',
       // URL ของ Edge Functions (ว่าง = {SUPABASE_URL}/functions/v1)

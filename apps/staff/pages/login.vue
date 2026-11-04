@@ -98,6 +98,24 @@ async function ownerLogin() {
   }
 }
 
+// ลืมรหัสผ่าน (เจ้าของร้าน): ส่งลิงก์ไปหน้า /set-password — ไม่บอกว่ามีอีเมลนี้ในระบบหรือไม่
+const resetSent = ref(false)
+async function forgotPassword() {
+  ownerError.value = null
+  const parsed = emailSchema.safeParse(email.value)
+  if (!parsed.success) {
+    ownerError.value = 'กรอกอีเมลก่อน แล้วกด “ลืมรหัสผ่าน”'
+    return
+  }
+  ownerLoading.value = true
+  try {
+    await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo: `${window.location.origin}/set-password` })
+    resetSent.value = true
+  } finally {
+    ownerLoading.value = false
+  }
+}
+
 onMounted(loadStaff)
 </script>
 
@@ -174,6 +192,9 @@ onMounted(loadStaff)
           />
           <v-alert v-if="ownerError" type="error" variant="tonal" class="mb-4" :text="ownerError" />
           <v-btn type="submit" color="primary" block :loading="ownerLoading">เข้าสู่ระบบ</v-btn>
+          <v-btn variant="text" block class="mt-2" :disabled="ownerLoading" @click="forgotPassword">ลืมรหัสผ่าน</v-btn>
+          <v-alert v-if="resetSent" type="info" variant="tonal" class="mt-2"
+            text="ถ้ามีบัญชีนี้ในระบบ จะได้รับอีเมลลิงก์ตั้งรหัสผ่านใหม่ (ตรวจกล่องจดหมายขยะด้วย)" />
         </v-form>
         <p class="mb-0 mt-4 text-center text-sm text-light-brown">บัญชีเจ้าของร้านต้องยืนยันด้วยแอป Authenticator ทุกครั้ง</p>
       </v-card>

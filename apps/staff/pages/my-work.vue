@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // งานของฉัน (หมอ): บริการที่ทำเสร็จ + ค่ามือประมาณการของตัวเอง (ยอดจ่ายจริงออกในระบบคอมมิชชัน)
-import { addDays, bangkokTime, bangkokToday, formatBaht, formatDuration, formatQueueNumber, type WorkHistory } from '@ifeew/shared'
+import { addDays, bangkokTime, bangkokToday, formatBaht, formatDuration, formatQueueNumber, type MyEarnings, type WorkHistory } from '@ifeew/shared'
 
 const supabase = useSupabaseClient()
 
@@ -29,6 +29,14 @@ function preset(kind: 'today' | 'week' | 'month') {
 }
 
 watch([from, to], load, { immediate: true })
+
+// รายได้ (ค่ามือที่ถึงเกณฑ์ + ประกันมือ) และรอบจ่าย
+const earnings = ref<MyEarnings | null>(null)
+async function loadEarnings() {
+  const { data: e } = await supabase.rpc('my_earnings', { p_from: from.value, p_to: to.value })
+  earnings.value = (e ?? null) as unknown as MyEarnings | null
+}
+watch([from, to], loadEarnings, { immediate: true })
 </script>
 
 <template>
@@ -64,6 +72,25 @@ watch([from, to], load, { immediate: true })
       <p class="m-0 mb-3 text-xs text-light-brown">
         ค่ามือเป็นยอดประมาณการจากราคาที่ตั้งไว้ (ถ้าส่งต่อหมอระหว่างบริการ แบ่งตามเวลาที่ทำจริง) ยอดจ่ายจริงยืนยันโดยเจ้าของร้าน
       </p>
+
+      <v-card v-if="earnings" class="mb-4 p-4">
+        <p class="m-0 mb-2 font-medium">รายได้ที่ร้านจะจ่าย</p>
+        <p class="m-0 text-sm">
+          ค้างจ่าย <b>{{ formatBaht(Number(earnings.unpaid)) }}</b>
+          <template v-if="Number(earnings.unpaid_tips)"> · ทิป (โอน/QR) ค้างจ่าย {{ formatBaht(Number(earnings.unpaid_tips)) }}</template>
+        </p>
+        <div v-if="earnings.days.length" class="mt-2 text-sm">
+          <p v-for="d in earnings.days" :key="d.business_date" class="m-0">
+            {{ d.business_date }} · ค่ามือ {{ formatBaht(Number(d.service ?? 0)) }}
+            <template v-if="Number(d.guarantee)"> · <b>ประกันมือเติม {{ formatBaht(Number(d.guarantee)) }}</b></template>
+            <span v-if="d.clock_in_at" class="text-light-brown"> · ลงเวลา {{ bangkokTime(d.clock_in_at) }}–{{ d.clock_out_at ? bangkokTime(d.clock_out_at) : '?' }}</span>
+          </p>
+        </div>
+        <p v-if="earnings.payouts.length" class="m-0 mt-2 text-sm text-light-brown">
+          จ่ายล่าสุด {{ earnings.payouts[0]!.paid_at.slice(0, 10) }} · {{ formatBaht(Number(earnings.payouts[0]!.net_amount)) }}
+        </p>
+        <p class="m-0 mt-1 text-xs text-light-brown">ค่ามือเข้าเกณฑ์จ่ายเมื่อบริการจบและลูกค้าจ่ายครบ · ประกันมือคิดเมื่อลงเวลาเข้า-ออกครบกะ</p>
+      </v-card>
 
       <p v-if="!data.rows.length" class="text-light-brown">ยังไม่มีงานในช่วงนี้</p>
       <div class="grid gap-2">

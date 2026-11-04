@@ -4,7 +4,7 @@
 // - หน้า meta.ownerOnly ต้องเป็น OWNER ที่ผ่าน MFA แล้ว
 // หมายเหตุ: เป็นการนำทางเท่านั้น สิทธิ์จริงบังคับด้วย RLS
 export default defineNuxtRouteMiddleware(async (to) => {
-  if (to.path === '/login') return
+  if (to.path === '/login' || to.path === '/set-password') return
 
   const user = useSupabaseUser()
   if (!user.value) return
