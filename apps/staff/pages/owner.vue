@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // แดชบอร์ดเจ้าของร้าน: ยอดทุกสาขา (วันนี้/เดือนนี้/ปีนี้ เทียบช่วงก่อน), กราฟ, เทียบสาขา, รายการที่ต้องทำ
+import { Banknote, CalendarRange, ChartColumn, TrendingUp } from '@lucide/vue'
 import { formatBaht, type OwnerDashboard } from '@ifeew/shared'
 
 definePageMeta({ ownerOnly: true })
@@ -33,78 +34,85 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
 
 <template>
   <div>
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">ภาพรวมทุกสาขา</h1>
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
+    <PageHeader title="ภาพรวมทุกสาขา" description="รายรับ กำไร และงานที่ต้องตรวจของทุกสาขา (รายรับไม่รวมทิป)">
+      <template #actions><Button as-child variant="outline"><NuxtLink to="/reports/finance">รายงานการเงิน</NuxtLink></Button></template>
+    </PageHeader>
+    <Alert v-if="error" variant="destructive" class="mb-6"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <div v-if="!dash && !error" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Skeleton v-for="n in 4" :key="n" class="h-32 rounded-xl" /></div>
 
-    <template v-if="dash">
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <v-card class="p-5">
-          <p class="m-0 text-sm text-light-brown">รายรับวันนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ baht(dash.kpis.today.revenue) }}</p>
-          <p class="m-0 text-sm">เมื่อวาน {{ baht(dash.kpis.yesterday.revenue) }}</p>
-        </v-card>
-        <v-card class="p-5">
-          <p class="m-0 text-sm text-light-brown">รายรับเดือนนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ baht(dash.kpis.month.revenue) }}</p>
-          <p class="m-0 text-sm">{{ change(dash.kpis.month.revenue, dash.kpis.prev_month_same_period.revenue) ?? '-' }} เทียบช่วงเดียวกันเดือนก่อน</p>
-        </v-card>
-        <v-card class="p-5">
-          <p class="m-0 text-sm text-light-brown">กำไรเบื้องต้นเดือนนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ baht(Number(dash.kpis.month.profit) - Number(dash.hq_expenses_month)) }}</p>
-          <p class="m-0 text-sm">รายจ่าย {{ baht(Number(dash.kpis.month.expenses) + Number(dash.hq_expenses_month)) }} · ค่ามือ {{ baht(dash.kpis.month.commission) }}</p>
-        </v-card>
-        <v-card class="p-5">
-          <p class="m-0 text-sm text-light-brown">รายรับปีนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ baht(dash.kpis.year.revenue) }}</p>
-          <p class="m-0 text-sm">{{ change(dash.kpis.year.revenue, dash.kpis.prev_year_same_period.revenue) ?? '-' }} เทียบปีก่อน</p>
-        </v-card>
+    <div v-if="dash" class="grid gap-6">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="รายรับวันนี้" :icon="Banknote" :value="baht(dash.kpis.today.revenue)" :hint="`เมื่อวาน ${baht(dash.kpis.yesterday.revenue)}`" />
+        <StatCard label="รายรับเดือนนี้" :icon="CalendarRange" :value="baht(dash.kpis.month.revenue)">
+          <template #hint><span class="num font-medium text-heading">{{ change(dash.kpis.month.revenue, dash.kpis.prev_month_same_period.revenue) ?? '—' }}</span> เทียบช่วงเดียวกันเดือนก่อน</template>
+        </StatCard>
+        <StatCard label="กำไรเบื้องต้นเดือนนี้" :icon="TrendingUp" :value="baht(Number(dash.kpis.month.profit) - Number(dash.hq_expenses_month))"
+          :hint="`รายจ่าย ${baht(Number(dash.kpis.month.expenses) + Number(dash.hq_expenses_month))} · ค่ามือ ${baht(dash.kpis.month.commission)}`" />
+        <StatCard label="รายรับปีนี้" :icon="ChartColumn" :value="baht(dash.kpis.year.revenue)">
+          <template #hint><span class="num font-medium text-heading">{{ change(dash.kpis.year.revenue, dash.kpis.prev_year_same_period.revenue) ?? '—' }}</span> เทียบปีก่อน</template>
+        </StatCard>
       </div>
 
       <!-- ต้องดำเนินการ -->
-      <v-card class="mt-4 p-4">
-        <p class="m-0 mb-2 font-medium">ต้องดำเนินการ</p>
-        <div class="flex flex-wrap gap-2">
-          <v-chip to="/sessions" :color="dash.actions.sessions_pending ? 'warning' : undefined" variant="tonal">กะรอตรวจ {{ dash.actions.sessions_pending }}</v-chip>
-          <v-chip to="/daily-closings" :color="dash.actions.closings_pending ? 'warning' : undefined" variant="tonal">ปิดยอดรอตรวจ {{ dash.actions.closings_pending }}</v-chip>
-          <v-chip to="/expenses" :color="dash.actions.expense_void_requests ? 'warning' : undefined" variant="tonal">คำขอยกเลิกรายจ่าย {{ dash.actions.expense_void_requests }}</v-chip>
-          <v-chip to="/reports/finance" variant="tonal">รายจ่ายสูงเดือนนี้ {{ dash.actions.large_expenses_month }}</v-chip>
-          <v-chip to="/commissions" variant="tonal">ค่ามือค้างจ่าย {{ baht(dash.actions.unpaid_commission) }}</v-chip>
-          <v-chip to="/bookings" :color="dash.actions.deposits_to_refund ? 'warning' : undefined" variant="tonal">มัดจำรอคืน {{ dash.actions.deposits_to_refund }}</v-chip>
+      <SectionCard title="ต้องดำเนินการ" flush>
+        <div class="grid sm:grid-cols-2 xl:grid-cols-3">
+          <NuxtLink
+            v-for="a in [
+              { to: '/sessions', label: 'กะรอตรวจ', value: String(dash.actions.sessions_pending), alert: !!dash.actions.sessions_pending },
+              { to: '/daily-closings', label: 'ปิดยอดรอตรวจ', value: String(dash.actions.closings_pending), alert: !!dash.actions.closings_pending },
+              { to: '/expenses', label: 'คำขอยกเลิกรายจ่าย', value: String(dash.actions.expense_void_requests), alert: !!dash.actions.expense_void_requests },
+              { to: '/reports/finance', label: 'รายจ่ายสูงเดือนนี้', value: String(dash.actions.large_expenses_month), alert: false },
+              { to: '/commissions', label: 'ค่ามือค้างจ่าย', value: baht(dash.actions.unpaid_commission), alert: false },
+              { to: '/bookings', label: 'มัดจำรอคืน', value: String(dash.actions.deposits_to_refund), alert: !!dash.actions.deposits_to_refund },
+            ]"
+            :key="a.label"
+            :to="a.to"
+            class="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5 text-foreground no-underline transition-colors hover:bg-muted/40 sm:border-r"
+          >
+            <span class="flex items-center gap-2">
+              <span class="size-2 rounded-full" :class="a.alert ? 'bg-brand-accent' : 'bg-secondary'" aria-hidden="true" />{{ a.label }}
+            </span>
+            <span class="num font-semibold" :class="a.alert ? 'text-pending-ink' : 'text-heading'">{{ a.value }}</span>
+          </NuxtLink>
         </div>
-      </v-card>
+      </SectionCard>
 
-      <div class="mt-4 grid gap-4 lg:grid-cols-2">
-        <v-card class="p-4"><BarChart title="รายรับรายวัน (30 วัน)" :points="daily" :format="shortBaht" :label-every="5" /></v-card>
-        <v-card class="p-4"><BarChart title="รายรับรายเดือน (12 เดือน)" :points="monthly" :format="shortBaht" /></v-card>
+      <div class="grid gap-6 xl:grid-cols-2">
+        <SectionCard><BarChart title="รายรับรายวัน (30 วัน)" :points="daily" :format="shortBaht" :label-every="5" /></SectionCard>
+        <SectionCard><BarChart title="รายรับรายเดือน (12 เดือน)" :points="monthly" :format="shortBaht" /></SectionCard>
       </div>
 
-      <v-card class="mt-4 p-2">
-        <p class="m-0 px-3 pt-2 font-medium">เทียบสาขา (เดือนนี้)</p>
-        <v-table density="comfortable">
-          <thead>
-            <tr>
-              <th>สาขา</th><th class="text-right">รายรับ</th><th class="text-right">รายจ่าย</th><th class="text-right">ค่ามือ</th>
-              <th class="text-right">กำไรเบื้องต้น</th><th class="text-right">ค้างชำระ</th><th class="text-right">ลูกค้า</th>
-              <th class="text-right">Walk-in / การจอง</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="b in dash.branches" :key="b.branch_id">
-              <td>{{ b.branch_name }}</td>
-              <td class="text-right">{{ baht(b.revenue) }}</td>
-              <td class="text-right">{{ baht(b.expenses) }}</td>
-              <td class="text-right">{{ baht(b.commission) }}</td>
-              <td class="text-right font-medium">{{ baht(b.profit) }}</td>
-              <td class="text-right">{{ baht(b.outstanding) }}</td>
-              <td class="text-right">{{ b.customers }}</td>
-              <td class="text-right">{{ b.walk_ins }} / {{ b.bookings }}</td>
-            </tr>
-          </tbody>
-        </v-table>
-        <p class="m-0 px-3 pb-2 text-xs text-light-brown">
-          รายจ่ายสำนักงานใหญ่เดือนนี้ {{ baht(dash.hq_expenses_month) }} (หักในกำไรรวมด้านบน ไม่แยกสาขา) · รายรับไม่รวมทิป
-        </p>
-      </v-card>
-    </template>
+      <SectionCard title="เทียบสาขา (เดือนนี้)" flush>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow class="hover:bg-transparent">
+                <TableHead>สาขา</TableHead>
+                <TableHead class="text-right">รายรับ</TableHead>
+                <TableHead class="text-right">รายจ่าย</TableHead>
+                <TableHead class="text-right">ค่ามือ</TableHead>
+                <TableHead class="text-right">กำไรเบื้องต้น</TableHead>
+                <TableHead class="text-right">ค้างชำระ</TableHead>
+                <TableHead class="text-right">ลูกค้า</TableHead>
+                <TableHead class="text-right">Walk-in / การจอง</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="b in dash.branches" :key="b.branch_id">
+                <TableCell class="font-medium text-heading">{{ b.branch_name }}</TableCell>
+                <TableCell class="num text-right">{{ baht(b.revenue) }}</TableCell>
+                <TableCell class="num text-right">{{ baht(b.expenses) }}</TableCell>
+                <TableCell class="num text-right">{{ baht(b.commission) }}</TableCell>
+                <TableCell class="num text-right font-semibold text-heading">{{ baht(b.profit) }}</TableCell>
+                <TableCell class="num text-right">{{ baht(b.outstanding) }}</TableCell>
+                <TableCell class="num text-right">{{ b.customers }}</TableCell>
+                <TableCell class="num text-right">{{ b.walk_ins }} / {{ b.bookings }}</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+        <template #footer>รายจ่ายสำนักงานใหญ่เดือนนี้ <span class="num">{{ baht(dash.hq_expenses_month) }}</span> (หักในกำไรรวมด้านบน ไม่แยกสาขา) · รายรับไม่รวมทิป</template>
+      </SectionCard>
+    </div>
   </div>
 </template>

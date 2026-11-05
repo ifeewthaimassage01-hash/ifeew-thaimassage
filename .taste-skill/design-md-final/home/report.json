@@ -1,0 +1,1513 @@
+{
+ "url": "http://localhost:3010/",
+ "at": "2026-11-04T20:40:22.428Z",
+ "allow": [],
+ "viewports": [
+  {
+   "width": 1440,
+   "height": 900,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.43,
+    0.41
+   ],
+   "motion": {
+    "elements": 2,
+    "css": 0,
+    "transitions": 2,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "page": {
+     "height": 1139,
+     "screens": 1.3,
+     "words": 67,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 18,
+     "sections": 3,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 27,
+     "lines": 1,
+     "size": 28,
+     "vw": 1.9,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 97,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "lines": 1,
+     "size": 28,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+      "words": 2,
+      "chars": 27,
+      "lines": 1,
+      "size": 28,
+      "vw": 1.9,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.31,
+      "top": 97,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 1,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      24,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 15,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 61,
+     "max": {
+      "size": 28,
+      "vw": 1.9,
+      "font": "Noto Sans Thai",
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.13,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f7f3eb",
+     "bodyBgHsl": {
+      "h": 40,
+      "s": 0.43,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#7a6e61",
+       "share": 0.59
+      },
+      {
+       "color": "#514337",
+       "share": 0.3
+      },
+      {
+       "color": "#8a6a50",
+       "share": 0.04
+      },
+      {
+       "color": "#66594d",
+       "share": 0.04
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.03
+      }
+     ],
+     "button": {
+      "bg": "#fffefc",
+      "hsl": {
+       "h": 40,
+       "s": 1,
+       "l": 0.99
+      },
+      "fg": "#514337"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 7,
+     "inHero": 6,
+     "radius": 8,
+     "height": 40,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "หน้าแรก",
+      "เข้าสู่ระบบ",
+      "ดูบริการทั้งหมด",
+      "จองคิว",
+      "จองสาขานี้"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 5,
+     "hairlineSamples": [
+      "aside.sticky.top-0 248px",
+      "div.hidden.border-t 247px",
+      "header.sticky.top-0 1192px",
+      "div.flex.flex-wrap 534px",
+      "div.flex.flex-wrap 1088px"
+     ],
+     "outlinedBoxes": 5,
+     "dashed": 1,
+     "blurred": 0,
+     "roundedBoxes": 5,
+     "boxRadius": 12,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 194
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 1,
+     "fixed": true,
+     "height": 900,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "pageH": 1139,
+    "margins": {
+     "left": 20,
+     "right": 52
+    },
+    "sections": [
+     {
+      "sel": "div",
+      "tag": "div",
+      "top": 97,
+      "height": 229,
+      "words": 20,
+      "media": 0,
+      "middle": 155,
+      "heading": null,
+      "left": 300,
+      "right": 72,
+      "textLeft": 300,
+      "textRight": 72,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 366,
+      "height": 260,
+      "words": 19,
+      "media": 0,
+      "middle": 597,
+      "heading": {
+       "text": "สาขาของเรา",
+       "size": 18,
+       "tag": "h2"
+      },
+      "left": 300,
+      "right": 52,
+      "textLeft": 300,
+      "textRight": 52,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 666,
+      "height": 336,
+      "words": 8,
+      "media": 0,
+      "middle": 369,
+      "heading": {
+       "text": "บริการแนะนำ",
+       "size": 18,
+       "tag": "h2"
+      },
+      "left": 300,
+      "right": 52,
+      "textLeft": 300,
+      "textRight": 52,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+      "size": 28,
+      "top": 97,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 300,
+      "n": 4
+     },
+     {
+      "x": 321,
+      "n": 1
+     },
+     {
+      "x": 343,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 6,
+    "bodySize": 15,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0.16,
+    "voidBox": {
+     "x": 900,
+     "y": 360,
+     "w": 420,
+     "h": 480
+    }
+   },
+   "app": {
+    "viewport": {
+     "w": 1440,
+     "h": 900
+    },
+    "dark": false,
+    "ground": "#f7f3eb",
+    "sidebar": {
+     "w": 248,
+     "tag": "aside",
+     "links": 10,
+     "share": 0.17
+    },
+    "topbar": {
+     "h": 65
+    },
+    "canvas": {
+     "left": 32,
+     "right": 45
+    },
+    "hero": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 27,
+     "lines": 1,
+     "size": 28,
+     "vw": 1.9,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 97,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 6,
+     "firstScreen": 6,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 6,
+     "radii": [
+      [
+       12,
+       5
+      ],
+      [
+       0,
+       1
+      ]
+     ],
+     "heavyBorders": 1,
+     "borderSamples": [
+      "#d9cbb9 on #fffefc (1.58:1)"
+     ],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 1,
+     "tabularShare": 1,
+     "kpiMax": 14
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      28
+     ]
+    },
+    "title": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "size": 28,
+     "top": 97
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 768,
+   "height": 1024,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.43,
+    0.45
+   ],
+   "motion": {
+    "elements": 2,
+    "css": 0,
+    "transitions": 2,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "page": {
+     "height": 1367,
+     "screens": 1.3,
+     "words": 58,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 18,
+     "sections": 3,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 27,
+     "lines": 1,
+     "size": 28,
+     "vw": 3.6,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 97,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "lines": 1,
+     "size": 28,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+      "words": 2,
+      "chars": 27,
+      "lines": 1,
+      "size": 28,
+      "vw": 3.6,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.58,
+      "top": 97,
+      "tag": "h1",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 1,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": null,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      24,
+      28
+     ],
+     "sizeCount": 8,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 15,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 30,
+     "max": {
+      "size": 28,
+      "vw": 3.6,
+      "font": "Noto Sans Thai",
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.15,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f7f3eb",
+     "bodyBgHsl": {
+      "h": 40,
+      "s": 0.43,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [],
+     "textColors": [
+      {
+       "color": "#7a6e61",
+       "share": 0.65
+      },
+      {
+       "color": "#514337",
+       "share": 0.27
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.04
+      },
+      {
+       "color": "#8a6a50",
+       "share": 0.03
+      },
+      {
+       "color": "#66594d",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#fffefc",
+      "hsl": {
+       "h": 40,
+       "s": 1,
+       "l": 0.99
+      },
+      "fg": "#514337"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 6,
+     "inHero": 5,
+     "radius": 8,
+     "height": 36,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "เข้าสู่ระบบ",
+      "ดูบริการทั้งหมด",
+      "จองคิว",
+      "จองสาขานี้",
+      "0925766293"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 4,
+     "hairlineSamples": [
+      "aside.sticky.top-0 76px",
+      "header.sticky.top-0 692px",
+      "div.flex.flex-wrap 304px",
+      "div.flex.flex-wrap 628px"
+     ],
+     "outlinedBoxes": 5,
+     "dashed": 1,
+     "blurred": 0,
+     "roundedBoxes": 5,
+     "boxRadius": 12,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": [
+      {
+       "count": 3,
+       "iconTopped": true,
+       "rounded": true,
+       "top": 250
+      }
+     ]
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": true,
+     "height": 1024,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "pageH": 1367,
+    "margins": {
+     "left": 108,
+     "right": 32
+    },
+    "sections": [
+     {
+      "sel": "div",
+      "tag": "div",
+      "top": 97,
+      "height": 433,
+      "words": 20,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 108,
+      "right": 104,
+      "textLeft": 108,
+      "textRight": 104,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 570,
+      "height": 284,
+      "words": 19,
+      "media": 0,
+      "middle": 349,
+      "heading": {
+       "text": "สาขาของเรา",
+       "size": 18,
+       "tag": "h2"
+      },
+      "left": 108,
+      "right": 32,
+      "textLeft": 108,
+      "textRight": 32,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 894,
+      "height": 336,
+      "words": 8,
+      "media": 0,
+      "middle": 139,
+      "heading": {
+       "text": "บริการแนะนำ",
+       "size": 18,
+       "tag": "h2"
+      },
+      "left": 108,
+      "right": 32,
+      "textLeft": 108,
+      "textRight": 32,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+      "size": 28,
+      "top": 97,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 108,
+      "n": 4
+     },
+     {
+      "x": 129,
+      "n": 1
+     },
+     {
+      "x": 151,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 6,
+    "bodySize": 15,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 768,
+     "h": 1024
+    },
+    "dark": false,
+    "ground": "#f7f3eb",
+    "sidebar": {
+     "w": 76,
+     "tag": "aside",
+     "links": 10,
+     "share": 0.1
+    },
+    "topbar": {
+     "h": 65
+    },
+    "canvas": {
+     "left": 32,
+     "right": 32
+    },
+    "hero": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 27,
+     "lines": 1,
+     "size": 28,
+     "vw": 3.6,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 97,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 5,
+     "firstScreen": 5,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 5,
+     "radii": [
+      [
+       12,
+       5
+      ]
+     ],
+     "heavyBorders": 1,
+     "borderSamples": [
+      "#d9cbb9 on #fffefc (1.58:1)"
+     ],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 1,
+     "hues": 1,
+     "samples": [
+      {
+       "hue": 36,
+       "size": 44,
+       "radius": "8px"
+      }
+     ]
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 1,
+     "tabularShare": 1,
+     "kpiMax": 14
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      28
+     ]
+    },
+    "title": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "size": 28,
+     "top": 97
+    },
+    "colourShare": 0.001
+   },
+   "consoleErrors": []
+  },
+  {
+   "width": 390,
+   "height": 844,
+   "load": "load",
+   "screens": 2,
+   "filled": [
+    0.66,
+    0.67
+   ],
+   "motion": {
+    "elements": 2,
+    "css": 0,
+    "transitions": 2,
+    "scripted": 0,
+    "videos": 0,
+    "playingVideos": 0
+   },
+   "metrics": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "page": {
+     "height": 1599,
+     "screens": 1.9,
+     "words": 57,
+     "img": 0,
+     "video": 0,
+     "canvas": 0,
+     "svg": 18,
+     "sections": 3,
+     "horizontalOverflow": 0,
+     "overflowCulprits": [],
+     "uiFragments": 0,
+     "uiAbuse": false,
+     "realPictures": 0,
+     "videoCount": 0,
+     "uiPictures": 0,
+     "pictureSamples": [],
+     "blendText": 0,
+     "sideScrollers": 0,
+     "brokenImages": [],
+     "emoji": [],
+     "videosNoPoster": 0
+    },
+    "hero": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 27,
+     "lines": 1,
+     "size": 24,
+     "vw": 6.2,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 89,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "h1": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "lines": 1,
+     "size": 24,
+     "font": "Noto Sans Thai"
+    },
+    "headings": [
+     {
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+      "words": 2,
+      "chars": 27,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": -0.025,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.92,
+      "top": 89,
+      "tag": "h1",
+      "kind": "heading"
+     },
+     {
+      "text": "0",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.04,
+      "top": 307,
+      "tag": "span",
+      "kind": "heading"
+     },
+     {
+      "text": "0",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "left",
+      "widthRatio": 0.04,
+      "top": 455,
+      "tag": "span",
+      "kind": "heading"
+     },
+     {
+      "text": "—",
+      "words": 1,
+      "chars": 1,
+      "lines": 1,
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "weight": 600,
+      "tracking": 0,
+      "leading": 1.25,
+      "upper": false,
+      "italic": false,
+      "mono": false,
+      "align": "left",
+      "position": "center",
+      "widthRatio": 0.81,
+      "top": 606,
+      "tag": "div",
+      "kind": "heading"
+     }
+    ],
+    "headingSummary": {
+     "count": 4,
+     "maxLines": 1,
+     "over2Lines": 0,
+     "statements": 0,
+     "centered": 0,
+     "medianWords": 1,
+     "mixedFontHeadings": 0
+    },
+    "type": {
+     "families": [
+      {
+       "family": "Noto Sans Thai",
+       "share": 1,
+       "mono": false
+      }
+     ],
+     "familyCount": 1,
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      24
+     ],
+     "sizeCount": 7,
+     "notLoaded": [],
+     "body": {
+      "font": "Noto Sans Thai",
+      "size": 15,
+      "leading": 1.6,
+      "weight": 400,
+      "tracking": 0,
+      "contrast": 4.5
+     },
+     "measureChars": 37,
+     "max": {
+      "size": 24,
+      "vw": 6.2,
+      "font": "Noto Sans Thai",
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา"
+     },
+     "monoShare": 0,
+     "monoProseShare": 0,
+     "monoFamilies": [],
+     "monoSamples": [],
+     "microLabels": 0,
+     "microLabelShare": 0,
+     "microSamples": [],
+     "upperShare": 0,
+     "centerShare": 0.15,
+     "smallText": 0
+    },
+    "eyebrows": [],
+    "numbered": [],
+    "color": {
+     "bodyBg": "#f7f3eb",
+     "bodyBgHsl": {
+      "h": 40,
+      "s": 0.43,
+      "l": 0.95
+     },
+     "dark": false,
+     "sectionBgs": [
+      {
+       "color": "#fffefc",
+       "top": 1093,
+       "hsl": {
+        "h": 40,
+        "s": 1,
+        "l": 0.99
+       }
+      }
+     ],
+     "textColors": [
+      {
+       "color": "#7a6e61",
+       "share": 0.66
+      },
+      {
+       "color": "#514337",
+       "share": 0.26
+      },
+      {
+       "color": "#ffffff",
+       "share": 0.04
+      },
+      {
+       "color": "#8a6a50",
+       "share": 0.03
+      },
+      {
+       "color": "#66594d",
+       "share": 0.02
+      }
+     ],
+     "button": {
+      "bg": "#fffefc",
+      "hsl": {
+       "h": 40,
+       "s": 1,
+       "l": 0.99
+      },
+      "fg": "#514337"
+     },
+     "lowContrast": []
+    },
+    "buttons": {
+     "count": 7,
+     "inHero": 4,
+     "radius": 8,
+     "height": 36,
+     "withShadow": 0,
+     "withGradient": 0,
+     "mono": 0,
+     "upper": 0,
+     "heroLabels": [
+      "เข้าสู่ระบบ",
+      "ดูบริการทั้งหมด",
+      "จองคิว",
+      "จองคิว"
+     ]
+    },
+    "surfaces": {
+     "shadowStatic": 0,
+     "shadowOverlay": 0,
+     "shadowSamples": [],
+     "gradients": 0,
+     "scrims": 0,
+     "gradientSamples": [],
+     "gradientText": 0,
+     "hairlines": 4,
+     "hairlineSamples": [
+      "header.sticky.top-0 390px",
+      "div.flex.flex-wrap 356px",
+      "div.flex.flex-wrap 358px",
+      "div.sticky.bottom-0 390px"
+     ],
+     "outlinedBoxes": 5,
+     "dashed": 1,
+     "blurred": 0,
+     "roundedBoxes": 5,
+     "boxRadius": 12,
+     "squareMedia": 0,
+     "roundedMedia": 0,
+     "mediaRadius": 0,
+     "textShadow": 0,
+     "cardRows": []
+    },
+    "heroMedia": [],
+    "nav": {
+     "links": 0,
+     "fixed": true,
+     "height": 0,
+     "floatingPill": false,
+     "blur": false
+    },
+    "fontsLoaded": [
+     "noto sans thai"
+    ]
+   },
+   "layout": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "pageH": 1599,
+    "margins": {
+     "left": 16,
+     "right": 16
+    },
+    "sections": [
+     {
+      "sel": "div",
+      "tag": "div",
+      "top": 89,
+      "height": 596,
+      "words": 20,
+      "media": 0,
+      "middle": 0,
+      "heading": null,
+      "left": 16,
+      "right": 81,
+      "textLeft": 16,
+      "textRight": 81,
+      "fullBleed": false,
+      "footer": false,
+      "hero": true,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 725,
+      "height": 284,
+      "words": 19,
+      "media": 0,
+      "middle": 11,
+      "heading": {
+       "text": "สาขาของเรา",
+       "size": 18,
+       "tag": "h2"
+      },
+      "left": 16,
+      "right": 16,
+      "textLeft": 16,
+      "textRight": 16,
+      "fullBleed": false,
+      "footer": false,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     },
+     {
+      "sel": "section.grid.gap-4",
+      "tag": "section",
+      "top": 1049,
+      "height": 340,
+      "words": 8,
+      "media": 0,
+      "middle": 4,
+      "heading": {
+       "text": "บริการแนะนำ",
+       "size": 18,
+       "tag": "h2"
+      },
+      "left": 16,
+      "right": 16,
+      "textLeft": 16,
+      "textRight": 16,
+      "fullBleed": false,
+      "footer": true,
+      "hero": false,
+      "continues": false,
+      "pinned": false
+     }
+    ],
+    "gaps": [],
+    "h1s": [
+     {
+      "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+      "size": 24,
+      "top": 89,
+      "firstScreen": true
+     }
+    ],
+    "edgeText": [],
+    "edges": [
+     {
+      "x": 16,
+      "n": 4
+     },
+     {
+      "x": 37,
+      "n": 1
+     },
+     {
+      "x": 59,
+      "n": 1
+     }
+    ],
+    "leftBlocks": 6,
+    "bodySize": 15,
+    "stage": false,
+    "explains": false,
+    "slivers": [],
+    "voidShare": 0,
+    "voidBox": null
+   },
+   "app": {
+    "viewport": {
+     "w": 390,
+     "h": 844
+    },
+    "dark": false,
+    "ground": "#f7f3eb",
+    "sidebar": null,
+    "topbar": {
+     "h": 65
+    },
+    "canvas": {
+     "left": 8,
+     "right": 16
+    },
+    "hero": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "words": 2,
+     "chars": 27,
+     "lines": 1,
+     "size": 24,
+     "vw": 6.2,
+     "font": "Noto Sans Thai",
+     "weight": 600,
+     "tracking": -0.02,
+     "leading": 1.25,
+     "top": 89,
+     "tag": "h1",
+     "kind": "heading",
+     "align": "left",
+     "position": "left"
+    },
+    "charts": 0,
+    "layout": {
+     "panels": 5,
+     "firstScreen": 4,
+     "ragged": [],
+     "voids": []
+    },
+    "tiles": 0,
+    "panels": {
+     "count": 5,
+     "radii": [
+      [
+       12,
+       5
+      ]
+     ],
+     "heavyBorders": 1,
+     "borderSamples": [
+      "#d9cbb9 on #fffefc (1.58:1)"
+     ],
+     "heavyShadows": 0,
+     "softShadows": 0,
+     "shadowSamples": [],
+     "glass": 0
+    },
+    "chips": {
+     "count": 0,
+     "hues": 0,
+     "samples": []
+    },
+    "numbers": {
+     "cells": 0,
+     "leftAligned": 0,
+     "figures": 1,
+     "tabularShare": 1,
+     "kpiMax": 14
+    },
+    "rows": null,
+    "chartHues": 0,
+    "placeholders": [],
+    "type": {
+     "under13": 0,
+     "tiny": 0,
+     "tinySamples": [],
+     "sizes": [
+      13,
+      14,
+      15,
+      16,
+      17,
+      18,
+      24
+     ]
+    },
+    "title": {
+     "text": "นวดไทย จองออนไลน์ได้ทุกสาขา",
+     "size": 24,
+     "top": 89
+    },
+    "colourShare": 0
+   },
+   "consoleErrors": []
+  }
+ ],
+ "findings": [
+  {
+   "level": "WARN",
+   "id": "palette-cream",
+   "width": 1440,
+   "message": "Yellow-cream background (page background #f7f3eb, button #fffefc).",
+   "fix": "Use the drawn palette. If you want warmth, take a low-chroma stone or bone, not a yellow cream.",
+   "alsoAt": [
+    768,
+    390
+   ]
+  }
+ ],
+ "images": [
+  {
+   "viewport": "desktop",
+   "width": 1440,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\design-md-final\\home\\desktop-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\design-md-final\\home\\desktop-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "tablet",
+   "width": 768,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\design-md-final\\home\\tablet-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\design-md-final\\home\\tablet-page-01.jpg"
+   ],
+   "film": []
+  },
+  {
+   "viewport": "mobile",
+   "width": 390,
+   "fold": "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\design-md-final\\home\\mobile-fold.jpg",
+   "pages": [
+    "C:\\Users\\M\\Documents\\ifeew-thaimassage\\.taste-skill\\design-md-final\\home\\mobile-page-01.jpg"
+   ],
+   "film": []
+  }
+ ]
+}

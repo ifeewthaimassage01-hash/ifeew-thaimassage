@@ -1,16 +1,20 @@
 <script setup lang="ts">
+import { RefreshCw } from '@lucide/vue'
 import { emailSchema } from '@ifeew/shared'
-import type { DeviceInfo, DeviceStaff } from '~/composables/useStaffDevice'
+import type { DeviceStaff, LoginBranch } from '~/composables/useStaffDevice'
 
 definePageMeta({ layout: 'blank' })
 
 const route = useRoute()
 const supabase = useSupabaseClient()
-const { token, listStaff, pinLogin, ownerPinLogin, forget, errorMessage } = useStaffDevice()
+const { listBranchStaff, branchPinLogin, ownerPinLogin, errorMessage } = useStaffDevice()
 const { clear: clearAccess } = useAccess()
 
-const mode = ref<'staff' | 'owner'>(token.value ? 'staff' : 'owner')
-const device = ref<DeviceInfo | null>(null)
+const mode = ref<'staff' | 'owner'>('staff')
+// เลือกสาขาจาก dropdown (ไม่ต้องผูกเครื่อง — migration 030) และจำสาขาล่าสุดไว้ในเครื่อง
+const branches = ref<LoginBranch[]>([])
+const branchId = useLocalStorage<string | null>('ifeew.login_branch', null)
+const loadingBranches = ref(false)
 const staff = ref<DeviceStaff[]>([])
 const loadingList = ref(false)
 const listError = ref<string | null>(null)
@@ -32,21 +36,50 @@ const queryErrors: Record<string, string> = {
 }
 const banner = computed(() => queryErrors[String(route.query.error ?? '')] ?? null)
 
+async function loadBranches() {
+  loadingBranches.value = true
+  listError.value = null
+  try {
+    const res = await listBranchStaff()
+    branches.value = res.branches
+    // สาขาที่จำไว้ไม่มีแล้ว → ล้าง; มีสาขาเดียว → เลือกให้เลย
+    if (!res.branches.some((b) => b.branch_id === branchId.value)) {
+      branchId.value = res.branches.length === 1 ? res.branches[0]!.branch_id : null
+    }
+  } catch (e) {
+    listError.value = errorMessage(e).message
+  } finally {
+    loadingBranches.value = false
+  }
+}
+
 async function loadStaff() {
-  if (!token.value) return
+  const id = branchId.value
+  staff.value = []
+  selected.value = null
+  if (!id) return
   loadingList.value = true
   listError.value = null
   try {
-    const res = await listStaff()
-    device.value = res.device
-    staff.value = res.staff
+    const res = await listBranchStaff(id)
+    if (branchId.value !== id) return // เปลี่ยนสาขาระหว่างโหลด
+    staff.value = res.staff ?? []
   } catch (e) {
     const err = errorMessage(e)
     listError.value = err.message
-    if (err.code === 'DEVICE_INVALID') forget()
+    if (err.code === 'BRANCH_INVALID') {
+      branchId.value = null
+      await loadBranches()
+    }
   } finally {
     loadingList.value = false
   }
+}
+watch(branchId, loadStaff)
+
+async function reload() {
+  await loadBranches()
+  await loadStaff()
 }
 
 function choose(s: DeviceStaff) {
@@ -56,12 +89,12 @@ function choose(s: DeviceStaff) {
 }
 
 async function submitPin(pin: string) {
-  if (!selected.value) return
+  if (!selected.value || !branchId.value) return
   pinLoading.value = true
   pinError.value = null
   try {
     clearAccess()
-    await pinLogin(selected.value.user_id, pin)
+    await branchPinLogin(branchId.value, selected.value.user_id, pin)
     await navigateTo('/')
   } catch (e) {
     const err = errorMessage(e)
@@ -138,108 +171,114 @@ async function submitOwnerPin(pin: string) {
   }
 }
 
-onMounted(loadStaff)
+onMounted(reload)
 </script>
 
 <template>
-  <div class="min-h-screen bg-cream px-4 py-10">
+  <div class="px-4 py-10 md:py-16">
     <div class="mx-auto max-w-4xl">
-      <header class="mb-8 text-center">
-        <h1 class="m-0 text-3xl font-semibold text-cocoa">Ifeew's Thaimassage</h1>
-        <p class="m-0 mt-2 text-light-brown">ระบบพนักงาน</p>
+      <header class="mb-8 flex flex-col items-center gap-3 text-center">
+        <BrandMark class="size-12" />
+        <div>
+          <h1 class="m-0 text-2xl font-semibold tracking-tight md:text-[28px]">Ifeew's Thaimassage</h1>
+          <p class="m-0 mt-1 text-[15px] text-muted-foreground">ระบบพนักงานและเจ้าของร้าน</p>
+        </div>
       </header>
 
-      <v-alert v-if="banner" type="info" variant="tonal" class="mb-6" :text="banner" />
+      <Alert v-if="banner" variant="info" class="mx-auto mb-6 max-w-md"><AlertDescription>{{ banner }}</AlertDescription></Alert>
 
-      <v-btn-toggle v-model="mode" mandatory color="primary" class="mb-6 flex justify-center" rounded="xl">
-        <v-btn value="staff" prepend-icon="mdi-account-group-outline">พนักงาน</v-btn>
-        <v-btn value="owner" prepend-icon="mdi-shield-account-outline">เจ้าของร้าน</v-btn>
-      </v-btn-toggle>
+      <div class="mb-6 flex justify-center">
+        <SegmentedControl
+          v-model="mode"
+          :items="[{ value: 'staff', label: 'พนักงาน' }, { value: 'owner', label: 'เจ้าของร้าน' }]"
+          label="เข้าสู่ระบบในฐานะ"
+        />
+      </div>
 
       <!-- พนักงาน: เลือกชื่อ + PIN -->
-      <v-card v-if="mode === 'staff'" class="p-6">
-        <template v-if="!token">
-          <div class="py-8 text-center">
-            <v-icon icon="mdi-tablet-cellphone" size="48" color="primary" />
-            <p class="mt-4 text-lg">เครื่องนี้ยังไม่ได้ผูกกับสาขา</p>
-            <p class="text-sm text-light-brown">ให้เจ้าของร้านเข้าสู่ระบบ แล้วผูกเครื่องที่เมนู “ตั้งค่าเครื่อง”</p>
+      <Card v-if="mode === 'staff'" class="gap-0 py-0">
+        <div class="flex flex-wrap items-end justify-between gap-3 border-b border-border px-6 py-4">
+          <SelectField
+            v-model="branchId"
+            :items="branches"
+            item-title="name"
+            item-value="branch_id"
+            label="สาขา"
+            :placeholder="loadingBranches ? 'กำลังโหลดสาขา…' : 'เลือกสาขา'"
+            :disabled="loadingBranches || branches.length === 0"
+            class="w-full sm:w-72"
+          />
+          <Button variant="ghost" size="icon" aria-label="โหลดรายชื่อใหม่" :disabled="loadingList || loadingBranches" @click="reload">
+            <RefreshCw :class="loadingList || loadingBranches ? 'animate-spin' : ''" />
+          </Button>
+        </div>
+
+        <div class="p-6">
+          <Alert v-if="listError" variant="destructive" class="mb-4"><AlertDescription>{{ listError }}</AlertDescription></Alert>
+          <EmptyState v-if="!branchId" compact title="เลือกสาขาก่อน" description="รายชื่อพนักงานของสาขาจะแสดงที่นี่ แตะชื่อของคุณเพื่อกรอก PIN" />
+          <div v-else-if="loadingList && !staff.length" class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            <Skeleton v-for="n in 4" :key="n" class="h-36 rounded-xl" />
           </div>
-        </template>
-
-        <template v-else>
-          <div class="mb-4 flex items-center justify-between">
-            <div>
-              <p class="m-0 text-lg font-medium">{{ device?.branch_name ?? 'กำลังโหลด…' }}</p>
-              <p class="m-0 text-sm text-light-brown">{{ device?.device_name }}</p>
-            </div>
-            <v-btn variant="text" icon="mdi-refresh" aria-label="โหลดใหม่" :loading="loadingList" @click="loadStaff" />
-          </div>
-
-          <v-alert v-if="listError" type="error" variant="tonal" class="mb-4" :text="listError" />
-
-          <div v-if="!loadingList && staff.length === 0 && !listError" class="py-8 text-center text-light-brown">
-            ยังไม่มีพนักงานที่ตั้ง PIN ในสาขานี้
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
-            <v-card
+          <EmptyState v-else-if="staff.length === 0 && !listError" compact title="ยังไม่มีพนักงานที่ตั้ง PIN ในสาขานี้" />
+          <div v-else class="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4">
+            <button
               v-for="s in staff"
               :key="s.user_id"
+              type="button"
               :disabled="s.locked"
-              class="cursor-pointer p-5 text-center"
-              :class="selected?.user_id === s.user_id ? 'ring-2 ring-light-brown' : ''"
+              class="flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
+              :class="selected?.user_id === s.user_id ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-input hover:bg-muted/40'"
               @click="choose(s)"
             >
-              <v-avatar color="secondary" size="56" class="mb-3">
-                <v-img v-if="s.photo_url" :src="s.photo_url" cover />
-                <span v-else class="text-xl">{{ s.display_name.slice(0, 1) }}</span>
-              </v-avatar>
-              <p class="m-0 font-medium">{{ s.display_name }}</p>
-              <p v-if="s.is_owner" class="m-0 mt-1 text-xs text-light-brown">เจ้าของร้าน</p>
-              <p v-if="s.locked" class="m-0 mt-1 text-xs text-red-700">ล็อกชั่วคราว</p>
-            </v-card>
+              <span class="grid size-14 place-items-center overflow-hidden rounded-full bg-secondary text-xl font-semibold text-heading">
+                <img v-if="s.photo_url" :src="s.photo_url" :alt="s.display_name" class="size-full object-cover">
+                <template v-else>{{ s.display_name.slice(0, 1) }}</template>
+              </span>
+              <span class="font-medium text-heading">{{ s.display_name }}</span>
+              <Badge v-if="s.locked" variant="danger">ล็อกชั่วคราว</Badge>
+              <span v-else-if="s.is_owner" class="text-[13px] text-muted-foreground">เจ้าของร้าน</span>
+            </button>
           </div>
-        </template>
-      </v-card>
+        </div>
+      </Card>
 
       <!-- เจ้าของร้าน: PIN อย่างเดียว (สำรอง: อีเมล + รหัสผ่าน สำหรับครั้งแรก/ลืม PIN) -->
-      <v-card v-else class="mx-auto max-w-md p-6">
-        <template v-if="!useEmail">
-          <p class="m-0 mb-4 text-center text-lg font-medium">กรอก PIN เจ้าของร้าน</p>
-          <PinPad ref="ownerPad" :loading="ownerLoading" :error="ownerError" @submit="submitOwnerPin" />
-          <v-btn variant="text" block class="mt-4" size="small" @click="useEmail = true; ownerError = null">
-            เข้าด้วยอีเมล (ครั้งแรก / ลืม PIN)
-          </v-btn>
-        </template>
-        <v-form v-else @submit.prevent="ownerLogin">
-          <v-text-field v-model="email" label="อีเมล" type="email" autocomplete="username" class="mb-2" />
-          <v-text-field
-            v-model="password"
-            label="รหัสผ่าน"
-            type="password"
-            autocomplete="current-password"
-            class="mb-2"
-          />
-          <v-alert v-if="ownerError" type="error" variant="tonal" class="mb-4" :text="ownerError" />
-          <v-btn type="submit" color="primary" block :loading="ownerLoading">เข้าสู่ระบบ</v-btn>
-          <v-btn variant="text" block class="mt-2" :disabled="ownerLoading" @click="forgotPassword">ลืมรหัสผ่าน</v-btn>
-          <v-alert v-if="resetSent" type="info" variant="tonal" class="mt-2"
-            text="ถ้ามีบัญชีนี้ในระบบ จะได้รับอีเมลลิงก์ตั้งรหัสผ่านใหม่ (ตรวจกล่องจดหมายขยะด้วย)" />
-          <v-btn variant="text" block class="mt-2" size="small" @click="useEmail = false; ownerError = null">กลับไปใช้ PIN</v-btn>
-          <p class="mb-0 mt-2 text-center text-xs text-light-brown">เข้าแล้วตั้ง PIN ที่เมนู “ตั้งค่าเครื่อง” → “PIN เจ้าของร้าน”</p>
-        </v-form>
-      </v-card>
+      <Card v-else class="mx-auto max-w-md gap-0 py-6">
+        <CardContent class="px-6">
+          <template v-if="!useEmail">
+            <h2 class="m-0 mb-5 text-center text-lg font-semibold">กรอก PIN เจ้าของร้าน</h2>
+            <PinPad ref="ownerPad" :loading="ownerLoading" :error="ownerError" @submit="submitOwnerPin" />
+            <Button variant="link" class="mt-4 w-full" @click="useEmail = true; ownerError = null">
+              เข้าด้วยอีเมล (ครั้งแรก / ลืม PIN)
+            </Button>
+          </template>
+          <form v-else class="grid gap-4" novalidate @submit.prevent="ownerLogin">
+            <h2 class="m-0 text-lg font-semibold">เข้าด้วยอีเมล</h2>
+            <TextField v-model="email" label="อีเมล" type="email" autocomplete="username" />
+            <TextField v-model="password" label="รหัสผ่าน" type="password" autocomplete="current-password" />
+            <Alert v-if="ownerError" variant="destructive"><AlertDescription>{{ ownerError }}</AlertDescription></Alert>
+            <Button type="submit" size="lg" class="w-full" :disabled="ownerLoading">{{ ownerLoading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ' }}</Button>
+            <Alert v-if="resetSent" variant="info">
+              <AlertDescription>ถ้ามีบัญชีนี้ในระบบ จะได้รับอีเมลลิงก์ตั้งรหัสผ่านใหม่ (ตรวจกล่องจดหมายขยะด้วย)</AlertDescription>
+            </Alert>
+            <div class="flex flex-wrap justify-between gap-2">
+              <Button type="button" variant="ghost" size="sm" :disabled="ownerLoading" @click="forgotPassword">ลืมรหัสผ่าน</Button>
+              <Button type="button" variant="ghost" size="sm" @click="useEmail = false; ownerError = null">กลับไปใช้ PIN</Button>
+            </div>
+            <p class="m-0 text-center text-sm text-muted-foreground">เข้าแล้วตั้ง PIN ที่เมนู “ตั้งค่าเครื่อง” → “PIN เจ้าของร้าน”</p>
+          </form>
+        </CardContent>
+      </Card>
     </div>
 
-    <v-dialog :model-value="!!selected" max-width="420" persistent>
-      <v-card v-if="selected" class="p-6">
-        <div class="mb-4 flex items-center justify-between">
-          <p class="m-0 text-lg font-medium">สวัสดี {{ selected.display_name }}</p>
-          <v-btn icon="mdi-close" variant="text" aria-label="ปิด" :disabled="pinLoading" @click="selected = null" />
-        </div>
-        <p class="mb-4 mt-0 text-sm text-light-brown">กรอก PIN 6 หลัก</p>
-        <PinPad ref="pinPad" :loading="pinLoading" :error="pinError" @submit="submitPin" />
-      </v-card>
-    </v-dialog>
+    <Dialog :open="!!selected" @update:open="(v) => !v && !pinLoading && (selected = null)">
+      <DialogContent class="sm:max-w-sm" @interact-outside.prevent>
+        <DialogHeader>
+          <DialogTitle>สวัสดี {{ selected?.display_name }}</DialogTitle>
+          <DialogDescription>กรอก PIN 6 หลัก</DialogDescription>
+        </DialogHeader>
+        <PinPad v-if="selected" ref="pinPad" :loading="pinLoading" :error="pinError" @submit="submitPin" />
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

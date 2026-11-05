@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // ตารางงานรายสัปดาห์ของสาขาที่เลือก — OWNER จัดกะได้, STAFF ดูอย่างเดียว
+import { ChevronLeft, ChevronRight, Copy, Plus } from '@lucide/vue'
 import {
   addDays,
   bangkokIso,
@@ -181,84 +182,113 @@ async function copyPreviousWeek() {
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">ตารางงาน · {{ activeBranch?.name }}</h1>
-      <div class="flex flex-wrap items-center gap-2">
-        <v-btn icon="mdi-chevron-left" variant="text" aria-label="สัปดาห์ก่อน" @click="monday = addDays(monday, -7)" />
-        <span class="min-w-[220px] text-center font-medium">{{ weekLabel }}</span>
-        <v-btn icon="mdi-chevron-right" variant="text" aria-label="สัปดาห์ถัดไป" @click="monday = addDays(monday, 7)" />
-        <v-btn variant="text" @click="monday = mondayOf(bangkokToday())">สัปดาห์นี้</v-btn>
-        <v-btn v-if="isOwner" variant="tonal" color="primary" prepend-icon="mdi-content-copy" :loading="copying" @click="copyPreviousWeek">
-          คัดลอกสัปดาห์ก่อน
-        </v-btn>
+    <PageHeader title="ตารางงาน" :description="`${activeBranch?.name ?? ''} · ${isOwner ? 'แตะช่องว่างเพื่อเพิ่มกะ แตะกะเพื่อแก้ไข' : 'ดูกะของทีมในสัปดาห์'}`">
+      <template #actions>
+        <Button v-if="isOwner" variant="outline" :disabled="copying" @click="copyPreviousWeek"><Copy /> คัดลอกสัปดาห์ก่อน</Button>
+      </template>
+    </PageHeader>
+
+    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+        <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ก่อน" @click="monday = addDays(monday, -7)"><ChevronLeft /></Button>
+        <span class="num min-w-[220px] px-2 text-center text-[15px] font-medium text-heading">{{ weekLabel }}</span>
+        <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ถัดไป" @click="monday = addDays(monday, 7)"><ChevronRight /></Button>
+        <Button variant="ghost" size="sm" @click="monday = mondayOf(bangkokToday())">สัปดาห์นี้</Button>
+      </div>
+      <div class="flex flex-wrap items-center gap-4">
+        <div class="flex items-center gap-3 text-sm text-muted-foreground" aria-hidden="true">
+          <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-secondary" />กะ</span>
+          <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-pending-soft ring-1 ring-brand-accent/40" />ลา</span>
+        </div>
+        <CheckboxField v-model="showCancelled" label="แสดงกะที่ยกเลิก" />
       </div>
     </div>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
-    <v-switch v-model="showCancelled" color="primary" label="แสดงกะที่ยกเลิก" hide-details density="compact" class="mb-2" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <LoadingBar v-if="loading" class="mb-2" />
 
-    <v-card class="overflow-x-auto p-2">
-      <table class="w-full min-w-[900px] border-collapse text-sm">
+    <div class="overflow-x-auto rounded-xl border border-border bg-card">
+      <table class="w-full min-w-[960px] border-collapse text-sm">
         <thead>
-          <tr>
-            <th class="w-40 p-2 text-left">พนักงาน</th>
-            <th v-for="(d, i) in days" :key="d" class="p-2 text-left" :class="d === bangkokToday() ? 'text-light-brown' : ''">
+          <tr class="border-b border-border">
+            <th scope="col" class="sticky left-0 z-10 w-44 bg-card px-4 py-3 text-left text-[13px] font-medium text-muted-foreground">พนักงาน</th>
+            <th
+              v-for="(d, i) in days"
+              :key="d"
+              scope="col"
+              class="border-l border-border px-2 py-3 text-left text-[13px] font-medium"
+              :class="[d === bangkokToday() ? 'text-heading' : 'text-muted-foreground', i >= 5 ? 'bg-background/60' : '']"
+            >
               {{ dayLabel(d, i) }}
+              <span v-if="d === bangkokToday()" class="ml-1 inline-block size-1.5 rounded-full bg-primary align-middle" aria-label="วันนี้" />
             </th>
           </tr>
         </thead>
         <tbody>
-          <tr v-for="e in employees" :key="e.id" class="border-t border-beige">
-            <td class="p-2 font-medium">{{ e.nickname }}<div class="text-xs text-light-brown">{{ e.employee_code }}</div></td>
-            <td v-for="d in days" :key="d" class="p-1 align-top">
-              <div class="flex min-h-[44px] flex-col gap-1">
-                <v-chip
+          <tr v-for="e in employees" :key="e.id" class="border-b border-border last:border-0">
+            <th scope="row" class="sticky left-0 z-10 bg-card px-4 py-2 text-left align-top font-normal">
+              <span class="block font-medium text-heading">{{ e.nickname }}</span>
+              <span class="num block text-[13px] text-muted-foreground">{{ e.employee_code }}</span>
+            </th>
+            <td v-for="(d, i) in days" :key="d" class="border-l border-border p-1.5 align-top" :class="[d === bangkokToday() ? 'bg-secondary/25' : i >= 5 ? 'bg-background/60' : '']">
+              <div class="flex min-h-11 flex-col gap-1">
+                <button
                   v-for="s in cellShifts(e.id, d)"
                   :key="s.id"
-                  :color="shiftColor(s)"
-                  variant="tonal"
-                  size="small"
-                  :class="s.status === 'CANCELLED' ? 'line-through' : ''"
+                  type="button"
+                  class="num rounded-md px-2 py-1 text-left text-[13px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  :class="[
+                    s.status === 'SCHEDULED' ? 'bg-secondary text-heading hover:bg-secondary/70' : s.status === 'LEAVE' ? 'bg-pending-soft text-pending-ink ring-1 ring-brand-accent/40' : 'bg-muted text-muted-foreground line-through',
+                    isOwner && s.status !== 'CANCELLED' ? 'cursor-pointer' : 'cursor-default',
+                  ]"
+                  :aria-label="`${e.nickname} ${s.status === 'LEAVE' ? 'ลา' : shiftText(s)} ${scheduleStatusLabels[s.status]}`"
                   @click="openEdit(s)"
-                >
-                  {{ s.status === 'LEAVE' ? 'ลา' : shiftText(s) }}
-                </v-chip>
-                <v-btn v-if="isOwner" size="small" variant="text" icon="mdi-plus" aria-label="เพิ่มกะ" class="self-start" @click="openAdd(e.id, d)" />
+                >{{ s.status === 'LEAVE' ? 'ลา' : shiftText(s) }}</button>
+                <button
+                  v-if="isOwner"
+                  type="button"
+                  class="grid h-7 place-items-center rounded-md text-muted-soft transition-colors hover:bg-muted hover:text-heading focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  :aria-label="`เพิ่มกะ ${e.nickname} ${dayLabel(d, i)}`"
+                  @click="openAdd(e.id, d)"
+                ><Plus class="size-4" /></button>
               </div>
             </td>
           </tr>
           <tr v-if="!employees.length && !loading">
-            <td :colspan="8" class="p-6 text-center text-light-brown">ไม่มีพนักงานหรือกะในสัปดาห์นี้</td>
+            <td :colspan="8" class="p-8 text-center text-muted-foreground">ไม่มีพนักงานหรือกะในสัปดาห์นี้</td>
           </tr>
         </tbody>
       </table>
-    </v-card>
+    </div>
 
-    <v-dialog v-model="dialog" max-width="460">
-      <v-card class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">{{ editing ? 'แก้ไขกะ' : 'เพิ่มกะ' }}</p>
-        <p class="m-0 mb-4 text-sm text-light-brown">
-          {{ employees.find((x) => x.id === form.employee_id)?.nickname }} ·
-          {{ new Date(`${form.date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'full', timeZone: 'Asia/Bangkok' }) }}
-        </p>
-        <div class="grid grid-cols-2 gap-4">
-          <v-text-field v-model="form.start" type="time" label="เริ่ม" :disabled="!!editing && editing.status !== 'SCHEDULED'" />
-          <v-text-field v-model="form.end" type="time" label="เลิก" :disabled="!!editing && editing.status !== 'SCHEDULED'" />
-        </div>
-        <p v-if="form.end && form.start && form.end <= form.start" class="m-0 mb-2 text-xs text-light-brown">เลิกงานวันถัดไป (ข้ามเที่ยงคืน)</p>
-        <v-select
-          v-if="editing"
-          v-model="form.status"
-          :items="(['SCHEDULED', 'LEAVE', 'CANCELLED'] as const).map((v) => ({ value: v, title: scheduleStatusLabels[v] }))"
-          label="สถานะ"
-        />
-        <v-text-field v-model="form.note" label="หมายเหตุ" maxlength="300" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="dialog = false">ปิด</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="dialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ editing ? 'แก้ไขกะ' : 'เพิ่มกะ' }}</DialogTitle>
+          <DialogDescription>
+            {{ employees.find((x) => x.id === form.employee_id)?.nickname }} ·
+            {{ form.date ? new Date(`${form.date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'full', timeZone: 'Asia/Bangkok' }) : '' }}
+          </DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="save">
+          <div class="grid grid-cols-2 gap-4">
+            <TimeField v-model="form.start" label="เริ่ม" :disabled="!!editing && editing.status !== 'SCHEDULED'" />
+            <TimeField v-model="form.end" label="เลิก" :disabled="!!editing && editing.status !== 'SCHEDULED'"
+              :hint="form.end && form.start && form.end <= form.start ? 'เลิกงานวันถัดไป (ข้ามเที่ยงคืน)' : undefined" />
+          </div>
+          <SelectField
+            v-if="editing"
+            v-model="form.status"
+            :items="(['SCHEDULED', 'LEAVE', 'CANCELLED'] as const).map((v) => ({ value: v, title: scheduleStatusLabels[v] }))"
+            label="สถานะ"
+          />
+          <TextField v-model="form.note" label="หมายเหตุ" maxlength="300" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="dialog = false">ปิด</Button>
+            <Button type="submit" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

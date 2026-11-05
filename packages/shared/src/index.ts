@@ -204,6 +204,7 @@ export function shiftRange(date: string, start: string, end: string): { starts_a
 // -----------------------------------------------------------------------------
 export const staffLoginErrors: Record<string, string> = {
   DEVICE_INVALID: 'เครื่องนี้ยังไม่ได้ผูกกับสาขา หรือถูกยกเลิกแล้ว',
+  BRANCH_INVALID: 'ไม่พบสาขานี้ หรือสาขาปิดใช้งานแล้ว',
   INVALID_CREDENTIALS: 'PIN ไม่ถูกต้อง',
   PIN_LOCKED: 'PIN ถูกล็อกชั่วคราว กรุณารอแล้วลองใหม่ หรือติดต่อเจ้าของร้าน',
   RATE_LIMITED: 'ลองหลายครั้งเกินไป กรุณารอสักครู่',

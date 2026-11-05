@@ -48,24 +48,27 @@ async function save() {
 </script>
 
 <template>
-  <div class="min-h-screen bg-cream px-4 py-10">
-    <v-card class="mx-auto max-w-md p-6">
-      <h1 class="m-0 mb-1 text-2xl font-semibold text-cocoa">ตั้งรหัสผ่าน</h1>
-      <p class="m-0 mb-4 text-sm text-light-brown">อย่างน้อย 10 ตัวอักษร มีตัวพิมพ์เล็ก ตัวพิมพ์ใหญ่ และตัวเลข</p>
-      <template v-if="user">
-        <p class="m-0 mb-4 text-sm">บัญชี: {{ user.email }}</p>
-        <v-form @submit.prevent="save">
-          <v-text-field v-model="password" label="รหัสผ่านใหม่" type="password" autocomplete="new-password" />
-          <v-text-field v-model="confirm" label="ยืนยันรหัสผ่าน" type="password" autocomplete="new-password" />
-          <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-          <v-btn type="submit" color="primary" block :loading="saving">บันทึกรหัสผ่าน</v-btn>
-        </v-form>
-      </template>
-      <v-progress-linear v-else-if="waiting" indeterminate color="primary" />
-      <template v-else>
-        <v-alert type="warning" variant="tonal" text="ลิงก์ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่ที่หน้าเข้าสู่ระบบ" />
-        <v-btn class="mt-4" block variant="tonal" to="/login">ไปหน้าเข้าสู่ระบบ</v-btn>
-      </template>
-    </v-card>
+  <div class="grid min-h-dvh place-items-center px-4 py-10">
+    <Card class="w-full max-w-md gap-5 py-6">
+      <CardHeader class="px-6">
+        <BrandMark class="mb-2 size-10" />
+        <CardTitle as="h1" class="text-2xl">ตั้งรหัสผ่าน</CardTitle>
+        <p class="m-0 text-[15px] text-muted-foreground">อย่างน้อย 10 ตัวอักษร มีตัวพิมพ์เล็ก ตัวพิมพ์ใหญ่ และตัวเลข</p>
+      </CardHeader>
+      <CardContent class="px-6">
+        <form v-if="user" class="grid gap-4" novalidate @submit.prevent="save">
+          <p class="m-0 rounded-lg bg-muted px-4 py-2.5 text-[15px] text-heading">บัญชี {{ user.email }}</p>
+          <TextField v-model="password" label="รหัสผ่านใหม่" type="password" autocomplete="new-password" />
+          <TextField v-model="confirm" label="ยืนยันรหัสผ่าน" type="password" autocomplete="new-password" />
+          <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
+          <Button type="submit" size="lg" class="w-full" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึกรหัสผ่าน' }}</Button>
+        </form>
+        <LoadingBar v-else-if="waiting" />
+        <div v-else class="grid gap-4">
+          <Alert variant="warning"><AlertDescription>ลิงก์ไม่ถูกต้องหรือหมดอายุ กรุณาขอลิงก์ใหม่ที่หน้าเข้าสู่ระบบ</AlertDescription></Alert>
+          <Button as-child variant="outline" class="w-full"><NuxtLink to="/login">ไปหน้าเข้าสู่ระบบ</NuxtLink></Button>
+        </div>
+      </CardContent>
+    </Card>
   </div>
 </template>

@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // แดชบอร์ด STAFF ของสาขาที่เลือก (ส่วนที่ไม่ใช่เงิน — ยอดขาย/ค้างชำระเพิ่มใน Phase 7)
+import { Banknote, CalendarCheck, CircleCheck, ListOrdered, ReceiptText, Store, Wallet } from '@lucide/vue'
 import { bangkokTime, formatBaht, formatDuration, formatQueueNumber, queueStatusLabels, type StaffDashboard } from '@ifeew/shared'
 
 const user = useSupabaseUser()
@@ -39,75 +40,90 @@ useIntervalFn(load, 30_000)
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">สวัสดี {{ displayName || 'ผู้ใช้' }}</h1>
-      <p class="m-0 text-light-brown">{{ activeBranch?.name }} · {{ isOwner ? 'เจ้าของร้าน' : 'พนักงาน' }}</p>
+    <PageHeader :title="`สวัสดี ${displayName || 'ผู้ใช้'}`" :description="`${activeBranch?.name ?? ''} · ${isOwner ? 'เจ้าของร้าน' : 'พนักงาน'} · อัปเดตทุก 30 วินาที`">
+      <template #actions>
+        <Button as-child variant="outline"><NuxtLink to="/queue">ดูคิว</NuxtLink></Button>
+        <Button as-child><NuxtLink to="/pos">เปิดหน้าร้าน (POS)</NuxtLink></Button>
+      </template>
+    </PageHeader>
+
+    <Alert v-if="error" variant="destructive" class="mb-6"><AlertDescription>{{ error }}</AlertDescription></Alert>
+
+    <div v-if="!dash && !error" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <Skeleton v-for="n in 4" :key="n" class="h-32 rounded-xl" />
     </div>
 
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-
-    <template v-if="dash">
-      <v-card v-if="dash.my_queue.length" class="mb-4 p-5" to="/queue">
-        <p class="m-0 mb-2 font-medium">คิวของฉัน</p>
-        <div class="flex flex-wrap gap-3">
-          <v-chip v-for="q in dash.my_queue" :key="q.queue_id" color="primary" variant="tonal" size="large">
-            {{ formatQueueNumber(q.queue_number) }} · {{ q.service_name }} {{ formatDuration(q.duration_minutes) }} · {{ queueStatusLabels[q.status] }}
-          </v-chip>
+    <div v-if="dash" class="grid gap-6">
+      <!-- คิวของฉัน -->
+      <SectionCard v-if="dash.my_queue.length" title="คิวของฉัน" :description="`${dash.my_queue.length} คิวที่มอบหมายให้คุณ`">
+        <template #actions><Button as-child variant="outline" size="sm"><NuxtLink to="/queue">ไปที่คิว</NuxtLink></Button></template>
+        <div class="flex flex-wrap gap-2">
+          <NuxtLink
+            v-for="q in dash.my_queue"
+            :key="q.queue_id"
+            to="/queue"
+            class="flex items-center gap-3 rounded-lg border border-border bg-background/60 px-4 py-2.5 text-foreground no-underline hover:border-input"
+          >
+            <span class="num text-lg font-semibold text-heading">{{ formatQueueNumber(q.queue_number) }}</span>
+            <span class="text-[15px]">{{ q.service_name }} <span class="text-muted-foreground">{{ formatDuration(q.duration_minutes) }}</span></span>
+            <Badge variant="default">{{ queueStatusLabels[q.status] }}</Badge>
+          </NuxtLink>
         </div>
-      </v-card>
+      </SectionCard>
 
-      <div class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <v-card class="p-5" to="/queue">
-          <p class="m-0 text-sm text-light-brown">คิวรอเรียก</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ dash.queue.waiting }}</p>
-          <p class="m-0 text-sm">เรียกแล้ว {{ dash.queue.called }} · กำลังบริการ {{ dash.queue.in_service }}</p>
-          <p v-if="dash.queue.overdue" class="m-0 text-sm font-medium text-red-700">เลยเวลาจบ {{ dash.queue.overdue }} คิว</p>
-        </v-card>
-        <v-card class="p-5" to="/queue">
-          <p class="m-0 text-sm text-light-brown">บริการเสร็จวันนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ dash.queue.completed }}</p>
-          <p class="m-0 text-sm">Walk-in {{ dash.walk_in_orders }} ราย</p>
-        </v-card>
-        <v-card class="p-5" to="/bookings">
-          <p class="m-0 text-sm text-light-brown">การจองวันนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ dash.bookings.total }}</p>
-          <p class="m-0 text-sm">รอเช็กอิน {{ dash.bookings.awaiting_check_in }} · มาแล้ว {{ dash.bookings.checked_in }}</p>
-          <p v-if="dash.bookings.slip_review" class="m-0 text-sm font-medium text-red-700">สลิปรอตรวจ {{ dash.bookings.slip_review }}</p>
-        </v-card>
-        <v-card class="p-5" to="/pos">
-          <p class="m-0 text-sm text-light-brown">กะ POS</p>
-          <template v-if="dash.session">
-            <p class="m-0 mt-1 text-xl font-semibold text-green-800">เปิดอยู่</p>
-            <p class="m-0 text-sm">ตั้งแต่ {{ bangkokTime(dash.session.opened_at) }} · เงินทอน {{ formatBaht(Number(dash.session.opening_cash)) }}</p>
+      <!-- สรุปวันนี้ -->
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        <StatCard label="คิวรอเรียก" :icon="ListOrdered" :value="dash.queue.waiting" to="/queue">
+          <template #hint>
+            เรียกแล้ว <span class="num">{{ dash.queue.called }}</span> · กำลังบริการ <span class="num">{{ dash.queue.in_service }}</span>
+            <span v-if="dash.queue.overdue" class="block font-medium text-danger-ink">เลยเวลาจบ {{ dash.queue.overdue }} คิว</span>
           </template>
-          <p v-else class="m-0 mt-1 text-xl font-semibold text-light-brown">ยังไม่เปิดกะ</p>
-        </v-card>
+        </StatCard>
+        <StatCard label="บริการเสร็จวันนี้" :icon="CircleCheck" :value="dash.queue.completed" to="/queue" :hint="`Walk-in ${dash.walk_in_orders} ราย`" />
+        <StatCard label="การจองวันนี้" :icon="CalendarCheck" :value="dash.bookings.total" to="/bookings">
+          <template #hint>
+            รอเช็กอิน <span class="num">{{ dash.bookings.awaiting_check_in }}</span> · มาแล้ว <span class="num">{{ dash.bookings.checked_in }}</span>
+            <span v-if="dash.bookings.slip_review" class="block font-medium text-danger-ink">สลิปรอตรวจ {{ dash.bookings.slip_review }}</span>
+          </template>
+        </StatCard>
+        <StatCard label="กะ POS" :icon="Store" to="/pos">
+          <span v-if="dash.session" class="text-success-ink">เปิดอยู่</span>
+          <span v-else class="text-muted-foreground">ยังไม่มีกะ</span>
+          <template #hint>
+            <template v-if="dash.session">ตั้งแต่ <span class="num">{{ bangkokTime(dash.session.opened_at) }}</span> · เงินทอน <span class="num">{{ formatBaht(Number(dash.session.opening_cash)) }}</span></template>
+            <template v-else>เปิดให้อัตโนมัติเมื่อรับเงินครั้งแรก</template>
+          </template>
+        </StatCard>
       </div>
 
-      <v-card class="mt-4 p-5">
-        <p class="m-0 mb-3 font-medium">เตียงและอุปกรณ์ตอนนี้</p>
-        <div class="grid gap-3 sm:grid-cols-3">
-          <div v-for="r in dash.resources" :key="r.resource_type_id" class="rounded-xl bg-cream px-4 py-3">
-            <p class="m-0 text-sm text-light-brown">{{ r.name }}</p>
-            <p class="m-0 text-2xl font-semibold">ว่าง {{ Math.max(0, r.total - r.in_use) }} / {{ r.total }}</p>
-            <p v-if="r.status !== 'ACTIVE'" class="m-0 text-xs text-red-700">{{ r.status === 'MAINTENANCE' ? 'ปิดซ่อมบำรุง' : 'ปิดใช้งาน' }}</p>
-          </div>
+      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]">
+        <!-- เตียงและอุปกรณ์ -->
+        <SectionCard title="เตียงและอุปกรณ์ตอนนี้" flush>
+          <EmptyState v-if="!dash.resources.length" compact title="ยังไม่ได้ตั้งค่าเตียงและอุปกรณ์" class="m-5" />
+          <ul v-else class="m-0 grid list-none p-0">
+            <li v-for="r in dash.resources" :key="r.resource_type_id" class="grid gap-2 border-b border-border px-5 py-3.5 last:border-0">
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-heading">{{ r.name }}</span>
+                <span class="text-[15px]">ว่าง <span class="num font-semibold text-heading">{{ Math.max(0, r.total - r.in_use) }}</span> / <span class="num">{{ r.total }}</span></span>
+              </div>
+              <div class="h-1.5 overflow-hidden rounded-full bg-secondary" role="img" :aria-label="`ใช้อยู่ ${r.in_use} จาก ${r.total}`">
+                <div class="h-full rounded-full bg-brand-accent" :style="{ width: `${r.total ? Math.min(100, (r.in_use / r.total) * 100) : 0}%` }" />
+              </div>
+              <Badge v-if="r.status !== 'ACTIVE'" variant="danger" class="w-fit">{{ r.status === 'MAINTENANCE' ? 'ปิดซ่อมบำรุง' : 'ปิดใช้งาน' }}</Badge>
+            </li>
+          </ul>
+        </SectionCard>
+
+        <!-- เงินวันนี้ -->
+        <div v-if="money" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
+          <StatCard label="ยอดรับวันนี้" :icon="Banknote" :value="formatBaht(Number(money.today_sales))" to="/pos" hint="ไม่รวมทิป" />
+          <StatCard label="ยอดค้างชำระ" :icon="Wallet" to="/pos" :hint="Number(money.outstanding) > 0 ? 'มีบิลที่ยังเก็บเงินไม่ครบ' : 'ไม่มียอดค้าง'">
+            <span :class="Number(money.outstanding) > 0 ? 'text-danger-ink' : ''">{{ formatBaht(Number(money.outstanding)) }}</span>
+          </StatCard>
+          <StatCard v-if="isOwner" label="คำขอยกเลิกรายจ่าย" :icon="ReceiptText" :value="money.pending_void_requests" to="/expenses" class="sm:col-span-2"
+            :hint="money.pending_void_requests ? 'รอเจ้าของร้านอนุมัติ' : 'ไม่มีคำขอค้าง'" />
         </div>
-      </v-card>
-      <div v-if="money" class="mt-4 grid gap-4 sm:grid-cols-3">
-        <v-card class="p-5" to="/pos">
-          <p class="m-0 text-sm text-light-brown">ยอดรับวันนี้</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ formatBaht(Number(money.today_sales)) }}</p>
-        </v-card>
-        <v-card class="p-5" to="/pos">
-          <p class="m-0 text-sm text-light-brown">ยอดค้างชำระ</p>
-          <p class="m-0 mt-1 text-3xl font-semibold" :class="{ 'text-red-700': Number(money.outstanding) > 0 }">{{ formatBaht(Number(money.outstanding)) }}</p>
-        </v-card>
-        <v-card v-if="isOwner" class="p-5" to="/expenses">
-          <p class="m-0 text-sm text-light-brown">คำขอยกเลิกรายจ่าย</p>
-          <p class="m-0 mt-1 text-3xl font-semibold">{{ money.pending_void_requests }}</p>
-        </v-card>
       </div>
-    </template>
+    </div>
   </div>
 </template>

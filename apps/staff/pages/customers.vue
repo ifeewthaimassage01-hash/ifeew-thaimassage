@@ -1,8 +1,12 @@
 <script setup lang="ts">
 // ลูกค้า: ค้นหาด้วยเบอร์เต็ม (ผลปิดบัง) -> เปิดดูรายละเอียด (บันทึก audit) -> แก้ไข / จับคู่ Guest
 // OWNER: คำขอลบข้อมูล (PDPA)
+import { Link2, Search, UserPlus } from '@lucide/vue'
 import { personNameSchema, reasonSchema, thaiPhoneSchema, type CustomerDetail, type Tables } from '@ifeew/shared'
 
+
+
+const { confirm, prompt } = useDialog()
 type SearchRow = { customer_id: string; display_name: string; phone_masked: string; is_member: boolean; created_at: string }
 type DataRequest = Tables<'customer_data_requests'> & { customer: { first_name: string; last_name: string } | null }
 
@@ -201,10 +205,10 @@ async function loadRequests() {
 async function processRequest(r: DataRequest, approve: boolean) {
   let note: string | null = null
   if (approve) {
-    if (!window.confirm('ยืนยันลบข้อมูลส่วนบุคคลของลูกค้ารายนี้? ย้อนกลับไม่ได้')) return
+    if (!(await confirm({ title: 'ลบข้อมูลส่วนบุคคลของลูกค้า?', description: 'ย้อนกลับไม่ได้', confirmText: 'ลบข้อมูล', destructive: true }))) return
   } else {
-    note = window.prompt('เหตุผลที่ปฏิเสธ (เช่น มีข้อผูกพันทางกฎหมาย)')
-    if (!note || note.trim().length < 3) return
+    note = await prompt({ title: 'ปฏิเสธคำขอลบข้อมูล', label: 'เหตุผล', placeholder: 'เช่น มีข้อผูกพันทางกฎหมาย', multiline: true, minLength: 3, confirmText: 'ปฏิเสธคำขอ' })
+    if (note === null) return
   }
   try {
     const res = await run(() =>
@@ -232,133 +236,150 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
 
 <template>
   <div>
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">ลูกค้า</h1>
+    <PageHeader title="ลูกค้า" description="ค้นหาด้วยเบอร์โทรเต็มเท่านั้น ผลลัพธ์แสดงข้อมูลบางส่วน และการเปิดดูรายละเอียดจะถูกบันทึก">
+      <template #actions><Button variant="outline" @click="openCreate"><UserPlus /> เพิ่มลูกค้า</Button></template>
+    </PageHeader>
 
-    <v-tabs v-if="isOwner" v-model="tab" color="primary" class="mb-4">
-      <v-tab value="search">ค้นหาลูกค้า</v-tab>
-      <v-tab value="requests">คำขอลบข้อมูล (PDPA)</v-tab>
-    </v-tabs>
+    <SegmentedControl
+      v-if="isOwner"
+      v-model="tab"
+      :items="[{ value: 'search', label: 'ค้นหาลูกค้า' }, { value: 'requests', label: 'คำขอลบข้อมูล (PDPA)' }]"
+      label="มุมมอง"
+      class="mb-4"
+    />
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
     <template v-if="tab === 'search'">
-      <v-card class="mb-4 p-5">
-        <v-form class="flex flex-wrap items-start gap-3" @submit.prevent="search">
-          <v-text-field v-model="phone" label="เบอร์โทรเต็ม" type="tel" inputmode="tel" class="min-w-[240px] flex-1" hide-details autofocus />
-          <v-btn type="submit" color="primary" :loading="searching" prepend-icon="mdi-magnify">ค้นหา</v-btn>
-          <v-btn variant="tonal" color="primary" prepend-icon="mdi-account-plus-outline" @click="openCreate">เพิ่มลูกค้า</v-btn>
-        </v-form>
-        <p class="m-0 mt-2 text-xs text-light-brown">ค้นหาได้ด้วยเบอร์โทรเต็มเท่านั้น ผลลัพธ์แสดงข้อมูลบางส่วน และการเปิดดูรายละเอียดจะถูกบันทึก</p>
-      </v-card>
+      <form class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" @submit.prevent="search">
+        <TextField v-model="phone" label="เบอร์โทรเต็ม" type="tel" inputmode="tel" class="num min-w-[240px] flex-1" autofocus />
+        <Button type="submit" :disabled="searching"><Search /> {{ searching ? 'กำลังค้นหา…' : 'ค้นหา' }}</Button>
+      </form>
 
-      <div class="grid gap-4 lg:grid-cols-2">
-        <v-card v-if="results" class="p-2">
-          <v-list v-if="results.length" lines="two">
-            <v-list-item
-              v-for="r in results"
-              :key="r.customer_id"
-              :title="r.display_name"
-              :subtitle="r.phone_masked"
-              :active="selected?.customer_id === r.customer_id"
-              rounded="lg"
-              @click="open(r)"
-            >
-              <template #append>
-                <v-chip :color="r.is_member ? 'primary' : 'grey'" variant="tonal" size="small" class="mr-2">
-                  {{ r.is_member ? 'สมาชิก' : 'Guest' }}
-                </v-chip>
-                <v-btn
-                  v-if="!r.is_member && results.length > 1"
-                  variant="text"
-                  size="small"
-                  prepend-icon="mdi-link-variant"
-                  @click.stop="openMerge(r)"
-                >จับคู่</v-btn>
-              </template>
-            </v-list-item>
-          </v-list>
-          <p v-else class="m-4 text-light-brown">ไม่พบลูกค้าเบอร์นี้</p>
-        </v-card>
+      <EmptyState v-if="!results" title="ค้นหาลูกค้าด้วยเบอร์โทร" description="กรอกเบอร์โทรเต็มของลูกค้าแล้วกดค้นหา" />
+      <div v-else class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,1.2fr)]">
+        <SectionCard title="ผลการค้นหา" :description="`${results.length} รายการ`" flush>
+          <EmptyState v-if="!results.length" compact title="ไม่พบลูกค้าเบอร์นี้" class="m-5">
+            <Button variant="outline" size="sm" @click="openCreate">เพิ่มเป็นลูกค้าใหม่</Button>
+          </EmptyState>
+          <ul v-else class="m-0 grid list-none p-0">
+            <li v-for="r in results" :key="r.customer_id" class="border-b border-border last:border-0">
+              <div class="flex items-center gap-3 px-3 py-2" :class="selected?.customer_id === r.customer_id ? 'bg-secondary/60' : ''">
+                <button
+                  type="button"
+                  class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  :aria-pressed="selected?.customer_id === r.customer_id"
+                  @click="open(r)"
+                >
+                  <span class="grid size-9 shrink-0 place-items-center rounded-full bg-secondary text-sm font-semibold text-heading">{{ r.display_name.slice(0, 1) }}</span>
+                  <span class="min-w-0">
+                    <span class="block truncate font-medium text-heading">{{ r.display_name }}</span>
+                    <span class="num block text-sm text-muted-foreground">{{ r.phone_masked }}</span>
+                  </span>
+                </button>
+                <Badge :variant="r.is_member ? 'default' : 'neutral'">{{ r.is_member ? 'สมาชิก' : 'Guest' }}</Badge>
+                <Button v-if="!r.is_member && results.length > 1" variant="ghost" size="sm" @click="openMerge(r)"><Link2 /> จับคู่</Button>
+              </div>
+            </li>
+          </ul>
+        </SectionCard>
 
-        <v-card v-if="selected" class="p-5">
-          <div class="mb-4 flex items-center justify-between">
-            <p class="m-0 text-lg font-medium">{{ selected.first_name }} {{ selected.last_name }}</p>
-            <v-chip :color="selected.is_member ? 'primary' : 'grey'" variant="tonal" size="small">
-              {{ selected.is_member ? 'สมาชิก' : 'Guest' }}
-            </v-chip>
-          </div>
-          <p v-if="selected.is_member" class="m-0 mb-3 text-xs text-light-brown">ชื่อ เบอร์ และอีเมลของสมาชิก ลูกค้าแก้เองในแอป พนักงานแก้ได้เฉพาะหมายเหตุ</p>
-          <div class="grid grid-cols-2 gap-x-3">
-            <v-text-field v-model="editForm.first_name" label="ชื่อ" :disabled="selected.is_member" />
-            <v-text-field v-model="editForm.last_name" label="นามสกุล" :disabled="selected.is_member" />
-            <v-text-field v-model="editForm.phone" label="เบอร์โทร" :disabled="selected.is_member" />
-            <v-text-field v-model="editForm.email" label="อีเมล" :disabled="selected.is_member" />
-          </div>
-          <v-textarea v-model="editForm.staff_note" label="หมายเหตุของร้าน (ลูกค้าไม่เห็น)" rows="2" variant="outlined" />
-          <p class="m-0 mb-3 text-xs text-light-brown">
-            รับข่าวสาร: {{ selected.marketing_consent === null ? 'ไม่ได้ระบุ' : selected.marketing_consent ? 'ยินยอม' : 'ไม่ยินยอม' }}
-          </p>
-          <div class="flex justify-end">
-            <v-btn color="primary" :loading="saving" @click="saveCustomer">บันทึก</v-btn>
-          </div>
-        </v-card>
+        <SectionCard v-if="selected" :title="`${selected.first_name} ${selected.last_name}`.trim()"
+          :description="selected.is_member ? 'ชื่อ เบอร์ และอีเมลของสมาชิก ลูกค้าแก้เองในแอป พนักงานแก้ได้เฉพาะหมายเหตุ' : 'ลูกค้า Guest แก้ข้อมูลได้'">
+          <template #actions><Badge :variant="selected.is_member ? 'default' : 'neutral'">{{ selected.is_member ? 'สมาชิก' : 'Guest' }}</Badge></template>
+          <form class="grid gap-4" @submit.prevent="saveCustomer">
+            <div class="grid gap-4 sm:grid-cols-2">
+              <TextField v-model="editForm.first_name" label="ชื่อ" :disabled="selected.is_member" />
+              <TextField v-model="editForm.last_name" label="นามสกุล" :disabled="selected.is_member" />
+              <TextField v-model="editForm.phone" label="เบอร์โทร" :disabled="selected.is_member" class="num" />
+              <TextField v-model="editForm.email" label="อีเมล" :disabled="selected.is_member" />
+            </div>
+            <TextareaField v-model="editForm.staff_note" label="หมายเหตุของร้าน" hint="ลูกค้าไม่เห็น" rows="2" />
+            <div class="flex flex-wrap items-center justify-between gap-3">
+              <p class="m-0 text-sm text-muted-foreground">
+                รับข่าวสาร: <span class="text-heading">{{ selected.marketing_consent === null ? 'ไม่ได้ระบุ' : selected.marketing_consent ? 'ยินยอม' : 'ไม่ยินยอม' }}</span>
+              </p>
+              <Button type="submit" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
+            </div>
+          </form>
+        </SectionCard>
+        <EmptyState v-else-if="results.length" compact title="เลือกลูกค้าเพื่อดูรายละเอียด" />
       </div>
     </template>
 
-    <v-card v-else class="p-2">
-      <v-table>
-        <thead><tr><th>วันที่ขอ</th><th>ลูกค้า</th><th>เหตุผล</th><th>สถานะ</th><th /></tr></thead>
-        <tbody>
-          <tr v-for="r in requests" :key="r.id">
-            <td>{{ new Date(r.requested_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }) }}</td>
-            <td>{{ r.customer ? `${r.customer.first_name} ${r.customer.last_name}` : '-' }}</td>
-            <td>{{ r.reason || '-' }}</td>
-            <td>{{ statusLabel[r.status] }}<div v-if="r.response_note" class="text-xs text-light-brown">{{ r.response_note }}</div></td>
-            <td class="text-right">
-              <template v-if="r.status === 'PENDING'">
-                <v-btn variant="text" @click="processRequest(r, false)">ปฏิเสธ</v-btn>
-                <v-btn variant="tonal" color="error" @click="processRequest(r, true)">ลบข้อมูล</v-btn>
-              </template>
-            </td>
-          </tr>
-          <tr v-if="!requests.length"><td colspan="5" class="text-center text-light-brown">ไม่มีคำขอ</td></tr>
-        </tbody>
-      </v-table>
-    </v-card>
+    <SectionCard v-else title="คำขอลบข้อมูล (PDPA)" flush>
+      <div class="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead>วันที่ขอ</TableHead><TableHead>ลูกค้า</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
+              <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="r in requests" :key="r.id">
+              <TableCell class="num">{{ new Date(r.requested_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }) }}</TableCell>
+              <TableCell class="text-heading">{{ r.customer ? `${r.customer.first_name} ${r.customer.last_name}` : '—' }}</TableCell>
+              <TableCell class="max-w-64 whitespace-normal">{{ r.reason || '—' }}</TableCell>
+              <TableCell>
+                <Badge dot :variant="r.status === 'COMPLETED' ? 'success' : r.status === 'REJECTED' ? 'neutral' : 'pending'">{{ statusLabel[r.status] }}</Badge>
+                <span v-if="r.response_note" class="mt-1 block text-sm whitespace-normal text-muted-foreground">{{ r.response_note }}</span>
+              </TableCell>
+              <TableCell class="text-right">
+                <div v-if="r.status === 'PENDING'" class="flex justify-end gap-2">
+                  <Button variant="ghost" size="sm" @click="processRequest(r, false)">ปฏิเสธ</Button>
+                  <Button variant="destructive" size="sm" @click="processRequest(r, true)">ลบข้อมูล</Button>
+                </div>
+              </TableCell>
+            </TableRow>
+            <TableRow v-if="!requests.length" class="hover:bg-transparent">
+              <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ไม่มีคำขอ</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+    </SectionCard>
 
     <!-- เพิ่มลูกค้า -->
-    <v-dialog v-model="createDialog" max-width="520">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">เพิ่มลูกค้า</p>
-        <div class="grid grid-cols-2 gap-x-3">
-          <v-text-field v-model="createForm.first_name" label="ชื่อ" />
-          <v-text-field v-model="createForm.last_name" label="นามสกุล (ไม่บังคับ)" />
-          <v-text-field v-model="createForm.phone" label="เบอร์โทร" type="tel" />
-          <v-text-field v-model="createForm.email" label="อีเมล (ไม่บังคับ)" type="email" />
-        </div>
-        <v-textarea v-model="createForm.staff_note" label="หมายเหตุของร้าน" rows="2" variant="outlined" />
-        <v-checkbox v-model="createForm.privacy" color="primary" label="แจ้งนโยบายความเป็นส่วนตัวให้ลูกค้ารับทราบแล้ว" hide-details />
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="createDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitCreate">เพิ่มลูกค้า</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="createDialog">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>เพิ่มลูกค้า</DialogTitle>
+          <DialogDescription>ลูกค้า Guest ที่มาที่ร้าน ใช้เบอร์โทรเป็นตัวระบุ</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitCreate">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <TextField v-model="createForm.first_name" label="ชื่อ" />
+            <TextField v-model="createForm.last_name" label="นามสกุล (ไม่บังคับ)" />
+            <TextField v-model="createForm.phone" label="เบอร์โทร" type="tel" class="num" />
+            <TextField v-model="createForm.email" label="อีเมล (ไม่บังคับ)" type="email" />
+          </div>
+          <TextareaField v-model="createForm.staff_note" label="หมายเหตุของร้าน" rows="2" />
+          <CheckboxField v-model="createForm.privacy" label="แจ้งนโยบายความเป็นส่วนตัวให้ลูกค้ารับทราบแล้ว" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="createDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">เพิ่มลูกค้า</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- จับคู่ -->
-    <v-dialog v-model="mergeDialog" max-width="480">
-      <v-card class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">จับคู่ลูกค้า Guest</p>
-        <p class="m-0 mb-4 text-sm text-light-brown">
-          รวม “{{ mergeSource?.display_name }}” เข้ากับลูกค้าที่เลือก ใช้เมื่อยืนยันกับลูกค้าแล้วว่าเป็นคนเดียวกัน
-        </p>
-        <v-select v-model="mergeTarget" :items="mergeTargets" label="รวมเข้ากับ" />
-        <v-textarea v-model="mergeReason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="mergeDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitMerge">ยืนยันจับคู่</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="mergeDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>จับคู่ลูกค้า Guest</DialogTitle>
+          <DialogDescription>รวม “{{ mergeSource?.display_name }}” เข้ากับลูกค้าที่เลือก ใช้เมื่อยืนยันกับลูกค้าแล้วว่าเป็นคนเดียวกัน</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitMerge">
+          <SelectField v-model="mergeTarget" :items="mergeTargets" label="รวมเข้ากับ" placeholder="เลือกลูกค้า" />
+          <TextareaField v-model="mergeReason" label="เหตุผล" hint="บังคับ" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="mergeDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">ยืนยันจับคู่</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

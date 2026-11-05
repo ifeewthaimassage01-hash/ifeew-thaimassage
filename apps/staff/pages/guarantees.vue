@@ -10,6 +10,8 @@ import {
   type EmploymentType,
 } from '@ifeew/shared'
 
+
+const { prompt } = useDialog()
 definePageMeta({ ownerOnly: true })
 
 const supabase = useSupabaseClient()
@@ -98,8 +100,14 @@ async function loadAttendance() {
 watch([branchId, from, to, () => company.value?.company_id], loadAttendance, { immediate: true })
 
 async function override(r: AttendanceRow, grant: boolean) {
-  const reason = window.prompt(grant ? 'เหตุผลที่ให้ประกันมือวันนี้' : 'เหตุผลที่ไม่ให้ประกันมือวันนี้', '')
-  if (!reason || reason.trim().length < 3) return
+  const reason = await prompt({
+    title: grant ? 'ให้ประกันมือวันนี้' : 'ไม่ให้ประกันมือวันนี้',
+    label: 'เหตุผล',
+    minLength: 3,
+    confirmText: grant ? 'ให้ประกันมือ' : 'ไม่ให้ประกันมือ',
+    destructive: !grant,
+  })
+  if (reason === null) return
   try {
     await must(supabase.rpc('set_guarantee_override', {
       p_employee_id: r.employee_id, p_branch_id: r.branch_id, p_date: r.business_date, p_grant: grant, p_reason: reason.trim(),
@@ -113,87 +121,113 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
 </script>
 
 <template>
-  <div class="max-w-5xl">
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">ประกันมือและการลงเวลา</h1>
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
+  <div>
+    <PageHeader title="ประกันมือและการลงเวลา" description="หมอประจำที่ลงเวลาเข้า-ออกครบกะ ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวัน (ไม่นับทิป) ระบบเติมส่วนต่างอัตโนมัติ · หมอวิ่งได้ค่ามือตามงานจริง" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
-    <v-card class="mb-6 p-2">
-      <v-table density="comfortable">
-        <thead><tr><th>หมอ</th><th>ประเภท</th><th class="text-right">ประกันมือ/วัน</th><th /></tr></thead>
-        <tbody>
-          <tr v-for="e in employees" :key="e.id">
-            <td>{{ e.nickname }} <span class="text-xs text-light-brown">{{ e.employee_code }}</span></td>
-            <td>
-              <v-btn-toggle :model-value="e.employment_type" density="compact" mandatory color="primary"
-                @update:model-value="(v: EmploymentType) => setType(e, v)">
-                <v-btn value="REGULAR" size="small">{{ employmentTypeLabels.REGULAR }}</v-btn>
-                <v-btn value="FREELANCE" size="small">{{ employmentTypeLabels.FREELANCE }}</v-btn>
-              </v-btn-toggle>
-            </td>
-            <td class="text-right">
-              {{ currentRate(e.id) ? formatBaht(Number(currentRate(e.id)!.daily_amount)) : '-' }}
-              <div v-for="f in futureRates(e.id)" :key="f.effective_from" class="text-xs text-light-brown">
-                {{ formatBaht(Number(f.daily_amount)) }} ตั้งแต่ {{ f.effective_from }}
-              </div>
-            </td>
-            <td class="text-right">
-              <v-btn v-if="e.employment_type === 'REGULAR'" size="small" variant="text" @click="openRate(e)">ตั้งยอด</v-btn>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
-      <p class="m-0 px-3 pb-2 text-xs text-light-brown">
-        หมอประจำที่ลงเวลาเข้า-ออกครบกะ ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวัน (ไม่นับทิป) ระบบเติมส่วนต่างอัตโนมัติ · หมอวิ่งได้ค่ามือตามงานจริง
-      </p>
-    </v-card>
-
-    <div class="mb-2 flex flex-wrap items-center gap-2">
-      <v-select v-model="branchId" :items="branchItems" label="สาขา" hide-details density="compact" class="max-w-52" />
-      <v-text-field v-model="from" type="date" label="ตั้งแต่" hide-details density="compact" class="max-w-44" />
-      <v-text-field v-model="to" type="date" label="ถึง" hide-details density="compact" class="max-w-44" />
-    </div>
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
-    <v-card class="overflow-x-auto p-2">
-      <v-table density="compact">
-        <thead><tr><th>วันที่</th><th>หมอ</th><th>กะ</th><th>ลงเวลา</th><th class="text-right">ค่ามือ</th><th class="text-right">ประกัน</th><th>ผล</th><th class="text-right">เติม</th><th /></tr></thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.employee_id + r.business_date">
-            <td>{{ r.business_date }}</td>
-            <td>{{ r.nickname }}</td>
-            <td>{{ r.shift_start ? `${time(r.shift_start)}–${time(r.shift_end)}` : 'ไม่มีกะ' }}</td>
-            <td>{{ time(r.clock_in_at) }}–{{ time(r.clock_out_at) }}</td>
-            <td class="text-right">{{ formatBaht(Number(r.earned)) }}</td>
-            <td class="text-right">{{ Number(r.rate) ? formatBaht(Number(r.rate)) : '-' }}</td>
-            <td>
-              <v-chip v-if="Number(r.rate)" size="x-small" variant="tonal" :color="r.qualified ? 'success' : 'grey'">
-                {{ r.override_grant !== null ? (r.override_grant ? 'OWNER ให้' : 'OWNER ไม่ให้') : r.attended ? 'ครบกะ' : 'ไม่ครบกะ' }}
-              </v-chip>
-              <div v-if="r.override_reason" class="text-xs text-light-brown">{{ r.override_reason }}</div>
-            </td>
-            <td class="text-right font-medium">{{ Number(r.topup) ? formatBaht(Number(r.topup)) : '-' }}</td>
-            <td class="whitespace-nowrap text-right">
-              <template v-if="Number(r.rate)">
-                <v-btn v-if="!r.qualified" size="x-small" variant="text" @click="override(r, true)">ให้</v-btn>
-                <v-btn v-else size="x-small" variant="text" color="error" @click="override(r, false)">ไม่ให้</v-btn>
-              </template>
-            </td>
-          </tr>
-          <tr v-if="!rows.length"><td colspan="9" class="text-center text-light-brown">ไม่มีข้อมูล</td></tr>
-        </tbody>
-      </v-table>
-    </v-card>
-
-    <v-dialog v-model="rateDialog" max-width="420">
-      <v-card v-if="rateEmp" class="p-6">
-        <p class="m-0 mb-3 text-lg font-medium">ประกันมือ · {{ rateEmp.nickname }}</p>
-        <v-text-field v-model="rateForm.amount" type="number" label="ยอดประกันต่อวัน (บาท, 0 = เลิกประกัน)" />
-        <v-text-field v-model="rateForm.from" type="date" label="มีผลตั้งแต่" :min="today" />
-        <v-text-field v-model="rateForm.reason" label="เหตุผล (บังคับ)" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="rateDialog = false">ปิด</v-btn>
-          <v-btn color="primary" :disabled="rateForm.reason.trim().length < 3" @click="saveRate">บันทึก</v-btn>
+    <div class="grid gap-6">
+      <SectionCard title="ประเภทหมอและยอดประกัน" :description="`${employees.length} คน`" flush>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow class="hover:bg-transparent">
+                <TableHead>หมอ</TableHead><TableHead>ประเภท</TableHead><TableHead class="text-right">ประกันมือ/วัน</TableHead>
+                <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="e in employees" :key="e.id">
+                <TableCell><span class="font-medium text-heading">{{ e.nickname }}</span> <span class="num text-sm text-muted-foreground">{{ e.employee_code }}</span></TableCell>
+                <TableCell>
+                  <SegmentedControl
+                    :model-value="e.employment_type"
+                    :items="[{ value: 'REGULAR', label: employmentTypeLabels.REGULAR }, { value: 'FREELANCE', label: employmentTypeLabels.FREELANCE }]"
+                    size="sm"
+                    :label="`ประเภทของ ${e.nickname}`"
+                    @update:model-value="(v) => setType(e, v as EmploymentType)"
+                  />
+                </TableCell>
+                <TableCell class="text-right">
+                  <span class="num text-heading">{{ currentRate(e.id) ? formatBaht(Number(currentRate(e.id)!.daily_amount)) : '—' }}</span>
+                  <span v-for="f in futureRates(e.id)" :key="f.effective_from" class="block text-sm text-muted-foreground">
+                    <span class="num">{{ formatBaht(Number(f.daily_amount)) }}</span> ตั้งแต่ <span class="num">{{ f.effective_from }}</span>
+                  </span>
+                </TableCell>
+                <TableCell class="text-right">
+                  <Button v-if="e.employment_type === 'REGULAR'" size="sm" variant="outline" @click="openRate(e)">ตั้งยอด</Button>
+                </TableCell>
+              </TableRow>
+              <TableRow v-if="!employees.length" class="hover:bg-transparent">
+                <TableCell colspan="4" class="py-8 text-center text-muted-foreground">ยังไม่มีพนักงาน</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
-      </v-card>
-    </v-dialog>
+      </SectionCard>
+
+      <SectionCard title="การลงเวลาและผลประกันรายวัน" flush>
+        <div class="flex flex-wrap items-end gap-3 border-b border-border p-5">
+          <SelectField v-model="branchId" :items="branchItems" label="สาขา" class="w-52" />
+          <TextField v-model="from" type="date" label="ตั้งแต่" class="w-44" />
+          <TextField v-model="to" type="date" label="ถึง" class="w-44" />
+        </div>
+        <LoadingBar v-if="loading" />
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow class="hover:bg-transparent">
+                <TableHead>วันที่</TableHead><TableHead>หมอ</TableHead><TableHead>กะ</TableHead><TableHead>ลงเวลา</TableHead>
+                <TableHead class="text-right">ค่ามือ</TableHead><TableHead class="text-right">ประกัน</TableHead><TableHead>ผล</TableHead>
+                <TableHead class="text-right">เติม</TableHead><TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="r in rows" :key="r.employee_id + r.business_date">
+                <TableCell class="num">{{ r.business_date }}</TableCell>
+                <TableCell class="text-heading">{{ r.nickname }}</TableCell>
+                <TableCell class="num">{{ r.shift_start ? `${time(r.shift_start)}–${time(r.shift_end)}` : 'ไม่มีกะ' }}</TableCell>
+                <TableCell class="num">{{ time(r.clock_in_at) }}–{{ time(r.clock_out_at) }}</TableCell>
+                <TableCell class="num text-right">{{ formatBaht(Number(r.earned)) }}</TableCell>
+                <TableCell class="num text-right">{{ Number(r.rate) ? formatBaht(Number(r.rate)) : '—' }}</TableCell>
+                <TableCell>
+                  <Badge v-if="Number(r.rate)" :variant="r.qualified ? 'success' : 'neutral'" dot>
+                    {{ r.override_grant !== null ? (r.override_grant ? 'เจ้าของให้' : 'เจ้าของไม่ให้') : r.attended ? 'ครบกะ' : 'ไม่ครบกะ' }}
+                  </Badge>
+                  <span v-if="r.override_reason" class="block max-w-48 truncate text-sm text-muted-foreground" :title="r.override_reason">{{ r.override_reason }}</span>
+                </TableCell>
+                <TableCell class="num text-right font-semibold text-heading">{{ Number(r.topup) ? formatBaht(Number(r.topup)) : '—' }}</TableCell>
+                <TableCell class="text-right">
+                  <template v-if="Number(r.rate)">
+                    <Button v-if="!r.qualified" size="xs" variant="outline" @click="override(r, true)">ให้</Button>
+                    <Button v-else size="xs" variant="ghost" class="text-danger-ink" @click="override(r, false)">ไม่ให้</Button>
+                  </template>
+                </TableCell>
+              </TableRow>
+              <TableRow v-if="!loading && !rows.length" class="hover:bg-transparent">
+                <TableCell colspan="9" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
+
+    <Dialog v-model:open="rateDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ประกันมือ · {{ rateEmp?.nickname }}</DialogTitle>
+          <DialogDescription>การเปลี่ยนยอดต้องยืนยันตัวตนด้วย Authenticator</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="saveRate">
+          <TextField v-model="rateForm.amount" type="number" label="ยอดประกันต่อวัน" hint="ใส่ 0 เพื่อเลิกประกัน" suffix="บาท" />
+          <TextField v-model="rateForm.from" type="date" label="มีผลตั้งแต่" :min="today" />
+          <TextField v-model="rateForm.reason" label="เหตุผล" hint="บังคับ อย่างน้อย 3 ตัวอักษร" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="rateDialog = false">ปิด</Button>
+            <Button type="submit" :disabled="rateForm.reason.trim().length < 3">บันทึก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

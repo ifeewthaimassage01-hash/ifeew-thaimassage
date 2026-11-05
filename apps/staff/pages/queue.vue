@@ -2,6 +2,7 @@
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
 // แท็บ "คิวของฉัน" สำหรับหมอที่ login ด้วย PIN บนเครื่องสาขา
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
+import { Clock, KeyRound, RefreshCw, UserRound } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -20,6 +21,8 @@ import {
   type Database,
 } from '@ifeew/shared'
 
+
+const { confirm } = useDialog()
 type CatalogRow = Database['public']['Views']['v_public_branch_services']['Row']
 
 type Row = PosOrderItem & { order: PosOrder }
@@ -57,8 +60,9 @@ const byColumn = (statuses: QueueStatus[]) =>
       statuses.includes('COMPLETED') ? b.queue_number - a.queue_number : a.queue_number - b.queue_number,
     )
 
-const statusColor = (s: QueueStatus) =>
-  ({ WAITING: 'warning', CALLED: 'info', ACCEPTED: 'primary', IN_SERVICE: 'success', COMPLETED: 'grey', CANCELLED: 'error' })[s]
+// สีของสถานะคิว (Badge variant ตาม DESIGN.md)
+const statusVariant = (s: QueueStatus) =>
+  (({ WAITING: 'pending', CALLED: 'default', ACCEPTED: 'default', IN_SERVICE: 'success', COMPLETED: 'neutral', CANCELLED: 'danger' }) as const)[s]
 
 function minutesLeft(r: Row): number | null {
   if (r.queue_status !== 'IN_SERVICE' || !r.started_at) return null
@@ -92,8 +96,8 @@ const accept = (r: Row) =>
   act(r, () => supabase.rpc('queue_accept', { p_queue_id: r.queue_id }), `รับคิว ${formatQueueNumber(r.queue_number)} แล้ว`)
 const start = (r: Row) =>
   act(r, () => supabase.rpc('queue_start', { p_queue_id: r.queue_id }), `เริ่มบริการคิว ${formatQueueNumber(r.queue_number)}`)
-function complete(r: Row) {
-  if (!window.confirm(`จบบริการคิว ${formatQueueNumber(r.queue_number)} (${r.service_name})?`)) return
+async function complete(r: Row) {
+  if (!(await confirm({ title: `จบบริการคิว ${formatQueueNumber(r.queue_number)}?`, description: r.service_name, confirmText: 'จบบริการ' }))) return
   act(r, () => supabase.rpc('queue_complete', { p_queue_id: r.queue_id }), `จบบริการคิว ${formatQueueNumber(r.queue_number)} แล้ว`)
 }
 
@@ -324,239 +328,269 @@ async function submitClock(pin: string) {
 
 <template>
   <div>
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">คิววันนี้ · {{ activeBranch?.name }}</h1>
-      <div class="flex items-center gap-2">
-        <v-btn-toggle v-model="tab" mandatory color="primary" density="comfortable">
-          <v-btn value="all">คิวทั้งหมด</v-btn>
-          <v-btn value="mine">คิวของฉัน <v-badge v-if="mine.length" :content="mine.length" color="error" inline /></v-btn>
-        </v-btn-toggle>
-        <v-btn v-if="device.token.value" variant="tonal" prepend-icon="mdi-clock-check-outline" @click="openClock">ลงเวลา</v-btn>
-        <v-btn icon="mdi-refresh" variant="text" aria-label="โหลดใหม่" @click="load" />
-      </div>
-    </div>
+    <PageHeader title="คิววันนี้" :description="`${activeBranch?.name ?? ''} · เรียกคิว มอบหมายหมอ เริ่มและจบบริการ`">
+      <template #actions>
+        <Button v-if="device.token.value" variant="outline" @click="openClock"><Clock /> ลงเวลา</Button>
+        <Button variant="ghost" size="icon" aria-label="โหลดคิวใหม่" @click="load"><RefreshCw :class="loading ? 'animate-spin' : ''" /></Button>
+      </template>
+    </PageHeader>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
+    <SegmentedControl
+      v-model="tab"
+      :items="[{ value: 'all', label: 'คิวทั้งหมด' }, { value: 'mine', label: mine.length ? `คิวของฉัน (${mine.length})` : 'คิวของฉัน' }]"
+      label="มุมมองคิว"
+      class="mb-4"
+    />
+
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <LoadingBar v-if="loading" class="mb-3" />
 
     <!-- คิวของฉัน (หมอ) -->
     <template v-if="tab === 'mine'">
-      <p v-if="!mine.length" class="text-light-brown">ยังไม่มีคิวที่เรียกให้คุณ</p>
-      <div class="grid gap-4 md:grid-cols-2">
-        <v-card v-for="r in mine" :key="r.queue_id" class="p-6">
-          <div class="flex items-start justify-between gap-3">
+      <EmptyState v-if="!mine.length" title="ยังไม่มีคิวที่เรียกให้คุณ" description="เมื่อพนักงานเรียกคิวให้คุณ คิวจะขึ้นที่นี่" />
+      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        <Card v-for="r in mine" :key="r.queue_id" class="gap-0 py-0">
+          <div class="flex items-start justify-between gap-3 p-6">
             <div>
-              <p class="m-0 text-5xl font-semibold text-cocoa">{{ formatQueueNumber(r.queue_number) }}</p>
-              <p class="m-0 mt-2 text-xl">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
-              <p class="m-0 text-light-brown">{{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
+              <p class="num m-0 text-5xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
+              <p class="m-0 mt-3 text-xl text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
+              <p class="m-0 text-muted-foreground">{{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
             </div>
-            <v-chip :color="statusColor(r.queue_status)" variant="tonal">{{ queueStatusLabels[r.queue_status] }}</v-chip>
+            <Badge :variant="statusVariant(r.queue_status)" dot>{{ queueStatusLabels[r.queue_status] }}</Badge>
           </div>
-          <p v-if="minutesLeft(r) !== null" class="m-0 mt-3 text-lg">
-            เหลือประมาณ {{ Math.max(0, minutesLeft(r)!) }} นาที
-          </p>
-          <div class="mt-4 grid gap-2">
-            <v-btn v-if="r.queue_status === 'CALLED'" color="primary" size="x-large" :loading="busy === r.queue_id" @click="accept(r)">รับคิว</v-btn>
-            <v-btn v-if="r.queue_status === 'ACCEPTED'" color="primary" size="x-large" :loading="busy === r.queue_id" @click="start(r)">เริ่มบริการ</v-btn>
-            <v-btn v-if="r.queue_status === 'IN_SERVICE'" color="success" size="x-large" :loading="busy === r.queue_id" @click="complete(r)">จบบริการ</v-btn>
+          <p v-if="minutesLeft(r) !== null" class="m-0 px-6 pb-4 text-lg">เหลือประมาณ <span class="num font-semibold text-heading">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</p>
+          <div class="border-t border-border p-4">
+            <Button v-if="r.queue_status === 'CALLED'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="accept(r)">รับคิว</Button>
+            <Button v-if="r.queue_status === 'ACCEPTED'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="start(r)">เริ่มบริการ</Button>
+            <Button v-if="r.queue_status === 'IN_SERVICE'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="complete(r)">จบบริการ</Button>
           </div>
-        </v-card>
+        </Card>
       </div>
     </template>
 
     <!-- คิวทั้งหมด -->
-    <div v-else class="grid gap-4 lg:grid-cols-[1fr_1fr_1fr_1fr_240px]">
-      <section v-for="c in columns" :key="c.key">
-        <p class="m-0 mb-2 font-medium">{{ c.title }} ({{ byColumn(c.statuses).length }})</p>
-        <div class="grid gap-3">
-          <v-card v-for="r in byColumn(c.statuses)" :key="r.queue_id" class="p-4"
-            :class="{ 'opacity-60': c.key === 'done', 'border-2 border-red-400': isOverdue(r) }">
-            <div class="flex items-start justify-between gap-2">
-              <p class="m-0 text-3xl font-semibold text-cocoa">{{ formatQueueNumber(r.queue_number) }}</p>
-              <v-chip :color="statusColor(r.queue_status)" variant="tonal" size="small">{{ queueStatusLabels[r.queue_status] }}</v-chip>
-            </div>
-            <p class="m-0 mt-1 font-medium">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
-            <p v-if="r.follows_queue_id" class="m-0 text-xs text-light-brown">ต่อเวลาจากคิว {{ queueNo(r.follows_queue_id) }}</p>
-            <p v-if="isOverdue(r)" class="m-0 text-sm font-medium text-red-700">เลยเวลาจบ {{ -(minutesLeft(r) ?? 0) }} นาที</p>
-            <p class="m-0 text-sm text-light-brown">
-              {{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }} · {{ orderChannelLabels[r.order.channel] }}
-              <span v-if="r.order.booking_code"> · {{ r.order.booking_code }}</span>
-            </p>
-            <p class="m-0 text-sm">
-              <template v-if="r.started_at">เริ่ม {{ bangkokTime(r.started_at) }}</template>
-              <template v-else>นัด {{ bangkokTime(r.planned_starts_at) }}</template>
-              <template v-if="minutesLeft(r) !== null"> · เหลือ {{ Math.max(0, minutesLeft(r)!) }} นาที</template>
-            </p>
-            <p v-if="r.therapist" class="m-0 mt-1 text-sm">
-              <v-icon icon="mdi-account-outline" size="16" /> {{ r.therapist.nickname }}
-              <v-chip v-if="r.therapist.off_shift_confirmed" size="x-small" variant="outlined">นอกกะ</v-chip>
-              <span v-if="r.handovers.length" class="text-xs text-light-brown">
-                (ต่อจาก {{ r.handovers.map((h) => h.nickname).join(', ') }})
-              </span>
-            </p>
-            <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 text-sm text-red-700">{{ r.cancel_reason }}</p>
+    <div v-else class="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-[repeat(4,minmax(0,1fr))_240px]">
+      <section v-for="c in columns" :key="c.key" class="grid gap-3 rounded-xl bg-secondary/35 p-3" :aria-labelledby="`col-${c.key}`">
+        <h2 :id="`col-${c.key}`" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
+          {{ c.title }} <span class="num rounded-md bg-card px-2 text-sm font-medium text-muted-foreground">{{ byColumn(c.statuses).length }}</span>
+        </h2>
+        <p v-if="!byColumn(c.statuses).length" class="m-0 rounded-lg border border-dashed border-input px-3 py-4 text-center text-sm text-muted-foreground">ไม่มีคิว</p>
+        <article
+          v-for="r in byColumn(c.statuses)"
+          :key="r.queue_id"
+          class="grid gap-1 rounded-lg border bg-card p-4"
+          :class="[isOverdue(r) ? 'border-danger ring-1 ring-danger/40' : 'border-border', c.key === 'done' ? 'opacity-70' : '']"
+        >
+          <div class="flex items-start justify-between gap-2">
+            <p class="num m-0 text-3xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
+            <Badge :variant="statusVariant(r.queue_status)" dot>{{ queueStatusLabels[r.queue_status] }}</Badge>
+          </div>
+          <p class="m-0 mt-1 font-medium text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
+          <p v-if="r.follows_queue_id" class="m-0 text-sm text-muted-foreground">ต่อเวลาจากคิว <span class="num">{{ queueNo(r.follows_queue_id) }}</span></p>
+          <p v-if="isOverdue(r)" class="m-0 text-sm font-medium text-danger-ink">เลยเวลาจบ {{ -(minutesLeft(r) ?? 0) }} นาที</p>
+          <p class="m-0 text-sm text-muted-foreground">
+            {{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }} · {{ orderChannelLabels[r.order.channel] }}
+            <span v-if="r.order.booking_code"> · <span class="num">{{ r.order.booking_code }}</span></span>
+          </p>
+          <p class="m-0 text-sm">
+            <template v-if="r.started_at">เริ่ม <span class="num">{{ bangkokTime(r.started_at) }}</span></template>
+            <template v-else>นัด <span class="num">{{ bangkokTime(r.planned_starts_at) }}</span></template>
+            <template v-if="minutesLeft(r) !== null"> · เหลือ <span class="num font-medium text-heading">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</template>
+          </p>
+          <p v-if="r.therapist" class="m-0 flex flex-wrap items-center gap-1.5 text-sm">
+            <UserRound class="size-4 text-muted-soft" aria-hidden="true" /><span class="text-heading">{{ r.therapist.nickname }}</span>
+            <Badge v-if="r.therapist.off_shift_confirmed" variant="outline">นอกกะ</Badge>
+            <span v-if="r.handovers.length" class="text-muted-foreground">(ต่อจาก {{ r.handovers.map((h) => h.nickname).join(', ') }})</span>
+          </p>
+          <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 text-sm text-danger-ink">{{ r.cancel_reason }}</p>
 
-            <div v-if="c.key !== 'done'" class="mt-2 flex flex-wrap gap-1">
-              <v-btn v-if="r.queue_status === 'WAITING'" size="small" color="primary" :loading="busy === r.queue_id" @click="openCall(r)">เรียกคิว</v-btn>
-              <v-btn v-if="r.queue_status === 'CALLED'" size="small" color="primary" :loading="busy === r.queue_id" @click="accept(r)">หมอรับคิว</v-btn>
-              <v-btn v-if="r.queue_status === 'ACCEPTED'" size="small" color="primary" :loading="busy === r.queue_id" @click="start(r)">เริ่มบริการ</v-btn>
-              <v-btn v-if="r.queue_status === 'IN_SERVICE'" size="small" color="success" :loading="busy === r.queue_id" @click="complete(r)">จบบริการ</v-btn>
-              <v-btn v-if="['CALLED', 'ACCEPTED'].includes(r.queue_status)" size="small" variant="text" @click="openCall(r)">เปลี่ยนหมอ</v-btn>
-              <v-btn v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" size="small" variant="text" color="error" @click="openCancel(r)">ยกเลิก</v-btn>
+          <div v-if="c.key !== 'done'" class="mt-2 grid gap-2">
+            <Button v-if="r.queue_status === 'WAITING'" size="sm" :disabled="busy === r.queue_id" @click="openCall(r)">เรียกคิว</Button>
+            <Button v-if="r.queue_status === 'CALLED'" size="sm" :disabled="busy === r.queue_id" @click="accept(r)">หมอรับคิว</Button>
+            <Button v-if="r.queue_status === 'ACCEPTED'" size="sm" :disabled="busy === r.queue_id" @click="start(r)">เริ่มบริการ</Button>
+            <Button v-if="r.queue_status === 'IN_SERVICE'" size="sm" :disabled="busy === r.queue_id" @click="complete(r)">จบบริการ</Button>
+            <div class="flex flex-wrap gap-1">
+              <Button v-if="['CALLED', 'ACCEPTED'].includes(r.queue_status)" size="xs" variant="ghost" @click="openCall(r)">เปลี่ยนหมอ</Button>
               <template v-if="r.queue_status === 'IN_SERVICE'">
-                <v-btn size="small" variant="text" @click="openExtend(r)">ต่อเวลา</v-btn>
-                <v-btn size="small" variant="text" @click="openCall(r)">เปลี่ยนหมอ</v-btn>
-                <v-btn v-if="withinUndo(r.started_at)" size="small" variant="text" @click="openUndo(r)">ย้อนเริ่ม</v-btn>
+                <Button size="xs" variant="ghost" @click="openExtend(r)">ต่อเวลา</Button>
+                <Button size="xs" variant="ghost" @click="openCall(r)">เปลี่ยนหมอ</Button>
+                <Button v-if="withinUndo(r.started_at)" size="xs" variant="ghost" @click="openUndo(r)">ย้อนเริ่ม</Button>
               </template>
-              <v-btn v-if="device.token.value && r.therapist && ['CALLED', 'ACCEPTED', 'IN_SERVICE'].includes(r.queue_status)"
-                size="small" variant="tonal" prepend-icon="mdi-dialpad" @click="openPin(r)">หมอกด PIN</v-btn>
+              <Button v-if="device.token.value && r.therapist && ['CALLED', 'ACCEPTED', 'IN_SERVICE'].includes(r.queue_status)" size="xs" variant="outline" @click="openPin(r)">
+                <KeyRound /> หมอกด PIN
+              </Button>
+              <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" size="xs" variant="ghost" class="text-danger-ink" @click="openCancel(r)">ยกเลิก</Button>
             </div>
-            <div v-else-if="r.queue_status === 'COMPLETED' && withinUndo(r.completed_at)" class="mt-2">
-              <v-btn size="small" variant="text" @click="openUndo(r)">ย้อนจบบริการ</v-btn>
-            </div>
-          </v-card>
-        </div>
+          </div>
+          <div v-else-if="r.queue_status === 'COMPLETED' && withinUndo(r.completed_at)" class="mt-1">
+            <Button size="xs" variant="ghost" @click="openUndo(r)">ย้อนจบบริการ</Button>
+          </div>
+        </article>
       </section>
 
-      <section>
-        <p class="m-0 mb-2 font-medium">หมอ ({{ therapists.length }})</p>
-        <v-card class="p-2">
-          <v-list density="compact">
-            <v-list-item v-for="t in therapists" :key="t.employee_id" :title="t.nickname"
-              :subtitle="t.busy_queue_number ? `คิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง' : 'ไม่มีกะ'">
-              <template #prepend>
-                <v-icon :icon="t.busy_queue_number ? 'mdi-circle' : 'mdi-circle-outline'"
-                  :color="t.busy_queue_number ? 'warning' : t.on_shift ? 'success' : 'grey'" size="12" class="mr-2" />
-              </template>
-            </v-list-item>
-          </v-list>
-        </v-card>
+      <section class="grid gap-3 rounded-xl border border-border bg-card p-3 lg:col-span-2 2xl:col-span-1" aria-labelledby="col-therapists">
+        <h2 id="col-therapists" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
+          หมอ <span class="num rounded-md bg-muted px-2 text-sm font-medium text-muted-foreground">{{ therapists.length }}</span>
+        </h2>
+        <ul class="m-0 grid list-none gap-0.5 p-0 lg:grid-cols-2 2xl:grid-cols-1">
+          <li v-for="t in therapists" :key="t.employee_id" class="flex items-center gap-2.5 rounded-md px-2 py-1.5">
+            <span class="size-2.5 shrink-0 rounded-full" :class="t.busy_queue_number ? 'bg-brand-accent' : t.on_shift ? 'bg-success' : 'border border-muted-soft'" aria-hidden="true" />
+            <span class="min-w-0">
+              <span class="block truncate text-[15px] text-heading">{{ t.nickname }}</span>
+              <span class="block text-[13px] text-muted-foreground">{{ t.busy_queue_number ? `คิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง' : 'ไม่มีกะ' }}</span>
+            </span>
+          </li>
+          <li v-if="!therapists.length" class="px-2 py-2 text-sm text-muted-foreground">ไม่มีพนักงานในสาขานี้</li>
+        </ul>
       </section>
     </div>
 
     <!-- เลือกหมอ -->
-    <v-dialog v-model="callDialog" max-width="520">
-      <v-card v-if="callRow" class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">
-          {{ callRow.queue_status === 'IN_SERVICE' ? 'เปลี่ยนหมอระหว่างบริการ' : callRow.therapist ? 'เปลี่ยนหมอ' : 'เรียกคิว' }}
-          {{ formatQueueNumber(callRow.queue_number) }}
-        </p>
-        <p class="m-0 mb-3 text-sm text-light-brown">{{ callRow.service_name }} {{ formatDuration(callRow.duration_minutes) }}</p>
-        <v-textarea v-if="callRow.therapist" v-model="callReason" label="เหตุผลที่เปลี่ยนหมอ (บังคับ)" rows="2" variant="outlined" />
-        <p v-if="callRow.queue_status === 'IN_SERVICE'" class="m-0 mb-3 text-xs text-light-brown">
-          ค่ามือแบ่งตามเวลาที่หมอแต่ละคนทำจริง
-        </p>
-
-        <v-alert v-if="offShift" type="warning" variant="tonal" class="mb-3">
-          {{ offShift.text }}
-          <div class="mt-2 flex justify-end gap-2">
-            <v-btn size="small" variant="text" @click="offShift = null">ไม่ใช่</v-btn>
-            <v-btn size="small" color="warning" @click="pick(offShift.therapist, true)">ยืนยันมอบหมาย</v-btn>
+    <Dialog v-model:open="callDialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>
+            {{ callRow?.queue_status === 'IN_SERVICE' ? 'เปลี่ยนหมอระหว่างบริการ' : callRow?.therapist ? 'เปลี่ยนหมอ' : 'เรียกคิว' }}
+            <span class="num">{{ callRow ? formatQueueNumber(callRow.queue_number) : '' }}</span>
+          </DialogTitle>
+          <DialogDescription>
+            {{ callRow?.service_name }} {{ callRow ? formatDuration(callRow.duration_minutes) : '' }}
+            <template v-if="callRow?.queue_status === 'IN_SERVICE'"> · ค่ามือแบ่งตามเวลาที่หมอแต่ละคนทำจริง</template>
+          </DialogDescription>
+        </DialogHeader>
+        <div v-if="callRow" class="-mx-6 grid content-start gap-3 overflow-y-auto px-6">
+          <TextareaField v-if="callRow.therapist" v-model="callReason" label="เหตุผลที่เปลี่ยนหมอ" hint="บังคับ" rows="2" />
+          <Alert v-if="offShift" variant="warning">
+            <AlertDescription class="grid gap-2">
+              <span>{{ offShift.text }}</span>
+              <span class="flex justify-end gap-2">
+                <Button size="sm" variant="ghost" @click="offShift = null">ไม่ใช่</Button>
+                <Button size="sm" @click="pick(offShift.therapist, true)">ยืนยันมอบหมาย</Button>
+              </span>
+            </AlertDescription>
+          </Alert>
+          <div class="grid gap-2 sm:grid-cols-2">
+            <button
+              v-for="t in therapists"
+              :key="t.employee_id"
+              type="button"
+              :disabled="!!t.busy_queue_number || t.employee_id === callRow.therapist?.employee_id || busy === callRow.queue_id"
+              class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary hover:bg-secondary/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card"
+              @click="pick(t)"
+            >
+              <span class="size-2.5 shrink-0 rounded-full" :class="t.busy_queue_number ? 'bg-brand-accent' : t.on_shift ? 'bg-success' : 'border border-muted-soft'" aria-hidden="true" />
+              <span>
+                <span class="block font-medium text-heading">{{ t.nickname }}</span>
+                <span class="block text-sm text-muted-foreground">{{ t.busy_queue_number ? `มีคิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง · มีกะ' : 'ว่าง · ไม่มีกะ' }}</span>
+              </span>
+            </button>
           </div>
-        </v-alert>
-
-        <div class="grid gap-2">
-          <v-btn
-            v-for="t in therapists"
-            :key="t.employee_id"
-            :disabled="!!t.busy_queue_number || t.employee_id === callRow.therapist?.employee_id"
-            :loading="busy === callRow.queue_id"
-            variant="outlined"
-            class="justify-start"
-            @click="pick(t)"
-          >
-            {{ t.nickname }}
-            <span class="ml-2 text-xs text-light-brown">
-              {{ t.busy_queue_number ? `มีคิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง · มีกะ' : 'ว่าง · ไม่มีกะ' }}
-            </span>
-          </v-btn>
+          <p v-if="!therapists.length" class="m-0 text-sm text-muted-foreground">ไม่มีพนักงานในสาขานี้</p>
         </div>
-        <p v-if="!therapists.length" class="m-0 text-sm text-light-brown">ไม่มีพนักงานในสาขานี้</p>
-        <div class="mt-4 flex justify-end"><v-btn variant="text" @click="callDialog = false">ปิด</v-btn></div>
-      </v-card>
-    </v-dialog>
+        <DialogFooter><Button variant="outline" @click="callDialog = false">ปิด</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- ย้อนเริ่ม/จบ -->
-    <v-dialog v-model="undoDialog" max-width="460">
-      <v-card v-if="undoRow" class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">
-          {{ undoKind === 'complete' ? 'ย้อนจบบริการ' : 'ย้อนเริ่มบริการ' }} คิว {{ formatQueueNumber(undoRow.queue_number) }}
-        </p>
-        <p class="m-0 mb-3 text-sm text-light-brown">
-          {{ undoKind === 'complete' ? 'คิวจะกลับมาเป็นกำลังให้บริการ และจองเตียงกลับ' : 'คิวจะกลับเป็นหมอรับแล้ว (ยังไม่เริ่ม)' }}
-          · ทำได้ภายใน {{ QUEUE_UNDO_MINUTES }} นาที
-        </p>
-        <v-textarea v-model="undoReason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="undoDialog = false">ปิด</v-btn>
-          <v-btn color="primary" :loading="busy === undoRow.queue_id" @click="submitUndo">ยืนยันย้อน</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="undoDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ undoKind === 'complete' ? 'ย้อนจบบริการ' : 'ย้อนเริ่มบริการ' }} คิว <span class="num">{{ undoRow ? formatQueueNumber(undoRow.queue_number) : '' }}</span></DialogTitle>
+          <DialogDescription>
+            {{ undoKind === 'complete' ? 'คิวจะกลับมาเป็นกำลังให้บริการ และจองเตียงกลับ' : 'คิวจะกลับเป็นหมอรับแล้ว (ยังไม่เริ่ม)' }} · ทำได้ภายใน {{ QUEUE_UNDO_MINUTES }} นาที
+          </DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitUndo">
+          <TextareaField v-model="undoReason" label="เหตุผล" hint="บังคับ" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="undoDialog = false">ปิด</Button>
+            <Button type="submit" :disabled="!undoRow || busy === undoRow.queue_id">ยืนยันย้อน</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- ต่อเวลา -->
-    <v-dialog v-model="extendDialog" max-width="480">
-      <v-card v-if="extendRow" class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">ต่อเวลาคิว {{ formatQueueNumber(extendRow.queue_number) }}</p>
-        <p class="m-0 mb-3 text-sm text-light-brown">
-          {{ extendRow.therapist?.nickname }} ให้บริการต่อทันทีเมื่อ {{ extendRow.service_name }} จบ
-        </p>
-        <v-select v-model="extendOption" label="บริการที่ต่อ" :items="extendItems" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="extendDialog = false">ปิด</v-btn>
-          <v-btn color="primary" :disabled="!extendOption" :loading="busy === extendRow.queue_id" @click="submitExtend">ต่อเวลา</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="extendDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ต่อเวลาคิว <span class="num">{{ extendRow ? formatQueueNumber(extendRow.queue_number) : '' }}</span></DialogTitle>
+          <DialogDescription>{{ extendRow?.therapist?.nickname }} ให้บริการต่อทันทีเมื่อ {{ extendRow?.service_name }} จบ</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitExtend">
+          <SelectField v-model="extendOption" label="บริการที่ต่อ" :items="extendItems" placeholder="เลือกบริการ" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="extendDialog = false">ปิด</Button>
+            <Button type="submit" :disabled="!extendOption || !extendRow || busy === extendRow.queue_id">ต่อเวลา</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- ลงเวลา -->
-    <v-dialog v-model="clockDialog" max-width="420">
-      <v-card class="p-6">
+    <Dialog v-model:open="clockDialog">
+      <DialogContent class="sm:max-w-md">
         <template v-if="!clockWho">
-          <p class="m-0 mb-3 text-lg font-medium">ลงเวลาเข้า/ออกงาน</p>
+          <DialogHeader>
+            <DialogTitle>ลงเวลาเข้า/ออกงาน</DialogTitle>
+            <DialogDescription>เลือกชื่อของคุณ แล้วกด PIN</DialogDescription>
+          </DialogHeader>
           <div class="grid gap-2">
-            <v-btn v-for="a in clockList" :key="a.employee_id" variant="outlined" class="justify-start" :disabled="!!a.clock_out_at"
-              @click="clockWho = a; clockError = null">
-              {{ a.nickname }}
-              <span class="ml-2 text-xs text-light-brown">
-                {{ a.clock_out_at ? `ออกแล้ว ${bangkokTime(a.clock_out_at)}` : a.clock_in_at ? `เข้า ${bangkokTime(a.clock_in_at)} · กดเพื่อลงเวลาออก` : 'กดเพื่อลงเวลาเข้า' }}
+            <button
+              v-for="a in clockList"
+              :key="a.employee_id"
+              type="button"
+              :disabled="!!a.clock_out_at"
+              class="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              @click="clockWho = a; clockError = null"
+            >
+              <span class="font-medium text-heading">{{ a.nickname }}</span>
+              <span class="text-sm text-muted-foreground">
+                {{ a.clock_out_at ? `ออกแล้ว ${bangkokTime(a.clock_out_at)}` : a.clock_in_at ? `เข้า ${bangkokTime(a.clock_in_at)} · แตะเพื่อลงเวลาออก` : 'แตะเพื่อลงเวลาเข้า' }}
               </span>
-            </v-btn>
+            </button>
           </div>
-          <div class="mt-4 flex justify-end"><v-btn variant="text" @click="clockDialog = false">ปิด</v-btn></div>
+          <DialogFooter><Button variant="outline" @click="clockDialog = false">ปิด</Button></DialogFooter>
         </template>
         <template v-else>
-          <p class="m-0 text-center text-lg font-medium">{{ clockWho.nickname }}</p>
-          <p class="m-0 mb-4 text-center text-sm text-light-brown">ลงเวลา{{ clockWho.clock_in_at ? 'ออก' : 'เข้า' }}งาน · กด PIN ของคุณ</p>
+          <DialogHeader class="items-center text-center">
+            <DialogTitle>{{ clockWho.nickname }}</DialogTitle>
+            <DialogDescription>ลงเวลา{{ clockWho.clock_in_at ? 'ออก' : 'เข้า' }}งาน · กด PIN ของคุณ</DialogDescription>
+          </DialogHeader>
           <PinPad ref="clockPad" :loading="clockLoading" :error="clockError" @submit="submitClock" />
-          <div class="mt-4 flex justify-center"><v-btn variant="text" @click="clockWho = null">ย้อนกลับ</v-btn></div>
+          <div class="flex justify-center"><Button variant="ghost" @click="clockWho = null">ย้อนกลับ</Button></div>
         </template>
-      </v-card>
-    </v-dialog>
+      </DialogContent>
+    </Dialog>
 
     <!-- หมอกด PIN -->
-    <v-dialog v-model="pinDialog" max-width="400">
-      <v-card v-if="pinRow?.therapist" class="p-6">
-        <p class="m-0 text-center text-lg font-medium">{{ pinRow.therapist.nickname }}</p>
-        <p class="m-0 mb-4 text-center text-sm text-light-brown">
-          {{ pinActionLabel[pinAction(pinRow)] }}คิว {{ formatQueueNumber(pinRow.queue_number) }} · กด PIN ของคุณ
-        </p>
-        <PinPad ref="pinPad" :loading="pinLoading" :error="pinError" @submit="submitPin" />
-        <div class="mt-4 flex justify-center"><v-btn variant="text" @click="pinDialog = false">ยกเลิก</v-btn></div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="pinDialog">
+      <DialogContent class="sm:max-w-sm">
+        <DialogHeader class="items-center text-center">
+          <DialogTitle>{{ pinRow?.therapist?.nickname }}</DialogTitle>
+          <DialogDescription v-if="pinRow">{{ pinActionLabel[pinAction(pinRow)] }}คิว {{ formatQueueNumber(pinRow.queue_number) }} · กด PIN ของคุณ</DialogDescription>
+        </DialogHeader>
+        <PinPad v-if="pinRow?.therapist" ref="pinPad" :loading="pinLoading" :error="pinError" @submit="submitPin" />
+        <div class="flex justify-center"><Button variant="ghost" @click="pinDialog = false">ยกเลิก</Button></div>
+      </DialogContent>
+    </Dialog>
 
     <!-- ยกเลิก -->
-    <v-dialog v-model="cancelDialog" max-width="460">
-      <v-card v-if="cancelRow" class="p-6">
-        <p class="m-0 mb-3 text-lg font-medium">ยกเลิกคิว {{ formatQueueNumber(cancelRow.queue_number) }} · {{ cancelRow.service_name }}</p>
-        <v-textarea v-model="cancelReason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="cancelDialog = false">ปิด</v-btn>
-          <v-btn color="error" :loading="busy === cancelRow.queue_id" @click="submitCancel">ยืนยันยกเลิก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="cancelDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ยกเลิกคิว <span class="num">{{ cancelRow ? formatQueueNumber(cancelRow.queue_number) : '' }}</span></DialogTitle>
+          <DialogDescription>{{ cancelRow?.service_name }}</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitCancel">
+          <TextareaField v-model="cancelReason" label="เหตุผล" hint="บังคับ" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="cancelDialog = false">ปิด</Button>
+            <Button type="submit" variant="destructive" :disabled="!cancelRow || busy === cancelRow.queue_id">ยืนยันยกเลิก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

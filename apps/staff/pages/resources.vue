@@ -1,7 +1,11 @@
 <script setup lang="ts">
 // OWNER: ประเภททรัพยากร, จำนวนต่อสาขา, ทรัพยากรที่แต่ละบริการใช้, บัญชีรับมัดจำของสาขา
+import { Plus, X } from '@lucide/vue'
 import type { Tables } from '@ifeew/shared'
 
+
+
+const { prompt } = useDialog()
 definePageMeta({ ownerOnly: true })
 
 type ResourceType = Tables<'resource_types'>
@@ -65,8 +69,8 @@ watch(() => activeBranch.value?.branch_id, load, { immediate: true })
 // ประเภททรัพยากร
 // ---------------------------------------------------------------------------
 async function addType() {
-  const name = window.prompt('ชื่อประเภททรัพยากร เช่น เบาะนวดไทย, เก้าอี้นวดเท้า')
-  if (!name?.trim() || !company.value) return
+  const name = await prompt({ title: 'เพิ่มประเภททรัพยากร', label: 'ชื่อประเภท', placeholder: 'เช่น เบาะนวดไทย, เก้าอี้นวดเท้า', minLength: 1, maxLength: 100, confirmText: 'เพิ่ม' })
+  if (name === null || !company.value) return
   try {
     await must(supabase.from('resource_types').insert({ company_id: company.value.company_id, name: name.trim() }))
     await load()
@@ -193,64 +197,80 @@ async function saveAccount() {
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <h1 class="m-0 text-2xl font-semibold text-cocoa">เตียงและอุปกรณ์ · {{ activeBranch?.name }}</h1>
-    <v-alert v-if="message" :type="message.type" variant="tonal" closable :text="message.text" @click:close="message = null" />
+  <div>
+    <PageHeader title="เตียงและอุปกรณ์" :description="`${activeBranch?.name ?? ''} · จำนวนต่อสาขา ทรัพยากรที่แต่ละบริการใช้ และบัญชีรับมัดจำ`" />
+    <MessageAlert :message="message" class="mb-6" @close="message = null" />
 
-    <v-card class="p-6">
-      <div class="mb-4 flex items-center justify-between">
-        <p class="m-0 text-lg font-medium">จำนวนที่สาขานี้</p>
-        <v-btn variant="tonal" prepend-icon="mdi-plus" @click="addType">เพิ่มประเภท</v-btn>
-      </div>
-      <div v-for="t in types" :key="t.id" class="grid grid-cols-[1fr_120px_180px_auto] items-center gap-3" :class="t.is_active ? '' : 'opacity-50'">
-        <span class="font-medium">{{ t.name }}</span>
-        <v-text-field v-model="qty[t.id]!.total_quantity" type="number" min="0" label="จำนวน" hide-details class="my-1" />
-        <v-select v-model="qty[t.id]!.status" hide-details label="สถานะ" class="my-1"
-          :items="[{ value: 'ACTIVE', title: 'ใช้งาน' }, { value: 'MAINTENANCE', title: 'ซ่อมบำรุง' }, { value: 'DISABLED', title: 'ปิด' }]" />
-        <v-btn variant="text" size="small" @click="toggleType(t)">{{ t.is_active ? 'ปิดประเภท' : 'เปิดประเภท' }}</v-btn>
-      </div>
-      <p class="m-0 mt-2 text-xs text-light-brown">ลดจำนวนต่ำกว่าที่ถูกจองไว้ในอนาคตไม่ได้ · ซ่อมบำรุง/ปิด = จองไม่ได้</p>
-      <div class="mt-4 flex justify-end"><v-btn color="primary" :loading="saving" @click="saveQuantities">บันทึกจำนวน</v-btn></div>
-    </v-card>
-
-    <v-card class="p-6">
-      <p class="m-0 mb-4 text-lg font-medium">บริการใช้อะไร (ทุกสาขา ทุกระยะเวลา)</p>
-      <div v-for="s in services" :key="s.id" class="flex items-center justify-between border-b border-beige py-2">
-        <div>
-          <p class="m-0 font-medium">{{ s.name }}</p>
-          <p class="m-0 text-sm text-light-brown">{{ usageText(s) }}</p>
+    <div class="grid gap-6">
+      <SectionCard title="จำนวนที่สาขานี้" description="ลดจำนวนต่ำกว่าที่ถูกจองไว้ในอนาคตไม่ได้ · ซ่อมบำรุง/ปิด = จองไม่ได้" flush>
+        <template #actions><Button variant="outline" size="sm" @click="addType"><Plus /> เพิ่มประเภท</Button></template>
+        <EmptyState v-if="!types.length" compact title="ยังไม่มีประเภทเตียงหรืออุปกรณ์" description="เช่น เบาะนวดไทย, เก้าอี้นวดเท้า" class="m-5" />
+        <div
+          v-for="t in types"
+          :key="t.id"
+          class="grid grid-cols-2 items-end gap-3 border-b border-border px-5 py-3 sm:grid-cols-[minmax(0,1fr)_120px_180px_auto]"
+          :class="t.is_active ? '' : 'text-muted-foreground'"
+        >
+          <span class="col-span-2 self-center font-medium text-heading sm:col-span-1">
+            {{ t.name }} <Badge v-if="!t.is_active" variant="neutral" class="ml-1">ปิดประเภท</Badge>
+          </span>
+          <TextField v-model="qty[t.id]!.total_quantity" type="number" min="0" :aria-label="`จำนวน ${t.name}`" class="num" />
+          <SelectField v-model="qty[t.id]!.status" :aria-label="`สถานะ ${t.name}`"
+            :items="[{ value: 'ACTIVE', title: 'ใช้งาน' }, { value: 'MAINTENANCE', title: 'ซ่อมบำรุง' }, { value: 'DISABLED', title: 'ปิด' }]" />
+          <Button variant="ghost" size="sm" @click="toggleType(t)">{{ t.is_active ? 'ปิดประเภท' : 'เปิดประเภท' }}</Button>
         </div>
-        <v-btn size="small" variant="tonal" color="primary" @click="openService(s)">กำหนด</v-btn>
-      </div>
-    </v-card>
-
-    <v-card class="p-6">
-      <p class="m-0 mb-1 text-lg font-medium">บัญชีรับมัดจำของสาขา</p>
-      <p class="m-0 mb-4 text-sm text-light-brown">ลูกค้าจะเห็น QR PromptPay ของบัญชีนี้ · SlipOK Branch ID ต้องผูกกับบัญชีเดียวกันในระบบ SlipOK</p>
-      <div class="grid gap-x-4 md:grid-cols-2">
-        <v-text-field v-model="accountForm.promptpay_id" label="PromptPay (เบอร์/เลขประจำตัว/e-Wallet)" inputmode="numeric" />
-        <v-text-field v-model="accountForm.account_name" label="ชื่อบัญชี" />
-        <v-text-field v-model="accountForm.bank_name" label="ธนาคาร" />
-        <v-text-field v-model="accountForm.slipok_branch_id" label="SlipOK Branch ID (ว่าง = พนักงานตรวจสลิปเอง)" />
-      </div>
-      <v-switch v-model="accountForm.is_active" color="primary" label="เปิดใช้งาน" hide-details />
-      <div class="mt-2 flex justify-end"><v-btn color="primary" :loading="saving" @click="saveAccount">บันทึกบัญชี</v-btn></div>
-    </v-card>
-
-    <v-dialog v-model="svcDialog" max-width="480">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">{{ svcTarget?.name }} ใช้</p>
-        <div v-for="(i, idx) in svcItems" :key="idx" class="flex items-center gap-2">
-          <v-select v-model="i.resource_type_id" :items="types.filter((t) => t.is_active)" item-title="name" item-value="id" label="ประเภท" hide-details class="mb-2" />
-          <v-text-field v-model="i.quantity" type="number" min="1" max="10" label="จำนวน" hide-details class="mb-2 w-24" />
-          <v-btn v-if="svcItems.length > 1" icon="mdi-close" size="small" variant="text" aria-label="ลบ" @click="svcItems.splice(idx, 1)" />
+        <div v-if="types.length" class="flex justify-end px-5 py-4">
+          <Button :disabled="saving" @click="saveQuantities">บันทึกจำนวน</Button>
         </div>
-        <v-btn variant="text" size="small" prepend-icon="mdi-plus" @click="svcItems.push({ resource_type_id: '', quantity: 1 })">เพิ่ม</v-btn>
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="svcDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="saveService">บันทึก</v-btn>
+      </SectionCard>
+
+      <SectionCard title="บริการใช้อะไร" description="ใช้กับทุกสาขาและทุกระยะเวลา บริการที่ยังไม่กำหนดจะจองออนไลน์ไม่ได้" flush>
+        <ul class="m-0 grid list-none p-0">
+          <li v-for="s in services" :key="s.id" class="flex items-center justify-between gap-3 border-b border-border px-5 py-3 last:border-0">
+            <div class="min-w-0">
+              <p class="m-0 font-medium text-heading">{{ s.name }}</p>
+              <p class="m-0 text-sm" :class="serviceRes.some((r) => r.service_id === s.id) ? 'text-muted-foreground' : 'text-pending-ink'">{{ usageText(s) }}</p>
+            </div>
+            <Button size="sm" variant="outline" @click="openService(s)">กำหนด</Button>
+          </li>
+          <li v-if="!services.length" class="px-5 py-8 text-center text-muted-foreground">ยังไม่มีบริการที่เปิดใช้งาน</li>
+        </ul>
+      </SectionCard>
+
+      <SectionCard title="บัญชีรับมัดจำของสาขา" description="ลูกค้าจะเห็น QR PromptPay ของบัญชีนี้ · SlipOK Branch ID ต้องผูกกับบัญชีเดียวกันในระบบ SlipOK">
+        <form class="grid gap-4" @submit.prevent="saveAccount">
+          <div class="grid gap-4 md:grid-cols-2">
+            <TextField v-model="accountForm.promptpay_id" label="PromptPay" hint="เบอร์มือถือ 10 หลัก / เลขประจำตัว 13 หลัก / e-Wallet 15 หลัก" inputmode="numeric" class="num" />
+            <TextField v-model="accountForm.account_name" label="ชื่อบัญชี" />
+            <TextField v-model="accountForm.bank_name" label="ธนาคาร" />
+            <TextField v-model="accountForm.slipok_branch_id" label="SlipOK Branch ID" hint="เว้นว่าง = พนักงานตรวจสลิปเอง" />
+          </div>
+          <SwitchField v-model="accountForm.is_active" label="เปิดใช้งาน" />
+          <div class="flex justify-end"><Button type="submit" :disabled="saving">บันทึกบัญชี</Button></div>
+        </form>
+      </SectionCard>
+    </div>
+
+    <Dialog v-model:open="svcDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ svcTarget?.name }} ใช้</DialogTitle>
+          <DialogDescription>เลือกประเภทและจำนวนที่บริการนี้ต้องใช้ต่อ 1 คน</DialogDescription>
+        </DialogHeader>
+        <div class="grid gap-3">
+          <div v-for="(i, idx) in svcItems" :key="idx" class="grid grid-cols-[minmax(0,1fr)_90px_auto] items-end gap-2">
+            <SelectField v-model="i.resource_type_id" :items="types.filter((t) => t.is_active)" item-title="name" item-value="id" :label="idx === 0 ? 'ประเภท' : undefined" :aria-label="`ประเภทที่ ${idx + 1}`" />
+            <TextField v-model="i.quantity" type="number" min="1" max="10" :label="idx === 0 ? 'จำนวน' : undefined" :aria-label="`จำนวนที่ ${idx + 1}`" class="num" />
+            <Button v-if="svcItems.length > 1" variant="ghost" size="icon" :aria-label="`ลบรายการที่ ${idx + 1}`" @click="svcItems.splice(idx, 1)"><X /></Button>
+            <span v-else class="size-10" />
+          </div>
+          <Button variant="outline" size="sm" class="w-fit" @click="svcItems.push({ resource_type_id: '', quantity: 1 })"><Plus /> เพิ่ม</Button>
         </div>
-      </v-card>
-    </v-dialog>
+        <DialogFooter class="gap-2">
+          <Button variant="outline" @click="svcDialog = false">ยกเลิก</Button>
+          <Button :disabled="saving" @click="saveService">บันทึก</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

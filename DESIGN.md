@@ -1,271 +1,226 @@
-# I’FEEW Massage & Wellness
+# UI Design Prompt — Minimal Premium Dashboard
+
+Act as a Senior UI/UX Designer and Frontend Developer.
+
+Design and build a modern, minimal, premium SaaS web application inspired by the provided reference image.
+
+The design should feel clean, elegant, professional, lightweight, and easy to use. Avoid unnecessary visual elements, excessive shadows, gradients, and decorative components.
+
+## 1. Design Direction
+
+- Style: Minimal SaaS Dashboard
+- Visual direction: Clean, Modern, Premium, Elegant
+- Layout: Sidebar + Top Navigation + Main Content
+- UI density: Comfortable spacing with generous whitespace
+- Components: Simple cards, subtle borders, clean typography
+- Border radius: 8–12px
+- Shadows: Very subtle or none
+- Icons: Simple consistent line icons
+- Typography: Modern sans-serif, highly readable
+
+Use the provided reference image as a layout and visual inspiration, not as something to copy pixel by pixel.
+
+## 2. Color Design System
+
+Use a warm cream and earthy neutral color palette as the primary visual identity.
+
+The overall interface must be cream-dominant, with soft beige, natural sand, and muted brown tones used to create visual hierarchy.
+
+| Token | Color | Usage |
+|---|---|---|
+| Primary | #8A6A50 | Primary buttons, active states |
+| Primary Hover | #72543E | Button hover, interactive states |
+| Accent | #B38B67 | Highlights, secondary emphasis |
+| Background | #F7F3EB | Main application background |
+| Surface | #FFFEFC | Cards, panels, content areas |
+| Secondary Surface | #EAE0D1 | Secondary sections, subtle backgrounds |
+| Border | #E8DFD4 | Borders, dividers, separators |
+| Heading | #514337 | Page titles, important headings |
+| Text | #66594D | Primary body text |
+| Muted | #A39789 | Secondary text, placeholders |
+| Success | #6F9277 | Success states, completed bookings |
+| Danger | #C87870 | Errors, warnings, destructive actions |
+
+### Color Rules
 
-## Design System v1.0
+- Use Background (#F7F3EB) as the dominant background color throughout the application.
+- Use Surface (#FFFEFC) for cards, panels, tables, forms, and content containers.
+- Use Primary (#8A6A50) for important buttons, active navigation items, and primary actions.
+- Use Primary Hover (#72543E) for hover and pressed states.
+- Use Accent (#B38B67) sparingly for highlights, icons, and secondary emphasis.
+- Use Secondary Surface (#EAE0D1) for subtle section backgrounds and secondary UI elements.
+- Use Heading (#514337) for headings and important labels.
+- Use Text (#66594D) for primary body text.
+- Use Muted (#A39789) for descriptions, metadata, and secondary information.
+- Use Border (#E8DFD4) for subtle separators and component outlines.
+- Use Success and Danger only for meaningful status indicators.
 
-**Design Direction:** Warm Minimal · Clean · Modern · Wellness
+### Visual Color Balance
 
-**Design Principle:** เรียบง่าย สบายตา ดูอบอุ่น มีความเป็นมืออาชีพ และใช้งานง่ายทั้งบนมือถือและ Desktop
+- 60% Warm Cream and Background
+- 25% White and Surface
+- 10% Brown and Primary
+- 5% Accent and Status Colors
 
----
+### Important Restrictions
 
-## 1. Brand Identity
+- Cream must remain the dominant color.
+- Do not use dark brown as a large background color.
+- Avoid pure black backgrounds.
+- Avoid cold gray, neon colors, and overly saturated colors.
+- Avoid excessive gradients and colorful decorations.
+- Do not make every card use a different background color.
+- Maintain sufficient contrast and accessibility.
+- Keep the overall interface warm, calm, natural, and visually consistent.
 
-**Brand Personality**
+## 3. Layout Structure
 
-- Warm — อบอุ่น เป็นมิตร
-- Calm — สงบ ผ่อนคลาย
-- Natural — เป็นธรรมชาติ
-- Professional — น่าเชื่อถือและเป็นมืออาชีพ
-- Minimal — ใช้เท่าที่จำเป็น ไม่รกสายตา
+### Desktop
 
-**Visual Direction**
+- Fixed or sticky sidebar on the left.
+- Compact top navigation bar.
+- Main content area with a clear page heading.
+- Use a responsive grid for dashboard cards.
+- Keep consistent margins and spacing.
+- Footer should be minimal.
+
+### Sidebar
 
-ใช้สีครีม น้ำตาล และสีเอิร์ธโทนเป็นหลัก พื้นที่ว่างต้องเพียงพอ ภาพประกอบควรสื่อถึงการพักผ่อนและการดูแลตัวเอง
+- Brand logo and application name.
+- Simple navigation menu with line icons.
+- Clearly distinguish the active menu item.
+- Use a subtle background or border.
+- Avoid oversized navigation elements.
 
-## 2. Color Palette
+### Top Navigation
 
-### Primary Colors
+- Page context or breadcrumb.
+- Account/profile information.
+- Notifications when relevant.
+- Primary action button.
+- Keep the navigation compact.
 
-| Token      | HEX       | Usage                  |
-| ---------- | --------- | ---------------------- |
-| Primary    | `#97714C` | ปุ่มหลัก, Active state |
-| Brown      | `#B0885F` | สีตกแต่ง, Accent       |
-| Brown Dark | `#64513E` | หัวข้อสำคัญ            |
-| Text       | `#4D4238` | ข้อความหลัก            |
+### Main Content
 
-### Neutral Colors
+- Clear page title and optional description.
+- Summary cards for important information.
+- Content sections separated by whitespace.
+- Tables with clean headers and subtle dividers.
+- Empty states with simple illustrations and clear actions.
 
-| Token       | HEX       | Usage        |
-| ----------- | --------- | ------------ |
-| Background  | `#FAF8F3` | พื้นหลังหลัก |
-| Surface     | `#FFFFFF` | Card, Modal  |
-| Surface Alt | `#F6F1E9` | พื้นหลังรอง  |
-| Border      | `#EAE2D4` | เส้นขอบ      |
-| Border Soft | `#F1EBE0` | เส้นแบ่งบาง  |
-| Muted Text  | `#6E6053` | ข้อความรอง   |
+## 4. Customer Interface
 
-### Semantic Colors
+Create a dedicated customer experience.
 
-| State   | Text      | Background |
-| ------- | --------- | ---------- |
-| Success | `#4A7D52` | `#EDF5ED`  |
-| Warning | `#B28C4D` | `#FAF5E8`  |
-| Danger  | `#C06A5C` | `#FAEEEB`  |
+Focus on:
 
-**Usage Rule:** ใช้ Primary เป็นสีเน้นหลัก ไม่ควรใช้สีน้ำตาลเข้มกับทุกองค์ประกอบ และไม่ใช้สีสถานะเป็นสีตกแต่งทั่วไป
+- Finding massage services.
+- Browsing service details.
+- Viewing available schedules.
+- Booking appointments.
+- Managing reservations.
+- Viewing booking history.
+- Managing personal profile.
 
-## 3. Typography
+Customer interface should prioritize simplicity and ease of booking.
 
-**Primary Font:** Kanit
+Do not expose internal shop management functions to customers.
 
-| Style   | Size |  Weight | Usage         |
-| ------- | ---: | ------: | ------------- |
-| Display | 32px | 500–600 | Hero Heading  |
-| H1      | 28px |     500 | Page Title    |
-| H2      | 22px |     500 | Section Title |
-| H3      | 18px |     500 | Card Title    |
-| Body    | 14px | 300–400 | เนื้อหาทั่วไป |
-| Label   | 13px |     400 | Form Label    |
-| Caption | 12px | 300–400 | ข้อความรอง    |
-| Small   | 10px |     400 | Metadata      |
+## 5. Staff / Shop Owner Interface
 
-**Typography Rules**
+Create a separate management experience.
 
-- ใช้ Kanit เป็นฟอนต์หลักทั้งระบบ
-- หัวข้อใช้ Weight 500 เป็นหลัก
-- เนื้อหาใช้ Weight 300–400
-- หลีกเลี่ยงตัวหนาหนักเกินความจำเป็น
-- ใช้ Line Height ประมาณ 1.5–1.7
+Focus on:
 
-## 4. Spacing System
+- Overview dashboard.
+- Appointment management.
+- Calendar and booking schedules.
+- Customer management.
+- Massage service management.
+- Staff management.
+- Revenue and sales reports.
+- Shop settings.
 
-ใช้ระบบระยะห่างแบบ 4px scale
+Staff and shop owners should have access only to functions allowed by their roles.
 
-| Token    | Value |
-| -------- | ----: |
-| space-1  |   4px |
-| space-2  |   8px |
-| space-3  |  12px |
-| space-4  |  16px |
-| space-5  |  20px |
-| space-6  |  24px |
-| space-8  |  32px |
-| space-10 |  40px |
-| space-12 |  48px |
-| space-16 |  64px |
+## 6. Responsive Design
 
-**Layout Rules**
+Desktop:
 
-- ระยะห่างระหว่าง Section: 32–48px
-- ระยะห่างภายใน Card: 20–24px
-- ระยะห่างระหว่าง Form Fields: 16px
-- ระยะห่างระหว่าง Label กับ Input: 8px
+- Full sidebar.
+- Multi-column dashboard layout.
+- Tables with comfortable spacing.
 
-## 5. Border Radius & Elevation
+Tablet:
 
-### Radius
+- Compact sidebar.
+- Flexible card grid.
+- Optimized content width.
 
-| Token       | Value | Usage                 |
-| ----------- | ----: | --------------------- |
-| radius-sm   |   8px | Input, Small Badge    |
-| radius-md   |  12px | Button                |
-| radius-lg   |  16px | Card                  |
-| radius-xl   |  20px | Hero, Large Container |
-| radius-full | 999px | Pill, Avatar          |
+Mobile:
 
-### Shadow
+- Replace sidebar with a compact navigation menu or drawer.
+- Single-column content.
+- Full-width primary buttons when appropriate.
+- Touch-friendly controls.
+- No horizontal overflow.
+- Keep important actions easily accessible.
 
-ใช้ Shadow อย่างประหยัด เพื่อให้หน้าจอดูสะอาด
+## 7. Component Design
 
-- Card: `0 4px 16px rgba(100,81,62,0.05)`
-- Floating Element: `0 16px 40px -16px rgba(100,81,62,0.15)`
+Create reusable components:
 
-## 6. Components
+- Button
+- Input
+- Select
+- Card
+- Badge
+- Modal
+- Dropdown
+- Sidebar
+- Topbar
+- Data Table
+- Empty State
+- Loading State
+- Toast Notification
 
-### Buttons
+All components must follow the same design tokens and visual rules.
 
-| Type      | Appearance              | Usage             |
-| --------- | ----------------------- | ----------------- |
-| Primary   | พื้นน้ำตาล ตัวอักษรขาว  | Action หลัก       |
-| Secondary | พื้นครีม ตัวอักษรน้ำตาล | Action รอง        |
-| Outline   | พื้นขาว เส้นขอบบาง      | Action ทั่วไป     |
-| Ghost     | ไม่มีพื้นหลัง           | Action ที่ไม่เน้น |
+## 8. Interaction & UX
 
-**Button Height**
+- Clear hover and active states.
+- Smooth but subtle transitions.
+- Consistent form validation.
+- Clear confirmation for destructive actions.
+- Meaningful loading and empty states.
+- Avoid unnecessary animations.
+- Prioritize accessibility and usability.
 
-- Small: 32px
-- Medium: 40px
-- Large: 48px
+## 9. Development Requirements
 
-ทุกปุ่มควรมี Hover, Active, Disabled State
+- Use clean, maintainable code.
+- Use reusable components and consistent naming.
+- Separate Customer and Staff/Owner interfaces into two independent files.
+- Maintain consistent design tokens across both interfaces.
+- Avoid duplicated styling.
+- Ensure responsive behavior at all screen sizes.
+- Use semantic HTML and accessible interactions.
 
-### Input & Form
+## 10. Final Design Goal
 
-- ความสูง Input: 44–48px
-- พื้นหลังสีขาว
-- Border สี `#EAE2D4`
-- Radius 8–12px
-- Focus Border ใช้ Primary
-- Error Message อยู่ใต้ Input
+The final result should look like a premium, minimal SaaS dashboard similar in layout quality to the reference image, but with a warm cream and earthy neutral visual identity.
 
-### Cards
+The interface must feel:
 
-- พื้นหลังขาว
-- Border บาง หรือไม่มี Border
-- Radius 16–20px
-- Padding 20–24px
-- ใช้ Shadow เฉพาะเมื่อจำเป็น
+- Minimal, not empty.
+- Premium, not luxurious or excessive.
+- Professional, not overly corporate.
+- Warm, calm, and welcoming.
+- Simple, not generic.
+- Consistent across Customer and Staff/Owner interfaces.
 
-### Status Badge
+Use cream as the dominant visual foundation, white as the primary content surface, and muted brown as the main interactive color.
 
-- Success: สีเขียวอ่อน
-- Pending: สีเหลืองอ่อน
-- Cancelled: สีแดงอ่อน
-- Processing: สีน้ำตาลอ่อน
+Prioritize visual hierarchy, whitespace, usability, consistency, and accessibility over decorative effects.
 
-ใช้ข้อความร่วมกับสีเสมอ ไม่ใช้สีเพียงอย่างเดียวในการสื่อสถานะ
-
-### Tables
-
-- Header พื้นหลังโปร่งหรือครีมอ่อน
-- เส้นแบ่งแถวบาง
-- Row Height ประมาณ 52–60px
-- ตัวเลขและราคาเรียงแนวเดียวกัน
-- ใช้ Status Badge สำหรับสถานะ
-
-### Navigation
-
-**Customer Website**
-
-- Navigation เข้าใจง่าย
-- ให้ความสำคัญกับบริการ สาขา และการจอง
-- Mobile ใช้ Bottom Navigation ได้
-
-**Management System**
-
-- Sidebar สำหรับ Desktop
-- Bottom Navigation เฉพาะเมนูหลักบน Mobile
-- แบ่งกลุ่มเมนูตามหน้าที่
-- Active Menu ใช้พื้นครีมและตัวอักษรน้ำตาล
-
-## 7. Iconography
-
-- ใช้ Icon สไตล์ Outline
-- น้ำหนักเส้นสม่ำเสมอ
-- ขนาดมาตรฐาน 18–20px
-- หลีกเลี่ยงการใช้ Emoji ปะปนกับ Icon
-- ใช้ Icon คู่กับข้อความในเมนูที่ผู้ใช้ใหม่อาจไม่เข้าใจ
-
-## 8. Layout & Responsive
-
-| Breakpoint |      Width | Layout         |
-| ---------- | ---------: | -------------- |
-| Mobile     |    ≤ 700px | Single Column  |
-| Tablet     | 701–1050px | Compact Layout |
-| Desktop    |   > 1050px | Full Layout    |
-
-**Desktop**
-
-- Header สูงประมาณ 72px
-- Sidebar กว้างประมาณ 240–250px
-- Main Content มี Padding 32px
-
-**Mobile**
-
-- Header สูงประมาณ 60–64px
-- Content Padding 16px
-- Card เต็มความกว้าง
-- Form เรียง 1 Column
-- ตารางควรเลื่อนแนวนอนได้เมื่อจำเป็น
-
-## 9. Product Experience
-
-### Customer Website
-
-เป้าหมายคือให้ลูกค้าค้นหาบริการและจองคิวได้ง่ายที่สุด
-
-ลำดับความสำคัญ:
-
-1. Home
-2. Services & Pricing
-3. Branches
-4. Booking
-5. Booking Tracking
-6. My Account
-
-**Primary CTA:** จองคิว
-
-### Management System
-
-เป้าหมายคือช่วยให้พนักงานและเจ้าของร้านทำงานได้รวดเร็ว
-
-ลำดับความสำคัญ:
-
-1. Dashboard
-2. POS
-3. Queue Management
-4. Bookings
-5. Customers
-6. Employees
-7. Services
-8. Resources
-9. Finance & Reports
-10. Expenses
-11. Settings
-
-**Primary CTA:** การทำงานที่เกี่ยวข้องกับคิวและการขายหน้าร้าน
-
-## 10. Design Principles
-
-1. **Less is More** — แสดงเฉพาะสิ่งที่จำเป็น
-2. **Clear Hierarchy** — ผู้ใช้ต้องรู้ว่าควรมองตรงไหนก่อน
-3. **Consistent Components** — Component เดียวกันต้องหน้าตาเหมือนกันทั้งระบบ
-4. **Comfortable Spacing** — เว้นพื้นที่ให้หน้าจอหายใจ
-5. **Functional First** — ความสวยต้องไม่ลดความสะดวกในการใช้งาน
-6. **Responsive Always** — ทุกหน้าต้องใช้งานได้ดีบนมือถือ
-
----
-
-**Design System Summary**
-
-I’FEEW ใช้โทนสี Warm Neutral + Earth Tone, ฟอนต์ Kanit, Layout แบบ Minimal, Component ที่เรียบง่าย และใช้ Primary Brown เป็นจุดเน้น เพื่อสร้างประสบการณ์ที่อบอุ่นสำหรับลูกค้าและเป็นมืออาชีพสำหรับระบบจัดการร้าน
+The final UI should resemble a premium boutique wellness and massage platform rather than a generic corporate dashboard.

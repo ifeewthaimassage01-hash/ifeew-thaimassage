@@ -2,6 +2,9 @@
 // OWNER: งวดบัญชีรายเดือน — ล็อก (ปิดยอดทุกวันต้องอนุมัติครบ) / เปิดใหม่พร้อมเหตุผล (ยืนยันตัวตนซ้ำ)
 import { type FinancialPeriodRow } from '@ifeew/shared'
 
+
+
+const { confirm, prompt } = useDialog()
 definePageMeta({ ownerOnly: true })
 
 const supabase = useSupabaseClient()
@@ -23,7 +26,7 @@ watch(() => company.value?.company_id, load, { immediate: true })
 const monthLabel = (d: string) => new Date(`${d}T00:00:00+07:00`).toLocaleDateString('th-TH', { month: 'long', year: 'numeric' })
 
 async function lock(r: FinancialPeriodRow) {
-  if (!company.value || !window.confirm(`ล็อกงวด ${monthLabel(r.period_start)}? หลังล็อกจะแก้ข้อมูลการเงินของเดือนนี้ไม่ได้`)) return
+  if (!company.value || !(await confirm({ title: `ล็อกงวด ${monthLabel(r.period_start)}?`, description: 'หลังล็อกจะแก้ข้อมูลการเงินของเดือนนี้ไม่ได้', confirmText: 'ล็อกงวด' }))) return
   const companyId = company.value.company_id
   try {
     await run(() => must(supabase.rpc('lock_financial_period', { p_company_id: companyId, p_month: r.period_start })))
@@ -35,8 +38,8 @@ async function lock(r: FinancialPeriodRow) {
 }
 
 async function reopen(r: FinancialPeriodRow) {
-  const reason = window.prompt(`เหตุผลที่เปิดงวด ${monthLabel(r.period_start)}`, '')
-  if (!company.value || !reason || reason.trim().length < 3) return
+  const reason = await prompt({ title: `เปิดงวด ${monthLabel(r.period_start)}`, label: 'เหตุผล', minLength: 3, confirmText: 'เปิดงวด' })
+  if (!company.value || reason === null) return
   const companyId = company.value.company_id
   try {
     await run(() => must(supabase.rpc('reopen_financial_period', { p_company_id: companyId, p_month: r.period_start, p_reason: reason.trim() })))
@@ -49,29 +52,38 @@ async function reopen(r: FinancialPeriodRow) {
 </script>
 
 <template>
-  <div class="max-w-3xl">
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">งวดบัญชี</h1>
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
-    <v-card class="p-2">
-      <v-table>
-        <thead><tr><th>เดือน</th><th>สถานะ</th><th>ปิดยอดที่ยังไม่อนุมัติ</th><th /></tr></thead>
-        <tbody>
-          <tr v-for="(r, n) in rows" :key="r.period_start">
-            <td>{{ monthLabel(r.period_start) }}</td>
-            <td>
-              <v-chip size="small" variant="tonal" :color="r.status === 'LOCKED' ? 'primary' : undefined">
-                {{ r.status === 'LOCKED' ? 'ล็อกแล้ว' : 'เปิด' }}</v-chip>
-              <div v-if="r.reopen_reason && r.status === 'OPEN'" class="text-xs text-light-brown">เปิดใหม่: {{ r.reopen_reason }}</div>
-            </td>
-            <td>{{ r.pending_closings || '-' }}</td>
-            <td class="text-right">
-              <v-btn v-if="r.status === 'LOCKED'" size="small" variant="text" @click="reopen(r)">เปิดงวด</v-btn>
-              <v-btn v-else-if="n > 0" size="small" color="primary" variant="tonal" :disabled="r.pending_closings > 0" @click="lock(r)">ล็อก</v-btn>
-            </td>
-          </tr>
-        </tbody>
-      </v-table>
-    </v-card>
-    <p class="m-0 mt-2 text-xs text-light-brown">ล็อกได้เฉพาะเดือนที่จบแล้ว และทุกวันที่มีการขายต้องปิดยอดรายวันที่อนุมัติแล้ว</p>
+  <div class="max-w-4xl">
+    <PageHeader title="งวดบัญชี" description="ล็อกงวดรายเดือนเมื่อปิดยอดรายวันอนุมัติครบ หลังล็อกจะแก้ข้อมูลการเงินของเดือนนั้นไม่ได้" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <SectionCard flush>
+      <Table>
+        <TableHeader>
+          <TableRow class="hover:bg-transparent">
+            <TableHead>เดือน</TableHead>
+            <TableHead>สถานะ</TableHead>
+            <TableHead class="text-right">ปิดยอดที่ยังไม่อนุมัติ</TableHead>
+            <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+          </TableRow>
+        </TableHeader>
+        <TableBody>
+          <TableRow v-for="(r, n) in rows" :key="r.period_start">
+            <TableCell class="font-medium text-heading">{{ monthLabel(r.period_start) }}</TableCell>
+            <TableCell>
+              <Badge :variant="r.status === 'LOCKED' ? 'default' : 'success'" dot>{{ r.status === 'LOCKED' ? 'ล็อกแล้ว' : 'เปิด' }}</Badge>
+              <span v-if="r.reopen_reason && r.status === 'OPEN'" class="mt-1 block text-sm whitespace-normal text-muted-foreground">เปิดใหม่: {{ r.reopen_reason }}</span>
+            </TableCell>
+            <TableCell class="num text-right" :class="r.pending_closings ? 'font-medium text-pending-ink' : 'text-muted-foreground'">{{ r.pending_closings || '—' }}</TableCell>
+            <TableCell class="text-right">
+              <Button v-if="r.status === 'LOCKED'" size="sm" variant="ghost" @click="reopen(r)">เปิดงวด</Button>
+              <Button v-else-if="n > 0" size="sm" variant="outline" :disabled="r.pending_closings > 0" @click="lock(r)">ล็อก</Button>
+            </TableCell>
+          </TableRow>
+          <TableRow v-if="!rows.length" class="hover:bg-transparent">
+            <TableCell colspan="4" class="py-8 text-center text-muted-foreground">ยังไม่มีงวดบัญชี</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+      <template #footer>ล็อกได้เฉพาะเดือนที่จบแล้ว และทุกวันที่มีการขายต้องปิดยอดรายวันที่อนุมัติแล้ว</template>
+    </SectionCard>
   </div>
 </template>

@@ -429,6 +429,9 @@ enabled = true
 [functions.device-staff-list]
 verify_jwt = false
 
+[functions.branch-staff-list]
+verify_jwt = false
+
 [functions.staff-pin-login]
 verify_jwt = false
 

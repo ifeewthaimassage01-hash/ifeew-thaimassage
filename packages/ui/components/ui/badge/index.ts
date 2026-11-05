@@ -3,23 +3,27 @@ import { cva } from "class-variance-authority"
 
 export { default as Badge } from "./Badge.vue"
 
-// สถานะ: พื้นสีอ่อน + ตัวหนังสือสีเข้มเฉดเดียวกัน (pastel-consumer) ไม่ใช้พื้นทึบตัวขาว
+// สถานะ (DESIGN.md: Success/Danger เฉพาะสถานะที่มีความหมาย) — พื้นอ่อน + จุดสี + ตัวหนังสือเข้มที่อ่านได้
 export const badgeVariants = cva(
-  "inline-flex flex-none items-center justify-center rounded-full px-2.5 py-0.5 text-[13px] font-medium leading-5 w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 gap-1 [&>svg]:pointer-events-none focus-visible:ring-ring/50 focus-visible:ring-3 overflow-hidden",
+  "inline-flex flex-none items-center justify-center gap-1.5 rounded-md px-2 py-0.5 text-[13px] font-medium leading-5 w-fit whitespace-nowrap shrink-0 [&>svg]:size-3 [&>svg]:pointer-events-none focus-visible:ring-ring/50 focus-visible:ring-3",
   {
     variants: {
       variant: {
-        default: "bg-tint-beige text-tint-beige-ink",
-        positive: "bg-tint-green text-tint-green-ink",
-        warning: "bg-tint-warn text-tint-warn-ink",
-        destructive: "bg-tint-danger text-tint-danger-ink",
-        pink: "bg-tint-pink text-tint-pink-ink",
-        neutral: "bg-muted text-muted-foreground",
-        outline: "border border-input text-foreground",
+        default: "bg-secondary text-heading",
+        success: "bg-success-soft text-success-ink",
+        danger: "bg-danger-soft text-danger-ink",
+        pending: "bg-pending-soft text-pending-ink",
+        neutral: "bg-muted text-foreground",
+        outline: "border border-border bg-card text-heading",
+      },
+      dot: {
+        true: "before:size-1.5 before:rounded-full before:bg-current before:content-['']",
+        false: "",
       },
     },
     defaultVariants: {
       variant: "default",
+      dot: false,
     },
   },
 )

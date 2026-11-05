@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // OWNER: รายการสาขา เพิ่ม/แก้ไข/ปิดใช้งาน
+import { Clock, Pencil, Plus } from '@lucide/vue'
 import type { Tables } from '@ifeew/shared'
 
 definePageMeta({ ownerOnly: true })
@@ -82,51 +83,56 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="mb-6 flex items-center justify-between">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">สาขา</h1>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openCreate">เพิ่มสาขา</v-btn>
-    </div>
+    <PageHeader title="สาขา" description="เพิ่มและแก้ไขข้อมูลสาขา ตั้งเวลาทำการและวันหยุด">
+      <template #actions><Button @click="openCreate"><Plus /> เพิ่มสาขา</Button></template>
+    </PageHeader>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-6" closable :text="message.text" @click:close="message = null" />
+    <MessageAlert :message="message" class="mb-6" @close="message = null" />
+    <LoadingBar v-if="loading" class="mb-4" />
+    <EmptyState v-if="!loading && !branches.length" title="ยังไม่มีสาขา" description="เพิ่มสาขาแรกเพื่อเริ่มรับคิวและการจอง">
+      <Button @click="openCreate"><Plus /> เพิ่มสาขา</Button>
+    </EmptyState>
 
-    <v-progress-linear v-if="loading" indeterminate color="primary" class="mb-4" />
-
-    <div class="grid gap-4 md:grid-cols-2">
-      <v-card v-for="b in branches" :key="b.id" class="p-5">
-        <div class="flex items-start justify-between gap-3">
-          <div>
-            <p class="m-0 text-lg font-medium">{{ b.code }} · {{ b.name }}</p>
-            <p class="m-0 mt-1 text-sm text-light-brown">{{ b.address || '-' }}</p>
-            <p class="m-0 text-sm text-light-brown">{{ b.phone || '' }}</p>
+    <div class="grid items-start gap-4 md:grid-cols-2">
+      <Card v-for="b in branches" :key="b.id" class="gap-0 py-0">
+        <div class="flex items-start justify-between gap-3 p-5">
+          <div class="min-w-0">
+            <p class="m-0 text-sm text-muted-foreground"><span class="num">{{ b.code }}</span></p>
+            <h2 class="m-0 text-[17px] font-semibold">{{ b.name }}</h2>
+            <p class="m-0 mt-1 text-[15px] text-muted-foreground">{{ b.address || 'ยังไม่ระบุที่อยู่' }}</p>
+            <p v-if="b.phone" class="num m-0 text-[15px] text-muted-foreground">{{ b.phone }}</p>
           </div>
-          <v-chip :color="b.is_active ? 'success' : 'error'" variant="tonal" size="small">
-            {{ b.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}
-          </v-chip>
+          <Badge :variant="b.is_active ? 'success' : 'neutral'" dot>{{ b.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}</Badge>
         </div>
-        <div class="mt-4 flex gap-2">
-          <v-btn variant="tonal" color="primary" prepend-icon="mdi-pencil-outline" @click="openEdit(b)">แก้ไข</v-btn>
-          <v-btn variant="text" prepend-icon="mdi-clock-outline" :to="`/branches/${b.id}`">เวลาทำการและวันหยุด</v-btn>
+        <div class="flex flex-wrap gap-2 border-t border-border px-5 py-3">
+          <Button variant="outline" size="sm" @click="openEdit(b)"><Pencil /> แก้ไข</Button>
+          <Button as-child variant="ghost" size="sm"><NuxtLink :to="`/branches/${b.id}`"><Clock /> เวลาทำการและวันหยุด</NuxtLink></Button>
         </div>
-      </v-card>
+      </Card>
     </div>
 
-    <v-dialog v-model="dialog" max-width="560">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">{{ editingId ? 'แก้ไขสาขา' : 'เพิ่มสาขา' }}</p>
-        <div class="grid gap-x-4 md:grid-cols-2">
-          <v-text-field v-model="branchForm.code" label="รหัสสาขา (A-Z 0-9)" maxlength="10" hint="แก้ไม่ได้หลังสาขาออกเอกสารแล้ว" persistent-hint class="mb-2" />
-          <v-text-field v-model="branchForm.name" label="ชื่อสาขา" />
-          <v-text-field v-model="branchForm.phone" label="เบอร์โทร" type="tel" />
-          <v-text-field v-model="branchForm.sort_order" label="ลำดับการแสดง" type="number" />
-        </div>
-        <v-text-field v-model="branchForm.address" label="ที่อยู่" />
-        <v-text-field v-model="branchForm.map_url" label="ลิงก์แผนที่ (https://...)" />
-        <v-switch v-model="branchForm.is_active" color="primary" label="เปิดใช้งาน" hide-details />
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="dialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="dialog">
+      <DialogContent class="sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{{ editingId ? 'แก้ไขสาขา' : 'เพิ่มสาขา' }}</DialogTitle>
+          <DialogDescription>ข้อมูลนี้แสดงในหน้าจองของลูกค้า</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="save">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <TextField v-model="branchForm.code" label="รหัสสาขา (A-Z 0-9)" maxlength="10" hint="แก้ไม่ได้หลังสาขาออกเอกสารแล้ว" />
+            <TextField v-model="branchForm.name" label="ชื่อสาขา" />
+            <TextField v-model="branchForm.phone" label="เบอร์โทร" type="tel" />
+            <TextField v-model="branchForm.sort_order" label="ลำดับการแสดง" type="number" />
+          </div>
+          <TextField v-model="branchForm.address" label="ที่อยู่" />
+          <TextField v-model="branchForm.map_url" label="ลิงก์แผนที่" placeholder="https://..." />
+          <SwitchField v-model="branchForm.is_active" label="เปิดใช้งาน" hint="ปิดแล้วลูกค้าจะไม่เห็นสาขานี้ในหน้าจอง" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="dialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // จองบริการ: สาขา -> บริการ/ระยะเวลา (สูงสุด 4 คน) -> วัน -> เวลาว่าง -> ข้อมูลผู้จอง -> ยืนยัน (มัดจำ)
 // คำถามของหน้า: "ว่างกี่โมง รวมเท่าไร" — สรุปการจองอยู่ข้างขวา (มือถืออยู่ก่อนปุ่มจอง)
-import { UserPlus, X } from '@lucide/vue'
+import { Check, UserPlus, X } from '@lucide/vue'
 import {
   addDays,
   bangkokToday,
@@ -171,21 +171,47 @@ async function submit() {
 const chip = (on: boolean) =>
   on
     ? 'border-primary bg-primary text-primary-foreground'
-    : 'border-input bg-card text-foreground hover:border-foreground/40'
+    : 'border-border bg-card text-heading hover:border-input hover:bg-muted'
+
+// แถบวันที่ 14 วัน (พรุ่งนี้เป็นค่าเริ่มต้น) — ดูตารางว่างได้ทีละวันโดยไม่ต้องเปิดปฏิทิน
+const days = computed(() =>
+  Array.from({ length: 14 }, (_, i) => {
+    const iso = addDays(today, i)
+    const d = new Date(`${iso}T00:00:00+07:00`)
+    const fmt = (o: Intl.DateTimeFormatOptions) => d.toLocaleDateString('th-TH', { ...o, timeZone: 'Asia/Bangkok' })
+    return { iso, weekday: i === 0 ? 'วันนี้' : i === 1 ? 'พรุ่งนี้' : fmt({ weekday: 'short' }), day: fmt({ day: 'numeric' }), month: fmt({ month: 'short' }) }
+  }),
+)
+
+// ความคืบหน้า: แสดงว่าขั้นไหนเสร็จแล้ว
+const steps = computed(() => [
+  { label: 'สาขา', done: !!branchId.value },
+  { label: 'บริการ', done: ready.value },
+  { label: 'วันและเวลา', done: !!slot.value },
+  { label: 'ข้อมูลผู้จอง', done: false },
+])
+const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <div>
-      <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">จองคิวนวด</h1>
-      <p class="m-0 mt-1 text-muted-foreground">เลือกได้สูงสุด {{ MAX_PEOPLE }} คนต่อการจอง · ชำระค่าบริการที่ร้าน มัดจำผ่าน PromptPay</p>
-    </div>
+  <div>
+    <PageHeader title="จองคิวนวด" :description="`เลือกได้สูงสุด ${MAX_PEOPLE} คนต่อการจอง · ชำระค่าบริการที่ร้าน มัดจำผ่าน PromptPay`" />
+
+    <!-- ความคืบหน้า -->
+    <ol class="m-0 mb-6 grid list-none grid-cols-4 gap-2 p-0" aria-label="ขั้นตอนการจอง">
+      <li v-for="(s, i) in steps" :key="s.label" class="grid gap-2" :aria-current="i === currentStep ? 'step' : undefined">
+        <span class="h-1 rounded-full" :class="s.done ? 'bg-primary' : i === currentStep ? 'bg-brand-accent' : 'bg-secondary'" />
+        <span class="flex items-center gap-1 text-sm" :class="s.done || i === currentStep ? 'font-medium text-heading' : 'text-muted-foreground'">
+          <Check v-if="s.done" class="size-3.5 text-primary" aria-hidden="true" />{{ s.label }}
+        </span>
+      </li>
+    </ol>
 
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div class="grid gap-4">
         <!-- สาขา -->
         <Card class="gap-4 py-5">
-          <CardHeader class="px-5"><CardTitle as="h2">สาขา</CardTitle></CardHeader>
+          <CardHeader class="px-5"><CardTitle as="h2" class="text-base">สาขา</CardTitle></CardHeader>
           <CardContent class="px-5">
             <Label for="branch" class="sr-only">สาขา</Label>
             <Select v-model="branchId">
@@ -199,13 +225,13 @@ const chip = (on: boolean) =>
 
         <!-- บริการ -->
         <Card v-if="branchId" class="gap-4 py-5">
-          <CardHeader class="px-5"><CardTitle as="h2">บริการ</CardTitle></CardHeader>
+          <CardHeader class="px-5"><CardTitle as="h2" class="text-base">บริการ</CardTitle></CardHeader>
           <CardContent class="grid gap-3 px-5">
-            <p v-if="!catalog?.length" class="m-0 rounded-lg border border-dashed px-4 py-3 text-muted-foreground">สาขานี้ยังไม่เปิดจองบริการออนไลน์ โทรจองที่ร้านได้</p>
+            <EmptyState v-if="!catalog?.length" compact title="สาขานี้ยังไม่เปิดจองบริการออนไลน์" description="โทรจองที่สาขาได้ หรือเลือกสาขาอื่น" />
             <template v-else>
-              <fieldset v-for="(p, idx) in people" :key="idx" class="m-0 grid gap-3 rounded-lg bg-muted/60 p-4">
+              <fieldset v-for="(p, idx) in people" :key="idx" class="m-0 grid gap-3 rounded-lg border border-border bg-background/60 p-4">
                 <div class="flex items-center justify-between">
-                  <legend class="float-left text-[15px] font-semibold">คนที่ {{ idx + 1 }}</legend>
+                  <legend class="float-left text-[15px] font-medium text-heading">คนที่ {{ idx + 1 }}</legend>
                   <Button v-if="people.length > 1" variant="ghost" size="icon-sm" :aria-label="`ลบคนที่ ${idx + 1}`" @click="people.splice(idx, 1)"><X /></Button>
                 </div>
                 <Select :model-value="p.branch_service_id ?? undefined" @update:model-value="(v) => pickService(p, (v as string) ?? null)">
@@ -221,7 +247,7 @@ const chip = (on: boolean) =>
                     type="button"
                     role="radio"
                     :aria-checked="p.option_id === o.option_id"
-                    class="inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-[15px] transition-colors active:scale-[0.98] focus-visible:ring-3 focus-visible:ring-ring/60 focus-visible:outline-none"
+                    class="inline-flex h-11 items-center gap-2 rounded-lg border px-4 text-[15px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:h-10"
                     :class="chip(p.option_id === o.option_id)"
                     @click="p.option_id = o.option_id"
                   >
@@ -229,43 +255,54 @@ const chip = (on: boolean) =>
                   </button>
                 </div>
               </fieldset>
-              <Button
-                v-if="people.length < MAX_PEOPLE"
-                variant="outline"
-                class="w-fit"
-                @click="people.push({ branch_service_id: null, option_id: null })"
-              ><UserPlus /> เพิ่มคน</Button>
+              <Button v-if="people.length < MAX_PEOPLE" variant="outline" class="w-fit" @click="people.push({ branch_service_id: null, option_id: null })">
+                <UserPlus /> เพิ่มคน
+              </Button>
             </template>
           </CardContent>
         </Card>
 
         <!-- วันและเวลา -->
         <Card v-if="ready" class="gap-4 py-5">
-          <CardHeader class="px-5"><CardTitle as="h2">วันและเวลา</CardTitle></CardHeader>
-          <CardContent class="grid gap-4 px-5">
-            <div class="grid gap-1.5 sm:w-64">
-              <Label for="date">วันที่</Label>
-              <Input id="date" v-model="date" type="date" :min="today" :max="addDays(today, 30)" class="num" />
+          <CardHeader class="px-5"><CardTitle as="h2" class="text-base">วันและเวลา</CardTitle></CardHeader>
+          <CardContent class="grid gap-5 px-5">
+            <div class="-mx-5 overflow-x-auto px-5 pb-1" role="radiogroup" aria-label="วันที่">
+              <div class="flex w-max gap-2">
+                <button
+                  v-for="d in days"
+                  :key="d.iso"
+                  type="button"
+                  role="radio"
+                  :aria-checked="date === d.iso"
+                  :aria-label="`${d.weekday} ${d.day} ${d.month}`"
+                  class="grid w-16 justify-items-center gap-0.5 rounded-lg border py-2 transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  :class="chip(date === d.iso)"
+                  @click="date = d.iso"
+                >
+                  <span class="text-[13px]" :class="date === d.iso ? 'text-primary-foreground/85' : 'text-muted-foreground'">{{ d.weekday }}</span>
+                  <span class="num text-lg leading-tight font-semibold">{{ d.day }}</span>
+                  <span class="text-[13px]" :class="date === d.iso ? 'text-primary-foreground/85' : 'text-muted-foreground'">{{ d.month }}</span>
+                </button>
+              </div>
             </div>
-            <div v-if="loadingSlots" class="grid grid-cols-4 gap-2 sm:grid-cols-6">
-              <Skeleton v-for="n in 8" :key="n" class="h-11 rounded-lg" />
+
+            <div v-if="loadingSlots" class="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-6">
+              <Skeleton v-for="n in 10" :key="n" class="h-11 rounded-lg md:h-10" />
             </div>
             <Alert v-else-if="slotError" variant="destructive"><AlertDescription>โหลดเวลาว่างไม่สำเร็จ: {{ slotError }}</AlertDescription></Alert>
-            <p v-else-if="!slots.length" class="m-0 rounded-lg border border-dashed px-4 py-3 text-muted-foreground">
-              {{ dateLabel }} ไม่มีเวลาว่าง (ร้านปิดหรือเต็ม) ลองเลือกวันอื่น
-            </p>
+            <EmptyState v-else-if="!slots.length" compact :title="`${dateLabel} ไม่มีเวลาว่าง`" description="ร้านปิดหรือคิวเต็ม ลองเลือกวันอื่น" />
             <div v-else class="grid gap-4" role="radiogroup" aria-label="เวลาเริ่ม">
-              <p class="m-0 text-[15px] text-muted-foreground">{{ dateLabel }} · ว่าง <span class="num">{{ slots.length }}</span> ช่วงเวลา</p>
+              <p class="m-0 text-[15px] text-muted-foreground">{{ dateLabel }} · ว่าง <span class="num font-medium text-heading">{{ slots.length }}</span> ช่วงเวลา</p>
               <div v-for="g in slotGroups" :key="g.label" class="grid gap-2">
-                <h3 class="m-0 text-[15px] font-semibold">{{ g.label }}</h3>
-                <div class="grid grid-cols-4 gap-2 sm:grid-cols-6">
+                <h3 class="m-0 text-sm font-medium text-muted-foreground">{{ g.label }}</h3>
+                <div class="grid grid-cols-3 gap-2 sm:grid-cols-5 xl:grid-cols-6">
                   <button
                     v-for="s in g.items"
                     :key="s.starts_at"
                     type="button"
                     role="radio"
                     :aria-checked="slot?.starts_at === s.starts_at"
-                    class="num h-11 rounded-lg border text-[15px] font-medium transition-colors active:scale-[0.98] focus-visible:ring-3 focus-visible:ring-ring/60 focus-visible:outline-none"
+                    class="num h-11 rounded-lg border text-[15px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:h-10"
                     :class="chip(slot?.starts_at === s.starts_at)"
                     @click="slot = s"
                   >{{ s.time }}</button>
@@ -277,9 +314,9 @@ const chip = (on: boolean) =>
 
         <!-- ข้อมูลผู้จอง -->
         <Card v-if="slot" class="gap-4 py-5">
-          <CardHeader class="px-5"><CardTitle as="h2">ข้อมูลผู้จอง</CardTitle></CardHeader>
+          <CardHeader class="px-5"><CardTitle as="h2" class="text-base">ข้อมูลผู้จอง</CardTitle></CardHeader>
           <CardContent class="grid gap-4 px-5">
-            <p v-if="isMember" class="m-0">{{ customer?.first_name }} {{ customer?.last_name }} · <span class="num">{{ customer?.phone }}</span></p>
+            <p v-if="isMember" class="m-0 rounded-lg bg-muted px-4 py-3 text-heading">{{ customer?.first_name }} {{ customer?.last_name }} · <span class="num">{{ customer?.phone }}</span></p>
             <template v-else>
               <p class="m-0 text-[15px] text-muted-foreground">
                 จองได้โดยไม่ต้องสมัครสมาชิก หรือ
@@ -289,8 +326,10 @@ const chip = (on: boolean) =>
                 <div class="grid gap-1.5"><Label for="g-first">ชื่อ</Label><Input id="g-first" v-model="guest.firstName" autocomplete="given-name" required /></div>
                 <div class="grid gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>
               </div>
-              <div class="grid gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
-              <div class="grid gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
+              <div class="grid gap-3 sm:grid-cols-2">
+                <div class="grid gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+                <div class="grid gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
+              </div>
               <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
               <ClientOnly><TurnstileWidget ref="turnstile" @token="(t: string) => (turnstileToken = t)" /></ClientOnly>
             </template>
@@ -303,36 +342,38 @@ const chip = (on: boolean) =>
       </div>
 
       <!-- สรุปการจอง -->
-      <Card class="gap-4 py-5 lg:sticky lg:top-20" aria-labelledby="summary-h">
-        <CardHeader class="px-5"><CardTitle id="summary-h" as="h2">สรุปการจอง</CardTitle></CardHeader>
-        <CardContent class="grid gap-4 px-5">
+      <Card class="gap-0 py-0 lg:sticky lg:top-24" aria-labelledby="summary-h">
+        <div class="border-b border-border p-5"><h2 id="summary-h" class="m-0 text-base font-semibold">สรุปการจอง</h2></div>
+        <div class="grid gap-4 p-5">
           <dl class="m-0 grid gap-2 text-[15px]">
-            <div class="flex justify-between gap-3"><dt class="text-muted-foreground">สาขา</dt><dd class="m-0 text-right">{{ branch?.name ?? '—' }}</dd></div>
+            <div class="flex justify-between gap-3"><dt class="text-muted-foreground">สาขา</dt><dd class="m-0 text-right text-heading">{{ branch?.name ?? '—' }}</dd></div>
             <div class="flex justify-between gap-3">
               <dt class="text-muted-foreground">เวลา</dt>
-              <dd class="m-0 text-right">{{ slot ? `${dateLabel} ${slot.time} น.` : '—' }}</dd>
+              <dd class="m-0 text-right text-heading">{{ slot ? `${dateLabel} ${slot.time} น.` : '—' }}</dd>
             </div>
           </dl>
-          <ul class="m-0 grid list-none gap-1.5 border-t border-border/70 p-0 pt-3 text-[15px]">
+          <ul class="m-0 grid list-none gap-1.5 border-t border-border p-0 pt-4 text-[15px]">
             <li v-for="(p, idx) in people" :key="idx" class="flex justify-between gap-3">
               <span class="min-w-0">
                 คนที่ {{ idx + 1 }} · {{ serviceOf(p)?.name ?? 'ยังไม่เลือก' }}
                 <span v-if="optionOf(p)" class="text-muted-foreground"> {{ formatDuration(optionOf(p)!.duration_minutes) }}</span>
               </span>
-              <span class="num shrink-0">{{ optionOf(p) ? formatBaht(optionOf(p)!.price) : '—' }}</span>
+              <span class="num shrink-0 text-heading">{{ optionOf(p) ? formatBaht(optionOf(p)!.price) : '—' }}</span>
             </li>
           </ul>
-          <div class="flex items-baseline justify-between border-t border-border/70 pt-3">
-            <span class="font-medium">รวมค่าบริการ</span>
-            <span class="num text-2xl font-semibold">{{ formatBaht(total) }}</span>
+          <div class="flex items-baseline justify-between border-t border-border pt-4">
+            <span class="font-medium text-heading">รวมค่าบริการ</span>
+            <span class="num text-2xl font-semibold text-heading">{{ formatBaht(total) }}</span>
           </div>
+        </div>
+        <div class="grid gap-3 border-t border-border bg-background/60 p-5">
           <p class="m-0 text-sm text-muted-foreground">ชำระที่ร้านหลังใช้บริการ หลังกดจองต้องโอนมัดจำผ่าน PromptPay และส่งสลิปภายในเวลาที่กำหนด</p>
           <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
           <Button size="lg" class="w-full" :disabled="!slot || submitting" @click="submit">
             {{ submitting ? 'กำลังจอง…' : 'จองและชำระมัดจำ' }}
           </Button>
-          <p v-if="!slot" class="m-0 -mt-2 text-center text-sm text-muted-foreground">เลือกบริการและเวลาก่อน</p>
-        </CardContent>
+          <p v-if="!slot" class="m-0 text-center text-sm text-muted-foreground">เลือกบริการและเวลาก่อน</p>
+        </div>
       </Card>
     </div>
   </div>

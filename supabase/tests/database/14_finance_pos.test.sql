@@ -113,9 +113,9 @@ select throws_ok(
 -- ---------------------------------------------------------------------------
 -- รับเงิน
 -- ---------------------------------------------------------------------------
-select throws_ok(
-  format($$select public.pos_record_payment(%L, 'CASH', 100, null, null, 0, null, 'p7-pay-000000000001')$$, pg_temp.j('iA') ->> 'invoice_id'),
-  '23514', 'ยังไม่ได้เปิดกะ กรุณาเปิดกะก่อนรับ/จ่ายเงินสด', 'ไม่มีกะเปิด รับเงินไม่ได้');
+select is((select count(*)::int from public.pos_sessions
+             where branch_id = '30000000-0000-4000-8000-000000000001' and status = 'OPEN'), 0,
+  'ยังไม่มีกะเปิดก่อนรับเงิน');
 select pg_temp.put('sess', public.pos_open_session('30000000-0000-4000-8000-000000000001', 1000, null)::text);
 
 select pg_temp.put('iA', public.pos_record_payment((pg_temp.j('iA') ->> 'invoice_id')::uuid, 'CASH', 300, null, null,
@@ -325,9 +325,12 @@ select throws_ok(format($$select public.pos_close_session(%L, 1150, null)$$, pg_
   '22023', null, 'นับเงินไม่ตรงต้องระบุเหตุผล');
 select is((public.pos_close_session(pg_temp.v('sess')::uuid, 1150, 'เงินขาด ทอนผิด') ->> 'cash_difference')::numeric,
   -50::numeric, 'ปิดกะ: ผลต่าง = นับจริง − คาดการณ์');
-select throws_ok(
-  format($$select public.pos_record_payment(%L, 'CASH', 100, null, null, 0, null, 'p7-pay-000000000010')$$, pg_temp.j('iD') ->> 'invoice_id'),
-  '23514', null, 'ปิดกะแล้วรับเงินในกะนั้นไม่ได้');
+-- (031) ไม่ต้องกดเปิดกะ: รายการเงินสดถัดไปเปิดกะใหม่ให้อัตโนมัติ เงินทอนเริ่มต้น 0 — ไม่เข้ากะที่ปิดแล้ว
+select pg_temp.put('cm2', public.pos_cash_adjustment('30000000-0000-4000-8000-000000000001', 'CASH_IN', 50, 'หลังปิดกะ')::text);
+select ok(exists (select 1 from public.pos_sessions
+                   where branch_id = '30000000-0000-4000-8000-000000000001' and status = 'OPEN'
+                     and id <> pg_temp.v('sess')::uuid and opening_cash = 0),
+  'ปิดกะแล้ว รายการเงินสดถัดไปเปิดกะใหม่อัตโนมัติ (ไม่เข้ากะที่ปิดแล้ว)');
 select is(public.pos_void_expense(pg_temp.v('e1')::uuid, 'ซื้อผิด'), 'REQUESTED',
   'กะปิดแล้ว STAFF ขอยกเลิกรายจ่าย = ส่งคำขอให้ OWNER');
 select throws_ok(format($$select public.pos_review_session(%L, true, null)$$, pg_temp.v('sess')),

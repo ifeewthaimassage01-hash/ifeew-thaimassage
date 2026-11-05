@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // OWNER: บริการ + ช่วงเวลา + ราคา + ค่าแรงหมอนวด (ต่อสาขา) และหมวดหมู่
-// แก้ราคา/ค่าแรงเดิม = step-up TOTP + เหตุผล (DB บังคับ)
+// แก้ราคา/ค่าแรงเดิม = OWNER เท่านั้น (เหตุผลไม่บังคับ — migration 032)
+import { History, Pencil, Plus, Trash2 } from '@lucide/vue'
 import {
   bangkokToday,
   formatBaht,
@@ -10,6 +11,8 @@ import {
   type Tables,
 } from '@ifeew/shared'
 
+
+const { prompt } = useDialog()
 definePageMeta({ ownerOnly: true })
 
 type Category = Tables<'service_categories'>
@@ -135,7 +138,6 @@ function validate(): string | null {
     if (!Number.isFinite(fee) || fee < 0) return `ค่าแรงช่วง ${formatDuration(o.duration_minutes)} ไม่ถูกต้อง`
     if (fee > price) return `ค่าแรงช่วง ${formatDuration(o.duration_minutes)} มากกว่าราคา`
   }
-  if (hasExistingPrice.value && f.reason.trim().length < 3) return 'กรุณาระบุเหตุผลการเปลี่ยนราคา'
   return null
 }
 
@@ -208,8 +210,8 @@ async function save() {
 
 async function cancelScheduled(o: PricingOption) {
   if (!o.scheduled) return
-  const reason = window.prompt('เหตุผลที่ยกเลิกราคาที่ตั้งล่วงหน้า')
-  if (!reason || reason.trim().length < 3) return
+  const reason = await prompt({ title: 'ยกเลิกราคาที่ตั้งล่วงหน้า', label: 'เหตุผล', minLength: 3, confirmText: 'ยกเลิกราคา', cancelText: 'ปิด', destructive: true })
+  if (reason === null) return
   try {
     await run(() => must(supabase.rpc('cancel_scheduled_price', { p_price_history_id: o.scheduled!.id, p_reason: reason.trim() })))
     ok('ยกเลิกราคาล่วงหน้าแล้ว')
@@ -279,177 +281,217 @@ async function toggleCategory(c: Category) {
 
 <template>
   <div>
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">บริการและราคา</h1>
-    <v-tabs v-model="tab" color="primary" class="mb-4">
-      <v-tab value="services">บริการ · {{ activeBranch?.name }}</v-tab>
-      <v-tab value="categories">หมวดหมู่</v-tab>
-    </v-tabs>
+    <PageHeader title="บริการและราคา" :description="`ราคาและค่าแรงแยกตามสาขา · กำลังดู ${activeBranch?.name ?? ''}`">
+      <template #actions>
+        <Button v-if="tab === 'services'" @click="openService()"><Plus /> เพิ่มบริการ</Button>
+        <Button v-else @click="openCategory()"><Plus /> เพิ่มหมวดหมู่</Button>
+      </template>
+    </PageHeader>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
+    <SegmentedControl v-model="tab" :items="[{ value: 'services', label: 'บริการ' }, { value: 'categories', label: 'หมวดหมู่' }]" label="มุมมอง" class="mb-4" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
     <!-- บริการ -->
     <template v-if="tab === 'services'">
-      <div class="mb-4 flex justify-end">
-        <v-btn color="primary" prepend-icon="mdi-plus" @click="openService()">เพิ่มบริการ</v-btn>
-      </div>
-      <v-progress-linear v-if="loading" indeterminate color="primary" />
-      <div class="grid gap-4 lg:grid-cols-2">
-        <v-card v-for="s in services" :key="s.id" class="p-5" :class="s.is_active ? '' : 'opacity-50'">
-          <div class="flex items-start justify-between gap-3">
-            <div>
-              <p class="m-0 text-xs text-light-brown">{{ categoryName(s.category_id) }}</p>
-              <p class="m-0 text-lg font-medium">{{ s.name }}</p>
-              <p v-if="s.name_en" class="m-0 text-sm text-light-brown">{{ s.name_en }}</p>
+      <LoadingBar v-if="loading" class="mb-3" />
+      <EmptyState v-if="!loading && !services.length" title="ยังไม่มีบริการ" description="เพิ่มบริการพร้อมช่วงเวลาและราคา แล้วเปิดขายที่สาขา">
+        <Button @click="openService()"><Plus /> เพิ่มบริการ</Button>
+      </EmptyState>
+      <div class="grid items-start gap-4 lg:grid-cols-2">
+        <Card v-for="s in services" :key="s.id" class="gap-0 py-0" :class="s.is_active ? '' : 'opacity-70'">
+          <div class="flex items-start justify-between gap-3 p-5">
+            <div class="min-w-0">
+              <p class="m-0 text-sm text-muted-foreground">{{ categoryName(s.category_id) }}</p>
+              <h2 class="m-0 text-[17px] font-semibold">{{ s.name }}</h2>
+              <p v-if="s.name_en" class="m-0 text-sm text-muted-foreground">{{ s.name_en }}</p>
             </div>
-            <v-chip v-if="!s.is_active" color="error" variant="tonal" size="small">ปิดใช้งาน</v-chip>
-            <v-chip v-else-if="!pricingOf(s.id)" variant="tonal" size="small">ยังไม่ขายที่สาขานี้</v-chip>
-            <v-chip v-else-if="!pricingOf(s.id)!.is_active" color="warning" variant="tonal" size="small">หยุดขายที่สาขานี้</v-chip>
+            <Badge v-if="!s.is_active" variant="neutral" dot>ปิดใช้งาน</Badge>
+            <Badge v-else-if="!pricingOf(s.id)" variant="neutral">ยังไม่ขายที่สาขานี้</Badge>
+            <Badge v-else-if="!pricingOf(s.id)!.is_active" variant="pending" dot>หยุดขายที่สาขานี้</Badge>
+            <Badge v-else variant="success" dot>ขายอยู่</Badge>
           </div>
 
-          <div v-if="activeOptions(s.id).length" class="mt-3 grid gap-1">
-            <div v-for="o in activeOptions(s.id)" :key="o.option_id" class="grid grid-cols-3 rounded-lg bg-cream px-3 py-2 text-sm">
-              <span class="font-medium">{{ formatDuration(o.duration_minutes) }}</span>
-              <span>{{ formatBaht(Number(o.current!.price)) }}</span>
-              <span class="text-light-brown">ค่าแรง {{ formatBaht(Number(o.current!.therapist_fee)) }}</span>
-              <span v-if="o.scheduled" class="col-span-3 text-xs text-light-brown">
-                ล่วงหน้า {{ fmt(o.scheduled.effective_from) }}: {{ formatBaht(Number(o.scheduled.price)) }} / ค่าแรง {{ formatBaht(Number(o.scheduled.therapist_fee)) }}
+          <div v-if="activeOptions(s.id).length" class="border-t border-border">
+            <div class="grid grid-cols-3 px-5 pt-3 pb-1 text-[13px] font-medium text-muted-foreground">
+              <span>ระยะเวลา</span><span class="text-right">ราคา</span><span class="text-right">ค่าแรง</span>
+            </div>
+            <div v-for="o in activeOptions(s.id)" :key="o.option_id" class="grid grid-cols-3 px-5 py-1.5 text-[15px]">
+              <span class="text-heading">{{ formatDuration(o.duration_minutes) }}</span>
+              <span class="num text-right font-medium text-heading">{{ formatBaht(Number(o.current!.price)) }}</span>
+              <span class="num text-right text-muted-foreground">{{ formatBaht(Number(o.current!.therapist_fee)) }}</span>
+              <span v-if="o.scheduled" class="col-span-3 text-sm text-pending-ink">
+                ราคาใหม่ {{ fmt(o.scheduled.effective_from) }}: <span class="num">{{ formatBaht(Number(o.scheduled.price)) }}</span> / ค่าแรง <span class="num">{{ formatBaht(Number(o.scheduled.therapist_fee)) }}</span>
               </span>
             </div>
+            <div class="h-2" />
           </div>
 
-          <div class="mt-4 flex flex-wrap gap-2">
-            <v-btn variant="tonal" color="primary" prepend-icon="mdi-pencil-outline" @click="openService(s)">แก้ไข</v-btn>
-            <v-btn v-if="pricingOf(s.id)" variant="text" @click="toggleAtBranch(s)">
+          <div class="flex flex-wrap gap-2 border-t border-border px-5 py-3">
+            <Button variant="outline" size="sm" @click="openService(s)"><Pencil /> แก้ไข</Button>
+            <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" @click="toggleAtBranch(s)">
               {{ pricingOf(s.id)!.is_active ? 'หยุดขายที่สาขานี้' : 'เปิดขายที่สาขานี้' }}
-            </v-btn>
-            <v-btn v-if="pricingOf(s.id)" variant="text" icon="mdi-history" aria-label="ประวัติราคา" @click="historyService = s" />
+            </Button>
+            <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" class="ml-auto" @click="historyService = s"><History /> ประวัติราคา</Button>
           </div>
-        </v-card>
+        </Card>
       </div>
     </template>
 
     <!-- หมวดหมู่ -->
-    <template v-else>
-      <div class="mb-4 flex justify-end">
-        <v-btn color="primary" prepend-icon="mdi-plus" @click="openCategory()">เพิ่มหมวดหมู่</v-btn>
+    <SectionCard v-else flush>
+      <div class="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead class="w-20">ลำดับ</TableHead><TableHead>ชื่อ</TableHead><TableHead>รายละเอียด</TableHead><TableHead>สถานะ</TableHead>
+              <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="c in categories" :key="c.id" :class="c.is_active ? '' : 'text-muted-foreground'">
+              <TableCell class="num">{{ c.sort_order }}</TableCell>
+              <TableCell class="font-medium text-heading">{{ c.name }}</TableCell>
+              <TableCell class="max-w-80 truncate">{{ c.description || '—' }}</TableCell>
+              <TableCell><Badge :variant="c.is_active ? 'success' : 'neutral'" dot>{{ c.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}</Badge></TableCell>
+              <TableCell class="text-right">
+                <Button size="sm" variant="ghost" @click="openCategory(c)">แก้ไข</Button>
+                <Button size="sm" variant="ghost" :class="c.is_active ? 'text-danger-ink' : ''" @click="toggleCategory(c)">{{ c.is_active ? 'ปิด' : 'เปิด' }}</Button>
+              </TableCell>
+            </TableRow>
+            <TableRow v-if="!categories.length" class="hover:bg-transparent">
+              <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ยังไม่มีหมวดหมู่</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
-      <v-card class="p-2">
-        <v-table>
-          <thead><tr><th>ลำดับ</th><th>ชื่อ</th><th>รายละเอียด</th><th>สถานะ</th><th /></tr></thead>
-          <tbody>
-            <tr v-for="c in categories" :key="c.id" :class="c.is_active ? '' : 'opacity-50'">
-              <td>{{ c.sort_order }}</td>
-              <td>{{ c.name }}</td>
-              <td>{{ c.description || '-' }}</td>
-              <td>{{ c.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}</td>
-              <td class="text-right">
-                <v-btn size="small" variant="text" @click="openCategory(c)">แก้ไข</v-btn>
-                <v-btn size="small" variant="text" :color="c.is_active ? 'error' : 'primary'" @click="toggleCategory(c)">
-                  {{ c.is_active ? 'ปิด' : 'เปิด' }}
-                </v-btn>
-              </td>
-            </tr>
-          </tbody>
-        </v-table>
-      </v-card>
-    </template>
+    </SectionCard>
 
     <!-- ฟอร์มบริการ -->
-    <v-dialog v-model="dialog" max-width="560" scrollable>
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">{{ editing ? 'แก้ไขบริการ' : 'เพิ่มบริการ' }} · {{ activeBranch?.name }}</p>
-        <div class="max-h-[70vh] overflow-y-auto pr-1">
-          <v-text-field v-model="form.name" label="ชื่อรายการ *" maxlength="150" />
-          <v-text-field v-model="form.name_en" label="ชื่อภาษาอังกฤษ (sub)" maxlength="150" />
-          <v-select v-model="form.category_id" :items="categories.filter((c) => c.is_active)" item-title="name" item-value="id" label="หมวดหมู่ *" />
-
-          <p class="m-0 mb-2 text-sm font-medium">เพิ่มช่วงเวลา (นาที) เช่น 3 ชม = 180</p>
-          <div class="mb-4 flex gap-2">
-            <v-text-field v-model="newMinutes" placeholder="นาทีอื่น เช่น 180" type="number" min="5" max="600" hide-details @keydown.enter.prevent="addDuration" />
-            <v-btn variant="outlined" prepend-icon="mdi-plus" class="!h-auto" @click="addDuration">เพิ่มเวลา</v-btn>
+    <Dialog v-model:open="dialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-xl">
+        <DialogHeader>
+          <DialogTitle>{{ editing ? 'แก้ไขบริการ' : 'เพิ่มบริการ' }}</DialogTitle>
+          <DialogDescription>ราคาและช่วงเวลาตั้งที่ {{ activeBranch?.name }}</DialogDescription>
+        </DialogHeader>
+        <div class="-mx-6 grid gap-4 overflow-y-auto px-6">
+          <TextField v-model="form.name" label="ชื่อรายการ" maxlength="150" />
+          <div class="grid gap-4 sm:grid-cols-2">
+            <TextField v-model="form.name_en" label="ชื่อภาษาอังกฤษ (ไม่บังคับ)" maxlength="150" />
+            <SelectField v-model="form.category_id" :items="categories.filter((c) => c.is_active)" item-title="name" item-value="id" label="หมวดหมู่" placeholder="เลือกหมวดหมู่" />
           </div>
 
-          <p class="m-0 mb-2 text-sm font-medium">ช่วงเวลาที่ขาย + ราคา + ค่าแรง (บาท)</p>
-          <div v-for="(o, i) in form.options" :key="o.duration_minutes" class="mb-3 rounded-2xl border border-beige p-4">
-            <div class="mb-3 flex items-center justify-between">
-              <span class="rounded-full border border-light-brown bg-beige px-4 py-1 text-sm font-medium">{{ formatDuration(o.duration_minutes) }}</span>
-              <v-btn icon="mdi-trash-can-outline" color="error" variant="tonal" size="small" aria-label="ลบช่วงเวลา" @click="form.options.splice(i, 1)" />
+          <fieldset class="m-0 grid gap-3 rounded-lg border border-border p-4">
+            <legend class="px-1 text-sm font-medium text-heading">ช่วงเวลาที่ขาย ราคา และค่าแรง</legend>
+            <div class="flex items-end gap-2">
+              <TextField v-model="newMinutes" label="เพิ่มช่วงเวลา (นาที)" hint="เช่น 3 ชม. = 180" type="number" min="5" max="600" class="flex-1" @keydown.enter.prevent="addDuration" />
+              <Button type="button" variant="outline" class="mb-6" @click="addDuration"><Plus /> เพิ่ม</Button>
             </div>
-            <div class="grid grid-cols-2 gap-3">
-              <v-text-field v-model="o.price" label="ราคา (฿) *" type="number" min="0" hide-details />
-              <v-text-field v-model="o.therapist_fee" label="ค่าแรง (฿)" type="number" min="0" hide-details />
+            <div v-for="(o, i) in form.options" :key="o.duration_minutes" class="grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 rounded-lg bg-background/70 p-3">
+              <span class="pb-2.5 text-[15px] font-medium text-heading">{{ formatDuration(o.duration_minutes) }}</span>
+              <TextField v-model="o.price" label="ราคา" type="number" min="0" suffix="฿" class="num" />
+              <TextField v-model="o.therapist_fee" label="ค่าแรง" type="number" min="0" suffix="฿" class="num" />
+              <Button type="button" variant="ghost" size="icon" class="text-danger-ink" :aria-label="`ลบช่วงเวลา ${formatDuration(o.duration_minutes)}`" @click="form.options.splice(i, 1)"><Trash2 /></Button>
             </div>
-          </div>
-          <p v-if="!form.options.length" class="text-sm text-red-700">ยังไม่มีช่วงเวลา</p>
+            <p v-if="!form.options.length" class="m-0 text-sm text-danger-ink">ยังไม่มีช่วงเวลา</p>
+          </fieldset>
 
-          <v-checkbox v-if="branches.length > 1" v-model="form.applyAll" color="primary" hide-details
-            :label="`ใช้ช่วงเวลาและราคานี้กับทุกสาขา (${branches.length} สาขา)`" />
+          <CheckboxField v-if="branches.length > 1" v-model="form.applyAll" :label="`ใช้ช่วงเวลาและราคานี้กับทุกสาขา (${branches.length} สาขา)`" />
 
-          <template v-if="hasExistingPrice || form.applyAll">
-            <v-switch v-model="form.immediate" color="primary" label="ราคามีผลทันที" hide-details />
+          <div v-if="hasExistingPrice || form.applyAll" class="grid gap-3 rounded-lg border border-border p-4">
+            <SwitchField v-model="form.immediate" label="ราคามีผลทันที" hint="ปิดเพื่อตั้งราคาล่วงหน้า" />
             <div v-if="!form.immediate" class="grid grid-cols-2 gap-3">
-              <v-text-field v-model="form.date" type="date" label="วันที่มีผล" />
-              <v-text-field v-model="form.time" type="time" label="เวลา" />
+              <TextField v-model="form.date" type="date" label="วันที่มีผล" />
+              <TimeField v-model="form.time" label="เวลา" />
             </div>
-            <v-text-field v-model="form.reason" :label="hasExistingPrice ? 'เหตุผลการเปลี่ยนราคา *' : 'เหตุผล'" class="mt-2" />
-            <p class="m-0 mb-2 text-xs text-light-brown">การแก้ราคาเดิมต้องยืนยันรหัส Authenticator · รายการที่ขายไปแล้วใช้ราคาเดิมตาม Snapshot</p>
-          </template>
+            <TextField v-model="form.reason" label="หมายเหตุ (ไม่บังคับ)" />
+            <p class="m-0 text-sm text-muted-foreground">รายการที่ขายไปแล้วยังใช้ราคาเดิม</p>
+          </div>
 
-          <div v-if="scheduledOptions.length" class="mb-3 rounded-xl bg-cream p-3 text-sm">
-            <p class="m-0 mb-1 font-medium">ราคาที่ตั้งล่วงหน้า</p>
-            <div v-for="o in scheduledOptions" :key="o.option_id" class="flex items-center justify-between">
-              <span>{{ formatDuration(o.duration_minutes) }} · {{ formatBaht(Number(o.scheduled!.price)) }} · มีผล {{ fmt(o.scheduled!.effective_from) }}</span>
-              <v-btn size="small" variant="text" color="error" @click="cancelScheduled(o)">ยกเลิก</v-btn>
+          <div v-if="scheduledOptions.length" class="grid gap-1 rounded-lg bg-pending-soft p-4 text-[15px] text-pending-ink">
+            <p class="m-0 font-medium">ราคาที่ตั้งล่วงหน้า</p>
+            <div v-for="o in scheduledOptions" :key="o.option_id" class="flex items-center justify-between gap-2">
+              <span>{{ formatDuration(o.duration_minutes) }} · <span class="num">{{ formatBaht(Number(o.scheduled!.price)) }}</span> · มีผล {{ fmt(o.scheduled!.effective_from) }}</span>
+              <Button size="sm" variant="ghost" class="text-danger-ink" @click="cancelScheduled(o)">ยกเลิก</Button>
             </div>
           </div>
 
-          <v-textarea v-model="form.description" label="รายละเอียด" rows="2" variant="outlined" />
-          <v-file-input v-model="image" label="รูปบริการ (JPG/PNG/WebP ไม่เกิน 2 MB)" accept="image/jpeg,image/png,image/webp" prepend-icon="mdi-image-outline" variant="outlined" />
-          <v-switch v-if="editing" v-model="form.is_active" color="primary" label="เปิดใช้งานบริการ" hide-details />
+          <TextareaField v-model="form.description" label="รายละเอียด" rows="2" />
+          <div class="grid gap-1.5">
+            <Label for="svc-image">รูปบริการ</Label>
+            <input
+              id="svc-image"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-describedby="svc-image-hint"
+              class="block w-full cursor-pointer rounded-lg border border-input bg-card text-[15px] file:mr-3 file:h-10 file:cursor-pointer file:border-0 file:bg-secondary file:px-4 file:font-medium file:text-heading"
+              @change="(e) => (image = (e.target as HTMLInputElement).files?.[0] ?? null)"
+            >
+            <p id="svc-image-hint" class="m-0 text-sm text-muted-foreground">JPG, PNG หรือ WebP ไม่เกิน 2 MB</p>
+          </div>
+          <SwitchField v-if="editing" v-model="form.is_active" label="เปิดใช้งานบริการ" />
         </div>
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="dialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+        <DialogFooter class="gap-2">
+          <Button variant="outline" @click="dialog = false">ยกเลิก</Button>
+          <Button :disabled="saving" @click="save">{{ saving ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- ประวัติราคา -->
-    <v-dialog :model-value="!!historyService" max-width="760" @update:model-value="historyService = null">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">ประวัติราคา {{ historyService?.name }} · {{ activeBranch?.name }}</p>
-        <div v-for="o in historyOptions" :key="o.option_id" class="mb-4">
-          <p class="m-0 mb-1 font-medium">{{ formatDuration(o.duration_minutes) }} <span v-if="!o.is_active" class="text-xs text-red-700">(ปิดแล้ว)</span></p>
-          <v-table density="compact">
-            <thead><tr><th>มีผลตั้งแต่</th><th>ถึง</th><th>ราคา</th><th>ค่าแรง</th><th>เหตุผล</th><th>สถานะ</th></tr></thead>
-            <tbody>
-              <tr v-for="h in o.history ?? []" :key="h.id" :class="h.status === 'CANCELLED' ? 'opacity-50' : ''">
-                <td>{{ fmt(h.effective_from) }}</td>
-                <td>{{ h.effective_to ? fmt(h.effective_to) : '-' }}</td>
-                <td>{{ formatBaht(Number(h.price)) }}</td>
-                <td>{{ formatBaht(Number(h.therapist_fee)) }}</td>
-                <td>{{ h.reason }}</td>
-                <td>{{ h.status === 'CANCELLED' ? 'ยกเลิก' : 'ใช้งาน' }}</td>
-              </tr>
-            </tbody>
-          </v-table>
+    <Dialog :open="!!historyService" @update:open="(v) => !v && (historyService = null)">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>ประวัติราคา {{ historyService?.name }}</DialogTitle>
+          <DialogDescription>{{ activeBranch?.name }}</DialogDescription>
+        </DialogHeader>
+        <div class="-mx-6 grid gap-5 overflow-y-auto px-6">
+          <section v-for="o in historyOptions" :key="o.option_id">
+            <h3 class="m-0 mb-2 text-[15px] font-semibold">
+              {{ formatDuration(o.duration_minutes) }} <Badge v-if="!o.is_active" variant="neutral" class="ml-1">ปิดแล้ว</Badge>
+            </h3>
+            <div class="overflow-x-auto rounded-lg border border-border">
+              <Table>
+                <TableHeader>
+                  <TableRow class="hover:bg-transparent">
+                    <TableHead>มีผลตั้งแต่</TableHead><TableHead>ถึง</TableHead><TableHead class="text-right">ราคา</TableHead>
+                    <TableHead class="text-right">ค่าแรง</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="h in o.history ?? []" :key="h.id" :class="h.status === 'CANCELLED' ? 'text-muted-foreground' : ''">
+                    <TableCell class="num">{{ fmt(h.effective_from) }}</TableCell>
+                    <TableCell class="num">{{ h.effective_to ? fmt(h.effective_to) : '—' }}</TableCell>
+                    <TableCell class="num text-right">{{ formatBaht(Number(h.price)) }}</TableCell>
+                    <TableCell class="num text-right">{{ formatBaht(Number(h.therapist_fee)) }}</TableCell>
+                    <TableCell class="max-w-56 truncate">{{ h.reason }}</TableCell>
+                    <TableCell><Badge :variant="h.status === 'CANCELLED' ? 'neutral' : 'success'">{{ h.status === 'CANCELLED' ? 'ยกเลิก' : 'ใช้งาน' }}</Badge></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+          </section>
         </div>
-        <div class="mt-2 flex justify-end"><v-btn variant="text" @click="historyService = null">ปิด</v-btn></div>
-      </v-card>
-    </v-dialog>
+        <DialogFooter><Button variant="outline" @click="historyService = null">ปิด</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- หมวดหมู่ -->
-    <v-dialog v-model="catDialog" max-width="460">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">{{ catEditing ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่' }}</p>
-        <v-text-field v-model="catForm.name" label="ชื่อหมวดหมู่" maxlength="100" />
-        <v-text-field v-model="catForm.description" label="รายละเอียด" maxlength="500" />
-        <v-text-field v-model="catForm.sort_order" label="ลำดับ" type="number" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="catDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="saveCategory">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="catDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>{{ catEditing ? 'แก้ไขหมวดหมู่' : 'เพิ่มหมวดหมู่' }}</DialogTitle>
+          <DialogDescription>หมวดหมู่ใช้จัดกลุ่มบริการในหน้าจองของลูกค้า</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="saveCategory">
+          <TextField v-model="catForm.name" label="ชื่อหมวดหมู่" maxlength="100" />
+          <TextField v-model="catForm.description" label="รายละเอียด" maxlength="500" />
+          <TextField v-model="catForm.sort_order" label="ลำดับ" type="number" class="num" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="catDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">บันทึก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

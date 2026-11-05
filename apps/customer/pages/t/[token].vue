@@ -33,14 +33,12 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="grid gap-4">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">สถานะการจอง</h1>
-        <p class="m-0 mt-1 text-muted-foreground">เก็บลิงก์หน้านี้ไว้ดูสถานะ และอย่าส่งต่อให้ผู้อื่น</p>
-      </div>
-      <Button variant="outline" :disabled="loading" @click="load"><RefreshCw :class="loading ? 'animate-spin' : ''" /> โหลดสถานะล่าสุด</Button>
-    </div>
+  <div>
+    <PageHeader title="สถานะการจอง" description="เก็บลิงก์หน้านี้ไว้ดูสถานะ และอย่าส่งต่อให้ผู้อื่น">
+      <template #actions>
+        <Button variant="outline" :disabled="loading" @click="load"><RefreshCw :class="loading ? 'animate-spin' : ''" /> โหลดสถานะล่าสุด</Button>
+      </template>
+    </PageHeader>
     <div v-if="loading && !booking" class="grid gap-4 md:grid-cols-2"><Skeleton class="h-80 rounded-xl" /><Skeleton class="h-80 rounded-xl" /></div>
     <Alert v-else-if="error" variant="info"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <BookingDetail v-else-if="booking" :booking="booking" :token="token" @updated="(v) => (booking = { ...booking!, ...v })" />

@@ -89,13 +89,7 @@ async function uploadSlip() {
   }
 }
 
-type BadgeVariant = 'positive' | 'warning' | 'destructive' | 'neutral' | 'default'
-const statusVariant = computed<BadgeVariant>(
-  () =>
-    (({ CONFIRMED: 'positive', PENDING: 'warning', CANCELLED: 'destructive', EXPIRED: 'neutral', NO_SHOW: 'destructive', COMPLETED: 'default', CHECKED_IN: 'default' }) as Record<string, BadgeVariant>)[
-      props.booking.status
-    ] ?? 'neutral',
-)
+const statusVariant = computed(() => bookingStatusVariant(props.booking.status))
 const needsPayment = computed(() => props.booking.can_upload_slip && !!props.booking.payment)
 const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
 </script>
@@ -112,7 +106,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
         </p>
       </CardHeader>
       <CardContent class="grid gap-4 px-5">
-        <figure class="m-0 grid justify-items-center gap-2 rounded-lg bg-muted/60 p-4">
+        <figure class="m-0 grid justify-items-center gap-2 rounded-lg bg-background p-4">
           <img v-if="qr" :src="qr" alt="QR PromptPay สำหรับโอนมัดจำ" class="size-56 rounded-md bg-white p-2" width="224" height="224">
           <Skeleton v-else class="size-56" />
           <figcaption class="text-center">
@@ -146,7 +140,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
             <p class="num m-0 text-sm text-muted-foreground">{{ booking.booking_code ?? 'รอยืนยัน' }}</p>
             <CardTitle as="h2" class="text-xl">{{ booking.branch.name }}</CardTitle>
           </div>
-          <Badge :variant="statusVariant">{{ bookingStatusLabels[booking.status] }}</Badge>
+          <Badge :variant="statusVariant" dot>{{ bookingStatusLabels[booking.status] }}</Badge>
         </div>
       </CardHeader>
       <CardContent class="grid gap-4 px-5">
@@ -160,7 +154,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
         <table class="w-full border-collapse text-[15px]">
           <caption class="sr-only">รายการบริการ</caption>
           <tbody>
-            <tr v-for="(i, idx) in booking.items" :key="idx" class="border-b border-border/70">
+            <tr v-for="(i, idx) in booking.items" :key="idx" class="border-b border-border">
               <td class="py-2 pr-3">คนที่ {{ idx + 1 }} · {{ i.service_name }} <span class="text-muted-foreground">{{ formatDuration(i.duration_minutes) }}</span></td>
               <td class="num py-2 text-right">{{ formatBaht(Number(i.line_total)) }}</td>
             </tr>
@@ -177,10 +171,10 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
           </tfoot>
         </table>
         <p v-if="booking.customer_note" class="m-0 text-[15px]"><span class="text-muted-foreground">หมายเหตุ:</span> {{ booking.customer_note }}</p>
-        <p v-if="booking.cancel_reason" class="m-0 text-[15px] text-tint-danger-ink">เหตุผลที่ยกเลิก: {{ booking.cancel_reason }}</p>
+        <p v-if="booking.cancel_reason" class="m-0 text-[15px] text-danger-ink">เหตุผลที่ยกเลิก: {{ booking.cancel_reason }}</p>
 
-        <div class="border-t border-border/70 pt-4">
-          <Button v-if="canCancel" variant="outline" class="border-destructive/40 text-destructive hover:bg-tint-danger" @click="emit('cancel')">
+        <div class="border-t border-border pt-4">
+          <Button v-if="canCancel" variant="outline" class="border-danger/50 text-danger-ink hover:bg-danger-soft" @click="emit('cancel')">
             <CalendarX2 /> ยกเลิกการจอง
           </Button>
           <p v-else-if="['PENDING', 'CONFIRMED'].includes(booking.status)" class="m-0 flex flex-wrap items-center gap-2 text-[15px] text-muted-foreground">

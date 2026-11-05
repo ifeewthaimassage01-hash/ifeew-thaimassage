@@ -42,18 +42,20 @@ async function verify() {
 </script>
 
 <template>
-  <v-dialog :model-value="open" max-width="400" persistent>
-    <v-card class="p-6">
-      <p class="m-0 mb-1 text-lg font-medium">ยืนยันตัวตนอีกครั้ง</p>
-      <p class="m-0 mb-4 text-sm text-light-brown">การทำรายการนี้ต้องใช้รหัสจากแอป Authenticator</p>
-      <v-form @submit.prevent="verify">
-        <v-text-field v-model="code" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus />
-        <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" :disabled="loading" @click="finish(false)">ยกเลิก</v-btn>
-          <v-btn type="submit" color="primary" :loading="loading">ยืนยัน</v-btn>
-        </div>
-      </v-form>
-    </v-card>
-  </v-dialog>
+  <Dialog :open="open" @update:open="(v) => !v && !loading && finish(false)">
+    <DialogContent class="sm:max-w-sm" :show-close-button="false" @interact-outside.prevent @escape-key-down.prevent>
+      <DialogHeader>
+        <DialogTitle>ยืนยันตัวตนอีกครั้ง</DialogTitle>
+        <DialogDescription>การทำรายการนี้ต้องใช้รหัสจากแอป Authenticator</DialogDescription>
+      </DialogHeader>
+      <form class="grid gap-4" @submit.prevent="verify">
+        <TextField v-model="code" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus class="num" />
+        <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
+        <DialogFooter class="gap-2">
+          <Button type="button" variant="outline" :disabled="loading" @click="finish(false)">ยกเลิก</Button>
+          <Button type="submit" :disabled="loading">{{ loading ? 'กำลังตรวจสอบ…' : 'ยืนยัน' }}</Button>
+        </DialogFooter>
+      </form>
+    </DialogContent>
+  </Dialog>
 </template>

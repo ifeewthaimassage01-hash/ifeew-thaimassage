@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // ชำระเงินของ Order: ร่าง Invoice → ส่วนลด → ออก Invoice (หักมัดจำอัตโนมัติ) → รับเงิน (เงินสด / โอน / QR + สลิป) + ทิป
 // Void (ต้องมีเหตุผล) / คืนเงิน (OWNER) — ใบเสร็จเก็บในระบบเท่านั้น
+import { Camera } from '@lucide/vue'
 import {
   formatBaht,
   formatDuration,
@@ -239,159 +240,180 @@ async function submitRefund() {
 </script>
 
 <template>
-  <div class="max-w-4xl">
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/pos" class="mb-2">หน้าร้าน</v-btn>
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
+  <div>
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <LoadingBar v-if="loading" class="mb-4" />
 
     <template v-if="invoice">
-      <div class="mb-4 flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <h1 class="m-0 text-2xl font-semibold text-cocoa">
-            {{ invoice.invoice_number ?? 'ร่าง Invoice' }}
-            <v-chip size="small" variant="tonal" class="ml-1">{{ invoiceStatusLabels[invoice.status] }}</v-chip>
-          </h1>
-          <p class="m-0 text-light-brown">{{ invoice.customer_name ?? 'ลูกค้าทั่วไป' }} · {{ invoice.business_date }}</p>
-          <p v-if="invoice.receipt_number" class="m-0 text-sm">ใบเสร็จ (เก็บในระบบ): {{ invoice.receipt_number }}</p>
-          <p v-if="invoice.void_reason" class="m-0 text-sm text-red-700">Void: {{ invoice.void_reason }}</p>
-        </div>
-        <div class="flex gap-2">
-          <v-btn v-if="invoice.status === 'VOID'" color="primary" @click="load">สร้าง Invoice ใหม่</v-btn>
-          <v-btn v-else variant="text" color="error" @click="voidDialog = true; voidReason = ''">Void Invoice</v-btn>
-        </div>
+      <PageHeader :title="invoice.invoice_number ?? 'ร่าง Invoice'" :description="`${invoice.customer_name ?? 'ลูกค้าทั่วไป'} · ${invoice.business_date}`">
+        <template #actions>
+          <Badge dot :variant="invoice.status === 'PAID' ? 'success' : invoice.status === 'VOID' ? 'danger' : invoice.status === 'DRAFT' ? 'neutral' : 'pending'">
+            {{ invoiceStatusLabels[invoice.status] }}
+          </Badge>
+          <Button v-if="invoice.status === 'VOID'" @click="load">สร้าง Invoice ใหม่</Button>
+          <Button v-else variant="ghost" class="text-danger-ink" @click="voidDialog = true; voidReason = ''">Void Invoice</Button>
+          <Button as-child variant="outline"><NuxtLink to="/pos">กลับหน้าร้าน</NuxtLink></Button>
+        </template>
+      </PageHeader>
+      <div v-if="invoice.receipt_number || invoice.void_reason" class="-mt-4 mb-6 grid gap-1 text-[15px]">
+        <p v-if="invoice.receipt_number" class="m-0">ใบเสร็จ (เก็บในระบบ): <span class="num text-heading">{{ invoice.receipt_number }}</span></p>
+        <p v-if="invoice.void_reason" class="m-0 text-danger-ink">Void: {{ invoice.void_reason }}</p>
       </div>
 
-      <v-card class="mb-4 p-4">
-        <v-table density="comfortable">
-          <thead>
-            <tr><th>รายการ</th><th class="text-right">ราคา</th><th class="text-right">ส่วนลด</th><th class="text-right">สุทธิ</th><th /></tr>
-          </thead>
-          <tbody>
-            <tr v-for="i in invoice.items" :key="i.invoice_item_id">
-              <td>{{ i.description }} {{ formatDuration(i.duration_minutes) }}
-                <div v-if="i.discount_reason" class="text-xs text-light-brown">{{ i.discount_reason }}</div></td>
-              <td class="text-right">{{ formatBaht(Number(i.unit_price)) }}</td>
-              <td class="text-right">{{ Number(i.discount_amount) ? '−' + formatBaht(Number(i.discount_amount)) : '-' }}</td>
-              <td class="text-right">{{ formatBaht(Number(i.line_total)) }}</td>
-              <td class="text-right"><v-btn v-if="isDraft" size="small" variant="text" @click="openDiscount(i)">ส่วนลด</v-btn></td>
-            </tr>
-          </tbody>
-        </v-table>
-        <div class="mt-3 grid justify-end gap-1 text-right">
-          <p class="m-0 text-xl font-semibold">รวม {{ formatBaht(Number(invoice.total)) }}</p>
-          <p class="m-0">จ่ายแล้ว {{ formatBaht(Number(invoice.paid_amount)) }}
-            <span v-if="Number(invoice.refunded_amount)"> · คืนแล้ว {{ formatBaht(Number(invoice.refunded_amount)) }}</span></p>
-          <p v-if="invoice.status !== 'VOID'" class="m-0 text-lg font-medium text-cocoa">ค้างชำระ {{ formatBaht(Number(invoice.balance)) }}</p>
-        </div>
-        <div v-if="isDraft" class="mt-3 flex items-center justify-end gap-3">
-          <span v-if="invoice.deposit_available" class="text-sm text-light-brown">จะหักมัดจำ {{ formatBaht(Number(invoice.deposit_available)) }} อัตโนมัติ</span>
-          <v-btn color="primary" size="large" :loading="saving" @click="issue">ออก Invoice</v-btn>
-        </div>
-      </v-card>
+      <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+        <div class="grid gap-6">
+          <!-- รายการ -->
+          <SectionCard title="รายการ" flush>
+            <div class="overflow-x-auto">
+              <Table>
+                <TableHeader>
+                  <TableRow class="hover:bg-transparent">
+                    <TableHead>รายการ</TableHead><TableHead class="text-right">ราคา</TableHead><TableHead class="text-right">ส่วนลด</TableHead>
+                    <TableHead class="text-right">สุทธิ</TableHead><TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+                  </TableRow>
+                </TableHeader>
+                <TableBody>
+                  <TableRow v-for="i in invoice.items" :key="i.invoice_item_id">
+                    <TableCell class="whitespace-normal">
+                      <span class="text-heading">{{ i.description }}</span> <span class="text-muted-foreground">{{ formatDuration(i.duration_minutes) }}</span>
+                      <span v-if="i.discount_reason" class="block text-sm text-muted-foreground">{{ i.discount_reason }}</span>
+                    </TableCell>
+                    <TableCell class="num text-right">{{ formatBaht(Number(i.unit_price)) }}</TableCell>
+                    <TableCell class="num text-right">{{ Number(i.discount_amount) ? '−' + formatBaht(Number(i.discount_amount)) : '—' }}</TableCell>
+                    <TableCell class="num text-right font-medium text-heading">{{ formatBaht(Number(i.line_total)) }}</TableCell>
+                    <TableCell class="text-right"><Button v-if="isDraft" size="sm" variant="ghost" @click="openDiscount(i)">ส่วนลด</Button></TableCell>
+                  </TableRow>
+                </TableBody>
+              </Table>
+            </div>
+            <dl class="m-0 grid gap-1.5 border-t border-border px-5 py-4 text-[15px] sm:ml-auto sm:w-80">
+              <div class="flex justify-between"><dt class="font-medium text-heading">รวม</dt><dd class="num m-0 text-xl font-semibold text-heading">{{ formatBaht(Number(invoice.total)) }}</dd></div>
+              <div class="flex justify-between"><dt class="text-muted-foreground">จ่ายแล้ว</dt><dd class="num m-0">{{ formatBaht(Number(invoice.paid_amount)) }}</dd></div>
+              <div v-if="Number(invoice.refunded_amount)" class="flex justify-between"><dt class="text-muted-foreground">คืนแล้ว</dt><dd class="num m-0">{{ formatBaht(Number(invoice.refunded_amount)) }}</dd></div>
+              <div v-if="invoice.status !== 'VOID'" class="flex justify-between border-t border-border pt-2">
+                <dt class="font-medium text-heading">ค้างชำระ</dt>
+                <dd class="num m-0 text-lg font-semibold" :class="Number(invoice.balance) > 0 ? 'text-pending-ink' : 'text-success-ink'">{{ formatBaht(Number(invoice.balance)) }}</dd>
+              </div>
+            </dl>
+            <div v-if="isDraft" class="flex flex-wrap items-center justify-end gap-3 border-t border-border px-5 py-4">
+              <span v-if="invoice.deposit_available" class="text-sm text-muted-foreground">จะหักมัดจำ <span class="num">{{ formatBaht(Number(invoice.deposit_available)) }}</span> อัตโนมัติ</span>
+              <Button size="lg" :disabled="saving" @click="issue">ออก Invoice</Button>
+            </div>
+          </SectionCard>
 
-      <!-- รับเงิน -->
-      <v-card v-if="payable" class="mb-4 p-5">
-        <p class="m-0 mb-3 text-lg font-medium">รับเงิน</p>
-        <v-btn-toggle v-model="method" mandatory color="primary" class="mb-4">
-          <v-btn value="CASH">เงินสด</v-btn>
-          <v-btn value="QR">QR</v-btn>
-          <v-btn value="BANK_TRANSFER">โอน</v-btn>
-        </v-btn-toggle>
-        <div class="grid gap-x-4 md:grid-cols-2">
-          <v-text-field v-model="amount" type="number" label="ยอดรับ (บาท)" :hint="`ค้าง ${formatBaht(Number(invoice.balance))}`" persistent-hint class="mb-2" />
-          <v-text-field v-if="method === 'CASH'" v-model="tendered" type="number" label="รับเงินมา (คำนวณเงินทอน)" :hint="`ทอน ${formatBaht(change)}`" persistent-hint class="mb-2" />
-          <v-text-field v-model="tipAmount" type="number" label="ทิป (ถ้ามี)" />
-          <v-select v-if="tip > 0" v-model="tipEmployee" :items="therapists.map((t) => ({ value: t.employee_id, title: t.nickname }))" label="ทิปให้หมอ" />
+          <!-- รายการรับเงิน -->
+          <SectionCard v-if="invoice.payments.length || invoice.tips.length" title="การรับเงิน" flush>
+            <ul class="m-0 grid list-none p-0">
+              <li v-for="p in invoice.payments" :key="p.payment_id" class="flex flex-wrap items-center justify-between gap-2 border-b border-border px-5 py-3 last:border-0">
+                <div :class="{ 'text-muted-foreground line-through': p.status === 'VOID' }">
+                  <span class="text-heading">{{ paymentMethodLabels[p.method] }}</span> <span class="num font-semibold text-heading">{{ formatBaht(Number(p.amount)) }}</span>
+                  <span class="block text-sm text-muted-foreground">
+                    <span class="num">{{ bangkokTime(p.received_at) }}</span> {{ p.received_by_name ?? '' }}
+                    <template v-if="p.verification"> · สลิป{{ p.verification === 'AUTO' ? 'ตรวจอัตโนมัติ' : 'ยืนยันโดยพนักงาน' }}</template>
+                    <template v-if="Number(p.refunded)"> · คืนแล้ว <span class="num">{{ formatBaht(Number(p.refunded)) }}</span></template>
+                  </span>
+                </div>
+                <div class="flex gap-1">
+                  <Button v-if="p.slip_path" size="sm" variant="ghost" @click="viewSlip(p.slip_path)">ดูสลิป</Button>
+                  <Button v-if="isOwner && p.status === 'SUCCESS' && p.method !== 'DEPOSIT' && Number(p.refunded) < Number(p.amount)"
+                    size="sm" variant="ghost" class="text-danger-ink" @click="openRefund(p)">คืนเงิน</Button>
+                </div>
+              </li>
+            </ul>
+            <template v-if="invoice.tips.length" #footer>
+              <p v-for="t in invoice.tips" :key="t.tip_id" class="m-0" :class="{ 'line-through': t.status === 'VOID' }">
+                ทิป <span class="text-heading">{{ t.nickname }}</span> <span class="num">{{ formatBaht(Number(t.amount)) }}</span> ({{ paymentMethodLabels[t.method as 'CASH'] }})
+                {{ t.status === 'PAID_OUT' ? '· จ่ายหมอแล้ว' : '' }}
+              </p>
+            </template>
+          </SectionCard>
         </div>
 
-        <template v-if="method !== 'CASH'">
-          <p class="m-0 mb-2 text-sm">ลูกค้าโอนผ่าน QR หน้าร้าน ยอด <b>{{ formatBaht((Number(amount) || 0) + tip) }}</b> แล้วถ่ายรูปสลิป</p>
-          <label class="inline-block">
-            <input type="file" accept="image/*" capture="environment" class="hidden" :disabled="slipUploading || !(Number(amount) > 0)" @change="onSlipSelected" >
-            <v-btn tag="span" prepend-icon="mdi-camera" variant="tonal" :loading="slipUploading" :disabled="!(Number(amount) > 0)">ถ่ายรูปสลิป</v-btn>
-          </label>
-          <v-alert v-if="slip" class="mt-3" variant="tonal"
-            :type="slip.outcome === 'VERIFIED' ? 'success' : slip.outcome === 'REJECTED' ? 'error' : 'warning'"
-            :text="slip.outcome === 'VERIFIED' ? `สลิปถูกต้อง ${formatBaht(Number(slip.slip_amount))}` : slip.message ?? ''" />
-          <v-text-field v-if="slip?.outcome === 'REVIEW'" v-model="manualReason" class="mt-3"
-            label="ตรวจยอดเข้าบัญชีแล้ว — ระบุเหตุผลเพื่อยืนยันเอง" />
-        </template>
+        <!-- รับเงิน -->
+        <SectionCard v-if="payable" title="รับเงิน" class="xl:sticky xl:top-24">
+          <form class="grid gap-4" @submit.prevent="pay">
+            <SegmentedControl v-model="method" :items="[{ value: 'CASH', label: 'เงินสด' }, { value: 'QR', label: 'QR' }, { value: 'BANK_TRANSFER', label: 'โอน' }]" label="วิธีรับเงิน" class="w-full [&>button]:flex-1" />
+            <TextField v-model="amount" type="number" label="ยอดรับ" :hint="`ค้าง ${formatBaht(Number(invoice.balance))}`" suffix="บาท" class="num" />
+            <TextField v-if="method === 'CASH'" v-model="tendered" type="number" label="รับเงินมา" :hint="`ทอน ${formatBaht(change)}`" suffix="บาท" class="num" />
+            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
+              <TextField v-model="tipAmount" type="number" label="ทิป (ถ้ามี)" suffix="บาท" class="num" />
+              <SelectField v-if="tip > 0" v-model="tipEmployee" :items="therapists.map((t) => ({ value: t.employee_id, title: t.nickname }))" label="ทิปให้หมอ" placeholder="เลือกหมอ" />
+            </div>
 
-        <div class="mt-4 flex justify-end">
-          <v-btn color="primary" size="large" :disabled="!canPay" :loading="saving" @click="pay">บันทึกรับเงิน</v-btn>
-        </div>
-      </v-card>
+            <div v-if="method !== 'CASH'" class="grid gap-3 rounded-lg bg-background/70 p-4">
+              <p class="m-0 text-[15px]">ลูกค้าโอนผ่าน QR หน้าร้าน ยอด <span class="num font-semibold text-heading">{{ formatBaht((Number(amount) || 0) + tip) }}</span> แล้วถ่ายรูปสลิป</p>
+              <label
+                class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-card px-4 py-3 text-[15px] text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50"
+                :class="slipUploading || !(Number(amount) > 0) ? 'pointer-events-none opacity-50' : ''"
+              >
+                <input type="file" accept="image/*" capture="environment" class="sr-only" :disabled="slipUploading || !(Number(amount) > 0)" @change="onSlipSelected">
+                <Camera class="size-5 text-brand-accent" /> {{ slipUploading ? 'กำลังตรวจสลิป…' : 'ถ่ายรูปสลิป' }}
+              </label>
+              <Alert v-if="slip" :variant="slip.outcome === 'VERIFIED' ? 'success' : slip.outcome === 'REJECTED' ? 'destructive' : 'warning'">
+                <AlertDescription>{{ slip.outcome === 'VERIFIED' ? `สลิปถูกต้อง ${formatBaht(Number(slip.slip_amount))}` : slip.message ?? '' }}</AlertDescription>
+              </Alert>
+              <TextField v-if="slip?.outcome === 'REVIEW'" v-model="manualReason" label="ยืนยันเอง: ระบุเหตุผล" hint="ตรวจยอดเข้าบัญชีแล้ว" />
+            </div>
 
-      <!-- รายการรับเงิน -->
-      <v-card v-if="invoice.payments.length || invoice.tips.length" class="p-4">
-        <p class="m-0 mb-2 font-medium">การรับเงิน</p>
-        <div v-for="p in invoice.payments" :key="p.payment_id" class="flex flex-wrap items-center justify-between gap-2 border-b py-2">
-          <div :class="{ 'line-through text-light-brown': p.status === 'VOID' }">
-            {{ paymentMethodLabels[p.method] }} {{ formatBaht(Number(p.amount)) }}
-            <span class="text-sm text-light-brown">· {{ bangkokTime(p.received_at) }} {{ p.received_by_name ?? '' }}
-              <template v-if="p.verification"> · สลิป{{ p.verification === 'AUTO' ? 'ตรวจอัตโนมัติ' : 'ยืนยันโดยพนักงาน' }}</template>
-              <template v-if="Number(p.refunded)"> · คืนแล้ว {{ formatBaht(Number(p.refunded)) }}</template>
-            </span>
-          </div>
-          <div class="flex gap-1">
-            <v-btn v-if="p.slip_path" size="small" variant="text" @click="viewSlip(p.slip_path)">ดูสลิป</v-btn>
-            <v-btn v-if="isOwner && p.status === 'SUCCESS' && p.method !== 'DEPOSIT' && Number(p.refunded) < Number(p.amount)"
-              size="small" variant="text" color="error" @click="openRefund(p)">คืนเงิน</v-btn>
-          </div>
-        </div>
-        <p v-for="t in invoice.tips" :key="t.tip_id" class="m-0 mt-2 text-sm" :class="{ 'line-through': t.status === 'VOID' }">
-          ทิป {{ t.nickname }} {{ formatBaht(Number(t.amount)) }} ({{ paymentMethodLabels[t.method as 'CASH'] }})
-          {{ t.status === 'PAID_OUT' ? '· จ่ายหมอแล้ว' : '' }}
-        </p>
-      </v-card>
+            <Button type="submit" size="lg" class="w-full" :disabled="!canPay || saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึกรับเงิน' }}</Button>
+          </form>
+        </SectionCard>
+      </div>
     </template>
 
     <!-- ส่วนลด -->
-    <v-dialog v-model="discountDialog" max-width="420">
-      <v-card v-if="discountItem && invoice" class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">ส่วนลด · {{ discountItem.description }}</p>
-        <p class="m-0 mb-3 text-sm text-light-brown">
-          ราคา {{ formatBaht(Number(discountItem.unit_price)) }} · พนักงานลดได้ไม่เกิน {{ invoice.max_staff_discount_percent }}%
-          (เกินนี้ต้องให้เจ้าของร้านยืนยันตัวตน)
-        </p>
-        <v-text-field v-model="discountAmount" type="number" label="ส่วนลด (บาท)" />
-        <v-text-field v-model="discountReason" label="เหตุผล" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="discountDialog = false">ปิด</v-btn>
-          <v-btn color="primary" :loading="saving" @click="saveDiscount">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="discountDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ส่วนลด · {{ discountItem?.description }}</DialogTitle>
+          <DialogDescription v-if="discountItem && invoice">
+            ราคา {{ formatBaht(Number(discountItem.unit_price)) }} · พนักงานลดได้ไม่เกิน {{ invoice.max_staff_discount_percent }}% (เกินนี้ต้องให้เจ้าของร้านยืนยันตัวตน)
+          </DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="saveDiscount">
+          <TextField v-model="discountAmount" type="number" label="ส่วนลด" suffix="บาท" class="num" />
+          <TextField v-model="discountReason" label="เหตุผล" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="discountDialog = false">ปิด</Button>
+            <Button type="submit" :disabled="saving">บันทึก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- Void -->
-    <v-dialog v-model="voidDialog" max-width="440">
-      <v-card class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">Void Invoice</p>
-        <p class="m-0 mb-3 text-sm text-light-brown">ถ้ารับเงินแล้ว ต้องให้เจ้าของร้านยืนยันตัวตน และเงินต้องอยู่ในกะที่ยังเปิด (นอกนั้นใช้คืนเงิน)</p>
-        <v-textarea v-model="voidReason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="voidDialog = false">ปิด</v-btn>
-          <v-btn color="error" :loading="saving" @click="submitVoid">ยืนยัน Void</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="voidDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>Void Invoice</DialogTitle>
+          <DialogDescription>ถ้ารับเงินแล้ว ต้องให้เจ้าของร้านยืนยันตัวตน และเงินต้องอยู่ในกะที่ยังเปิด (นอกนั้นใช้คืนเงิน)</DialogDescription>
+        </DialogHeader>
+        <TextareaField v-model="voidReason" label="เหตุผล" hint="บังคับ" rows="2" />
+        <DialogFooter class="gap-2">
+          <Button variant="outline" @click="voidDialog = false">ปิด</Button>
+          <Button variant="destructive" :disabled="saving" @click="submitVoid">ยืนยัน Void</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- คืนเงิน (OWNER) -->
-    <v-dialog v-model="refundDialog" max-width="440">
-      <v-card class="p-6">
-        <p class="m-0 mb-3 text-lg font-medium">คืนเงิน</p>
-        <v-text-field v-model="refundForm.amount" type="number" label="ยอดคืน (บาท)" />
-        <v-btn-toggle v-model="refundForm.method" mandatory color="primary" class="mb-3">
-          <v-btn value="CASH">เงินสดจากลิ้นชัก</v-btn>
-          <v-btn value="BANK_TRANSFER">โอนคืน</v-btn>
-        </v-btn-toggle>
-        <v-text-field v-if="refundForm.method === 'BANK_TRANSFER'" v-model="refundForm.reference" label="เลขอ้างอิงการโอนคืน" />
-        <v-textarea v-model="refundForm.reason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="refundDialog = false">ปิด</v-btn>
-          <v-btn color="error" :loading="saving" @click="submitRefund">คืนเงิน</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="refundDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>คืนเงิน</DialogTitle>
+          <DialogDescription v-if="refundPayment">{{ paymentMethodLabels[refundPayment.method] }} {{ formatBaht(Number(refundPayment.amount)) }}</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitRefund">
+          <TextField v-model="refundForm.amount" type="number" label="ยอดคืน" suffix="บาท" class="num" />
+          <SegmentedControl v-model="refundForm.method" :items="[{ value: 'CASH', label: 'เงินสดจากลิ้นชัก' }, { value: 'BANK_TRANSFER', label: 'โอนคืน' }]" label="วิธีคืนเงิน" />
+          <TextField v-if="refundForm.method === 'BANK_TRANSFER'" v-model="refundForm.reference" label="เลขอ้างอิงการโอนคืน" />
+          <TextareaField v-model="refundForm.reason" label="เหตุผล" hint="บังคับ" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="refundDialog = false">ปิด</Button>
+            <Button type="submit" variant="destructive" :disabled="saving">คืนเงิน</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

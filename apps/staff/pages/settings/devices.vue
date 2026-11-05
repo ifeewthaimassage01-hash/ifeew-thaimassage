@@ -122,75 +122,78 @@ onMounted(() => {
 
 <template>
   <div>
-    <h1 class="m-0 mb-6 text-2xl font-semibold text-cocoa">ตั้งค่าเครื่องประจำสาขา</h1>
+    <PageHeader title="ตั้งค่าเครื่องประจำสาขา" description="ผูกเครื่องกับสาขาเพื่อให้พนักงานเข้าด้วย PIN และตั้ง PIN เจ้าของร้าน" />
+    <MessageAlert :message="message" class="mb-6" @close="message = null" />
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-6" closable :text="message.text" @click:close="message = null" />
+    <div class="grid gap-6">
+      <div class="grid items-start gap-6 xl:grid-cols-2">
+        <SectionCard title="PIN เจ้าของร้าน">
+          <template #actions><Badge :variant="ownerPin.has_pin ? 'success' : 'pending'" dot>{{ ownerPin.has_pin ? 'ตั้งแล้ว' : 'ยังไม่ได้ตั้ง' }}</Badge></template>
+          <p class="m-0 mb-4 text-sm text-muted-foreground">
+            ตัวเลข 6 หลัก ห้ามเลขซ้ำหรือเรียง ใช้เข้าระบบบนทุกเครื่องที่ผูกกับสาขา อย่าให้ใครเห็นตอนกด เพราะ PIN นี้เข้าถึงข้อมูลการเงินทั้งหมด
+          </p>
+          <form class="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="saveOwnerPin">
+            <TextField v-model="pinForm.pin" label="PIN ใหม่" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+            <TextField v-model="pinForm.confirm" label="ยืนยัน PIN" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+            <Button type="submit" :disabled="pinSaving">{{ ownerPin.has_pin ? 'เปลี่ยน PIN' : 'ตั้ง PIN' }}</Button>
+          </form>
+        </SectionCard>
 
-    <v-card class="mb-6 p-6">
-      <p class="m-0 mb-1 text-lg font-medium">PIN เจ้าของร้าน</p>
-      <p class="m-0 mb-4 text-sm text-light-brown">
-        {{ ownerPin.has_pin ? 'ตั้ง PIN แล้ว — ที่หน้าเข้าสู่ระบบของเครื่องสาขา กดชื่อเจ้าของร้านแล้วใส่ PIN' : 'ยังไม่ได้ตั้ง PIN' }}
-        · ตัวเลข 6 หลัก ห้ามเลขซ้ำ/เรียง · อย่าให้ใครเห็นตอนกด เพราะ PIN นี้เข้าถึงข้อมูลการเงินทั้งหมด
-      </p>
-      <v-form class="grid gap-x-4 md:grid-cols-3" @submit.prevent="saveOwnerPin">
-        <v-text-field v-model="pinForm.pin" label="PIN ใหม่" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
-        <v-text-field v-model="pinForm.confirm" label="ยืนยัน PIN" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
-        <v-btn type="submit" color="primary" :loading="pinSaving" class="!h-auto">{{ ownerPin.has_pin ? 'เปลี่ยน PIN' : 'ตั้ง PIN' }}</v-btn>
-      </v-form>
-    </v-card>
-
-    <v-card class="mb-6 p-6">
-      <p class="m-0 mb-1 text-lg font-medium">ผูกเครื่องนี้กับสาขา</p>
-      <p class="m-0 mb-4 text-sm text-light-brown">
-        {{ token ? 'เครื่องนี้ผูกไว้แล้ว การผูกใหม่จะแทนที่ค่าเดิมในเครื่องนี้' : 'เครื่องนี้ยังไม่ได้ผูก' }}
-      </p>
-      <div class="grid gap-4 md:grid-cols-3">
-        <v-select v-model="pairBranchId" :items="branches" item-title="name" item-value="branch_id" label="สาขา" />
-        <v-text-field v-model="pairName" label="ชื่อเครื่อง เช่น iPad หน้าร้าน" maxlength="100" />
-        <v-btn color="primary" :loading="pairing" @click="pair">ผูกเครื่องนี้</v-btn>
+        <SectionCard title="ผูกเครื่องนี้กับสาขา">
+          <template #actions><Badge :variant="token ? 'success' : 'neutral'" dot>{{ token ? 'ผูกแล้ว' : 'ยังไม่ผูก' }}</Badge></template>
+          <p class="m-0 mb-4 text-sm text-muted-foreground">{{ token ? 'การผูกใหม่จะแทนที่ค่าเดิมในเครื่องนี้' : 'ผูกแล้วพนักงานจะเลือกชื่อและกด PIN ที่หน้าเข้าสู่ระบบได้' }}</p>
+          <form class="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="pair">
+            <SelectField v-model="pairBranchId" :items="branches" item-title="name" item-value="branch_id" label="สาขา" />
+            <TextField v-model="pairName" label="ชื่อเครื่อง" placeholder="เช่น iPad หน้าร้าน" maxlength="100" />
+            <Button type="submit" :disabled="pairing">ผูกเครื่องนี้</Button>
+          </form>
+          <Button v-if="token" variant="ghost" size="sm" class="mt-3 text-danger-ink" @click="forget">ลบการผูกออกจากเครื่องนี้</Button>
+        </SectionCard>
       </div>
-      <v-btn v-if="token" variant="text" color="error" class="mt-2" @click="forget">ลบการผูกออกจากเครื่องนี้</v-btn>
-    </v-card>
 
-    <v-card class="p-2">
-      <v-data-table
-        :items="devices"
-        :loading="loading"
-        :headers="[
-          { title: 'ชื่อเครื่อง', key: 'name' },
-          { title: 'สาขา', key: 'branch_id' },
-          { title: 'สถานะ', key: 'status' },
-          { title: 'ผูกเมื่อ', key: 'paired_at' },
-          { title: 'ใช้งานล่าสุด', key: 'last_seen_at' },
-          { title: '', key: 'actions', sortable: false, align: 'end' },
-        ]"
-        no-data-text="ยังไม่มีเครื่องที่ผูกไว้"
-      >
-        <template #[`item.branch_id`]="{ item }">{{ branchName(item.branch_id) }}</template>
-        <template #[`item.status`]="{ item }">
-          <v-chip :color="item.status === 'ACTIVE' ? 'success' : 'error'" variant="tonal" size="small">
-            {{ item.status === 'ACTIVE' ? 'ใช้งาน' : 'ยกเลิกแล้ว' }}
-          </v-chip>
-        </template>
-        <template #[`item.paired_at`]="{ item }">{{ fmt(item.paired_at) }}</template>
-        <template #[`item.last_seen_at`]="{ item }">{{ fmt(item.last_seen_at) }}</template>
-        <template #[`item.actions`]="{ item }">
-          <v-btn v-if="item.status === 'ACTIVE'" variant="text" color="error" @click="revokeTarget = item">ยกเลิก</v-btn>
-        </template>
-      </v-data-table>
-    </v-card>
-
-    <v-dialog :model-value="!!revokeTarget" max-width="440" @update:model-value="revokeTarget = null">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">ยกเลิกเครื่อง “{{ revokeTarget?.name }}”</p>
-        <v-textarea v-model="revokeReason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="revokeTarget = null">ปิด</v-btn>
-          <v-btn color="error" :loading="revoking" :disabled="revokeReason.trim().length < 3" @click="confirmRevoke">
-            ยืนยันยกเลิก
-          </v-btn>
+      <SectionCard title="เครื่องที่ผูกไว้" :description="`${devices.length} เครื่อง`" flush>
+        <LoadingBar v-if="loading" />
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow class="hover:bg-transparent">
+                <TableHead>ชื่อเครื่อง</TableHead><TableHead>สาขา</TableHead><TableHead>สถานะ</TableHead>
+                <TableHead>ผูกเมื่อ</TableHead><TableHead>ใช้งานล่าสุด</TableHead>
+                <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="d in devices" :key="d.id">
+                <TableCell class="font-medium text-heading">{{ d.name }}</TableCell>
+                <TableCell>{{ branchName(d.branch_id) }}</TableCell>
+                <TableCell><Badge :variant="d.status === 'ACTIVE' ? 'success' : 'neutral'" dot>{{ d.status === 'ACTIVE' ? 'ใช้งาน' : 'ยกเลิกแล้ว' }}</Badge></TableCell>
+                <TableCell class="num">{{ fmt(d.paired_at) }}</TableCell>
+                <TableCell class="num">{{ fmt(d.last_seen_at) }}</TableCell>
+                <TableCell class="text-right">
+                  <Button v-if="d.status === 'ACTIVE'" variant="ghost" size="sm" class="text-danger-ink" @click="revokeTarget = d">ยกเลิก</Button>
+                </TableCell>
+              </TableRow>
+              <TableRow v-if="!loading && !devices.length" class="hover:bg-transparent">
+                <TableCell colspan="6" class="py-8 text-center text-muted-foreground">ยังไม่มีเครื่องที่ผูกไว้</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
         </div>
-      </v-card>
-    </v-dialog>
+      </SectionCard>
+    </div>
+
+    <Dialog :open="!!revokeTarget" @update:open="(v) => !v && (revokeTarget = null)">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ยกเลิกเครื่อง “{{ revokeTarget?.name }}”</DialogTitle>
+          <DialogDescription>พนักงานจะเข้าสู่ระบบด้วย PIN บนเครื่องนี้ไม่ได้อีก</DialogDescription>
+        </DialogHeader>
+        <TextareaField v-model="revokeReason" label="เหตุผล" hint="บังคับ อย่างน้อย 3 ตัวอักษร" rows="2" />
+        <DialogFooter class="gap-2">
+          <Button variant="outline" @click="revokeTarget = null">ปิด</Button>
+          <Button variant="destructive" :disabled="revoking || revokeReason.trim().length < 3" @click="confirmRevoke">ยืนยันยกเลิก</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

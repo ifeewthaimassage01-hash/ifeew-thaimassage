@@ -87,35 +87,29 @@ onMounted(setup)
 </script>
 
 <template>
-  <div class="flex min-h-screen items-center justify-center bg-cream px-4">
-    <v-card class="w-full max-w-md p-6">
-      <h1 class="m-0 mb-1 text-xl font-semibold text-cocoa">ยืนยันตัวตนเจ้าของร้าน</h1>
-      <p class="m-0 mb-6 text-sm text-light-brown">ใช้แอป Authenticator เช่น Google Authenticator หรือ Microsoft Authenticator</p>
-
-      <v-progress-linear v-if="loading" indeterminate color="primary" />
-
-      <template v-else>
-        <div v-if="enrolling && qrCode" class="mb-6 text-center">
-          <p class="mt-0">สแกน QR นี้ด้วยแอป Authenticator</p>
-          <img :src="qrCode" alt="QR สำหรับลงทะเบียน Authenticator" class="mx-auto h-48 w-48 rounded-lg bg-white p-2" >
-          <p class="mb-0 mt-3 break-all text-xs text-light-brown">หรือกรอกรหัสด้วยตนเอง: {{ secret }}</p>
-        </div>
-
-        <v-form @submit.prevent="verify">
-          <v-text-field
-            v-model="code"
-            label="รหัส 6 หลัก"
-            inputmode="numeric"
-            autocomplete="one-time-code"
-            maxlength="6"
-            autofocus
-          />
-          <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-          <v-btn type="submit" color="primary" block :loading="verifying">ยืนยัน</v-btn>
-        </v-form>
-      </template>
-
-      <v-btn variant="text" block class="mt-3" @click="logout">ออกจากระบบ</v-btn>
-    </v-card>
+  <div class="grid min-h-dvh place-items-center px-4 py-10">
+    <Card class="w-full max-w-md gap-5 py-6">
+      <CardHeader class="px-6">
+        <BrandMark class="mb-2 size-10" />
+        <CardTitle as="h1" class="text-2xl">ยืนยันตัวตนเจ้าของร้าน</CardTitle>
+        <p class="m-0 text-[15px] text-muted-foreground">ใช้แอป Authenticator เช่น Google Authenticator หรือ Microsoft Authenticator</p>
+      </CardHeader>
+      <CardContent class="grid gap-4 px-6">
+        <LoadingBar v-if="loading" />
+        <template v-else>
+          <figure v-if="enrolling && qrCode" class="m-0 grid justify-items-center gap-2 rounded-lg bg-muted p-4 text-center">
+            <figcaption class="text-[15px] text-heading">สแกน QR นี้ด้วยแอป Authenticator</figcaption>
+            <img :src="qrCode" alt="QR สำหรับลงทะเบียน Authenticator" class="size-48 rounded-md bg-white p-2">
+            <p class="m-0 text-sm break-all text-muted-foreground">หรือกรอกรหัสด้วยตนเอง: <span class="num text-heading">{{ secret }}</span></p>
+          </figure>
+          <form class="grid gap-4" @submit.prevent="verify">
+            <TextField v-model="code" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus class="num" />
+            <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
+            <Button type="submit" size="lg" class="w-full" :disabled="verifying">{{ verifying ? 'กำลังตรวจสอบ…' : 'ยืนยัน' }}</Button>
+          </form>
+        </template>
+        <Button variant="ghost" class="w-full" @click="logout">ออกจากระบบ</Button>
+      </CardContent>
+    </Card>
   </div>
 </template>

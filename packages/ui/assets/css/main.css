@@ -1,0 +1,157 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+/* ให้ Tailwind เห็นคลาสในคอมโพเนนต์ของ layer นี้ (ไฟล์ของแต่ละแอปถูกสแกนอัตโนมัติ) */
+@source '../../components';
+
+/*
+ * Ifeew (Customer + Staff) — design tokens ตาม DESIGN.md (Minimal Premium, warm cream)
+ *
+ * ค่าตาม DESIGN.md ทุกตัว + "ตัวหนังสือ" ที่ปรับเข้มขึ้นเพื่อให้อ่านได้ (DESIGN.md: Maintain sufficient contrast)
+ *   Muted #A39789 อ่านได้ 2.6:1 → ใช้กับไอคอน/ของตกแต่ง; ข้อความรอง ใช้ #7A6E61 (4.5–4.9:1)
+ *   Success #6F9277 / Danger #C87870 → ใช้เป็นจุด/เส้น/พื้น; ตัวหนังสือใช้ #557560 / #9E5149
+ *   Accent #B38B67 → ไอคอนและไฮไลต์ (กราฟิก ≥3:1) ไม่ใช้เป็นตัวหนังสือ
+ * สัดส่วน: ครีม 60% · ขาว 25% · น้ำตาล 10% · accent/สถานะ 5%
+ * รัศมี: การ์ด 12px · ปุ่ม/ช่องกรอก 8px · ชิป 6px · เงาบางมากหรือไม่มี
+ */
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* DESIGN.md */
+  --background: #f7f3eb;
+  --card: #fffefc;
+  --secondary: #eae0d1;
+  --border: #e8dfd4;
+  --heading: #514337;
+  --foreground: #66594d;
+  --primary: #8a6a50;
+  --primary-hover: #72543e;
+  --brand-accent: #b38b67;
+  --muted-soft: #a39789;
+  --success: #6f9277;
+  --danger: #c87870;
+
+  /* ตัวหนังสือที่ผ่าน 4.5:1 */
+  --muted-foreground: #7a6e61;
+  --success-ink: #557560;
+  --danger-ink: #9e5149;
+
+  /* พื้นอ่อนของสถานะ */
+  --success-soft: #e6eee6;
+  --danger-soft: #f6e5e1;
+  --pending-soft: #f2e6d6;
+  --pending-ink: #72543e;
+
+  /* บทบาทของ shadcn */
+  --card-foreground: var(--foreground);
+  --popover: var(--card);
+  --popover-foreground: var(--foreground);
+  --primary-foreground: #ffffff;
+  --secondary-foreground: var(--heading);
+  --muted: #f1ebe1;
+  --accent: #f1ebe1;
+  --accent-foreground: var(--heading);
+  --destructive: var(--danger-ink);
+  --input: #d9cbb9;
+  --ring: #b38b67;
+
+  --radius: 0.75rem;
+  --sidebar-width: 248px;
+}
+
+@theme inline {
+  --font-sans: 'Noto Sans Thai', system-ui, sans-serif;
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-heading: var(--heading);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-hover: var(--primary-hover);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-muted-soft: var(--muted-soft);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-brand-accent: var(--brand-accent);
+  --color-destructive: var(--destructive);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+
+  --color-success: var(--success);
+  --color-success-ink: var(--success-ink);
+  --color-success-soft: var(--success-soft);
+  --color-danger: var(--danger);
+  --color-danger-ink: var(--danger-ink);
+  --color-danger-soft: var(--danger-soft);
+  --color-pending-soft: var(--pending-soft);
+  --color-pending-ink: var(--pending-ink);
+
+  /* การ์ด 12 / ปุ่ม-ช่องกรอก 8 / ชิป 6 */
+  --radius-xl: var(--radius);
+  --radius-lg: 0.5rem;
+  --radius-md: 0.375rem;
+  --radius-sm: 0.25rem;
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  html {
+    -webkit-text-size-adjust: 100%;
+  }
+  body {
+    @apply bg-background text-foreground font-sans antialiased;
+    font-size: 16px;
+    line-height: 1.6;
+  }
+  h1,
+  h2,
+  h3,
+  h4 {
+    color: var(--heading);
+    text-wrap: balance;
+  }
+  a {
+    color: var(--primary);
+  }
+  a:hover {
+    color: var(--primary-hover);
+  }
+  ::placeholder {
+    color: var(--muted-foreground);
+    opacity: 1;
+  }
+}
+
+@utility scrollbar-hidden {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
+/* ตัวเลขเงิน เวลา และจำนวนเรียงหลักตรงกัน */
+.num {
+  font-variant-numeric: tabular-nums;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

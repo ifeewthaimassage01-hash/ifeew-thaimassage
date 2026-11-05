@@ -1,7 +1,7 @@
 <script setup lang="ts">
-// การจองของสมาชิก — คำถามของหน้า: "นัดครั้งถัดไปเมื่อไร ต้องทำอะไรไหม"
-import { Plus } from '@lucide/vue'
-import { bangkokDateLong, bangkokTime, bookingStatusLabels, type BookingView } from '@ifeew/shared'
+// การจองของฉัน: การ์ดสรุป → แท็บ กำลังจะถึง/ที่ผ่านมา → ตาราง (เดสก์ท็อป) / รายการ (มือถือ)
+import { CalendarCheck, CalendarClock, ChevronRight, Plus, Wallet } from '@lucide/vue'
+import { bangkokDateLong, bangkokTime, bookingStatusLabels, formatBaht, type BookingView } from '@ifeew/shared'
 
 definePageMeta({ middleware: 'auth' })
 useHead({ title: "การจองของฉัน — Ifeew's Thaimassage" })
@@ -19,57 +19,104 @@ onMounted(async () => {
   loading.value = false
 })
 
-const upcoming = computed(() => bookings.value.filter((b) => ['PENDING', 'CONFIRMED'].includes(b.status)))
-const past = computed(() => bookings.value.filter((b) => !['PENDING', 'CONFIRMED'].includes(b.status)))
+const isUpcoming = (b: BookingView) => ['PENDING', 'CONFIRMED'].includes(b.status)
+const upcoming = computed(() => bookings.value.filter(isUpcoming).sort((a, b) => a.starts_at.localeCompare(b.starts_at)))
+const past = computed(() => bookings.value.filter((b) => !isUpcoming(b)).sort((a, b) => b.starts_at.localeCompare(a.starts_at)))
+const awaiting = computed(() => bookings.value.filter((b) => b.can_upload_slip).length)
 
-type BadgeVariant = 'positive' | 'warning' | 'destructive' | 'neutral' | 'default'
-const variantOf = (s: string): BadgeVariant =>
-  (({ CONFIRMED: 'positive', PENDING: 'warning', CANCELLED: 'destructive', NO_SHOW: 'destructive', EXPIRED: 'neutral' }) as Record<string, BadgeVariant>)[s] ?? 'default'
-// ต้องทำอะไรต่อ: รอโอนมัดจำ
-const todo = (b: BookingView) => (b.can_upload_slip ? 'ต้องโอนมัดจำ' : null)
+const tab = ref<'upcoming' | 'past'>('upcoming')
+const list = computed(() => (tab.value === 'upcoming' ? upcoming.value : past.value))
+const services = (b: BookingView) => b.items.map((i) => i.service_name).join(', ')
 </script>
 
 <template>
-  <div class="grid gap-6">
-    <div class="flex flex-wrap items-end justify-between gap-3">
-      <div>
-        <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">การจองของฉัน</h1>
-        <p v-if="!loading" class="m-0 mt-1 text-muted-foreground">กำลังจะถึง <span class="num">{{ upcoming.length }}</span> · ที่ผ่านมา <span class="num">{{ past.length }}</span></p>
-      </div>
-      <div class="flex gap-2">
-        <Button as-child variant="outline"><NuxtLink to="/history">ประวัติการนวด</NuxtLink></Button>
+  <div>
+    <PageHeader title="การจองของฉัน" description="ดูสถานะ ส่งสลิปมัดจำ หรือยกเลิกก่อนเวลานัด">
+      <template #actions>
         <Button as-child><NuxtLink to="/book"><Plus /> จองใหม่</NuxtLink></Button>
-      </div>
+      </template>
+    </PageHeader>
+
+    <div class="mb-8 grid gap-4 sm:grid-cols-3">
+      <StatCard label="กำลังจะถึง" :icon="CalendarClock" :value="loading ? null : upcoming.length" hint="นัดที่รอและยืนยันแล้ว" />
+      <StatCard label="รอโอนมัดจำ" :icon="Wallet" :value="loading ? null : awaiting" :hint="awaiting ? 'ส่งสลิปก่อนหมดเวลากันคิว' : 'ไม่มีรายการค้าง'" />
+      <StatCard label="ที่ผ่านมา" :icon="CalendarCheck" :value="loading ? null : past.length" hint="เสร็จ ยกเลิก หรือหมดเวลา" />
     </div>
 
-    <div v-if="loading" class="grid gap-3"><Skeleton v-for="n in 3" :key="n" class="h-20 rounded-xl" /></div>
+    <div class="mb-4 inline-flex rounded-lg border border-border bg-card p-1" role="tablist" aria-label="ช่วงเวลา">
+      <button
+        v-for="t in ([['upcoming', 'กำลังจะถึง', upcoming.length], ['past', 'ที่ผ่านมา', past.length]] as const)"
+        :key="t[0]"
+        type="button"
+        role="tab"
+        :aria-selected="tab === t[0]"
+        class="h-9 rounded-md px-4 text-[15px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        :class="tab === t[0] ? 'bg-secondary font-medium text-heading' : 'text-muted-foreground hover:text-heading'"
+        @click="tab = t[0]"
+      >{{ t[1] }} <span class="num ml-1 text-muted-foreground">{{ t[2] }}</span></button>
+    </div>
+
+    <div v-if="loading" class="grid gap-2"><Skeleton v-for="n in 4" :key="n" class="h-14 rounded-lg" /></div>
     <Alert v-else-if="failed" variant="destructive"><AlertDescription>โหลดการจองไม่สำเร็จ กรุณารีเฟรชหน้านี้</AlertDescription></Alert>
-    <div v-else-if="!bookings.length" class="grid justify-items-start gap-3 rounded-xl border border-dashed p-6">
-      <p class="m-0">ยังไม่มีการจอง</p>
-      <Button as-child><NuxtLink to="/book">จองคิวแรก</NuxtLink></Button>
-    </div>
+    <EmptyState
+      v-else-if="!list.length"
+      :title="tab === 'upcoming' ? 'ยังไม่มีนัดที่กำลังจะถึง' : 'ยังไม่มีการจองที่ผ่านมา'"
+      :description="tab === 'upcoming' ? 'เลือกสาขาและเวลาที่สะดวก จองได้ภายในไม่กี่นาที' : undefined"
+    >
+      <Button v-if="tab === 'upcoming'" as-child><NuxtLink to="/book">จองคิว</NuxtLink></Button>
+    </EmptyState>
 
-    <template v-for="[title, list] in ([['กำลังจะถึง', upcoming], ['ที่ผ่านมา', past]] as const)" :key="title">
-      <section v-if="list.length" class="grid gap-3">
-        <h2 class="m-0 text-xl font-semibold">{{ title }}</h2>
-        <Card class="gap-0 py-1">
-          <NuxtLink
-            v-for="b in list"
-            :key="b.booking_id"
-            :to="`/bookings/${b.booking_id}`"
-            class="flex items-center gap-4 border-b border-border/70 px-5 py-4 text-foreground no-underline transition-colors last:border-0 hover:bg-muted/50"
-          >
-            <div class="min-w-0 flex-1">
-              <p class="m-0 font-medium">{{ bangkokDateLong(b.starts_at) }} · <span class="num">{{ bangkokTime(b.starts_at) }}</span> น.</p>
-              <p class="m-0 truncate text-[15px] text-muted-foreground">{{ b.branch.name }} · {{ b.items.map((i) => i.service_name).join(', ') }}</p>
-            </div>
-            <div class="flex shrink-0 flex-col items-end gap-1">
-              <Badge :variant="variantOf(b.status)">{{ bookingStatusLabels[b.status] }}</Badge>
-              <span v-if="todo(b)" class="text-sm font-medium text-tint-warn-ink">{{ todo(b) }}</span>
-            </div>
-          </NuxtLink>
-        </Card>
-      </section>
+    <template v-else>
+      <!-- เดสก์ท็อป: ตาราง -->
+      <div class="hidden overflow-hidden rounded-xl border border-border bg-card md:block">
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead>วันและเวลา</TableHead>
+              <TableHead>สาขา</TableHead>
+              <TableHead>บริการ</TableHead>
+              <TableHead class="text-right">ค่าบริการ</TableHead>
+              <TableHead>สถานะ</TableHead>
+              <TableHead class="w-10"><span class="sr-only">เปิด</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="b in list" :key="b.booking_id" class="cursor-pointer" @click="navigateTo(`/bookings/${b.booking_id}`)">
+              <TableCell>
+                <NuxtLink :to="`/bookings/${b.booking_id}`" class="font-medium text-heading no-underline" @click.stop>{{ bangkokDateLong(b.starts_at) }}</NuxtLink>
+                <span class="num block text-sm text-muted-foreground">{{ bangkokTime(b.starts_at) }}–{{ bangkokTime(b.ends_at) }} น.</span>
+              </TableCell>
+              <TableCell>{{ b.branch.name }}</TableCell>
+              <TableCell class="max-w-64 truncate">{{ services(b) }}</TableCell>
+              <TableCell class="num text-right text-heading">{{ formatBaht(Number(b.total_amount)) }}</TableCell>
+              <TableCell>
+                <div class="flex flex-col items-start gap-1">
+                  <Badge :variant="bookingStatusVariant(b.status)" dot>{{ bookingStatusLabels[b.status] }}</Badge>
+                  <span v-if="b.can_upload_slip" class="text-[13px] font-medium text-pending-ink">ต้องโอนมัดจำ</span>
+                </div>
+              </TableCell>
+              <TableCell><ChevronRight class="size-4 text-muted-soft" aria-hidden="true" /></TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
+      </div>
+
+      <!-- มือถือ: รายการ -->
+      <div class="grid overflow-hidden rounded-xl border border-border bg-card md:hidden">
+        <NuxtLink
+          v-for="b in list"
+          :key="b.booking_id"
+          :to="`/bookings/${b.booking_id}`"
+          class="flex items-center gap-3 border-b border-border px-4 py-3.5 text-foreground no-underline last:border-0 active:bg-muted"
+        >
+          <div class="min-w-0 flex-1">
+            <p class="m-0 font-medium text-heading">{{ bangkokDateLong(b.starts_at) }}</p>
+            <p class="m-0 truncate text-sm text-muted-foreground"><span class="num">{{ bangkokTime(b.starts_at) }}</span> น. · {{ b.branch.name }} · {{ services(b) }}</p>
+            <span v-if="b.can_upload_slip" class="text-[13px] font-medium text-pending-ink">ต้องโอนมัดจำ</span>
+          </div>
+          <Badge :variant="bookingStatusVariant(b.status)" dot>{{ bookingStatusLabels[b.status] }}</Badge>
+        </NuxtLink>
+      </div>
     </template>
   </div>
 </template>

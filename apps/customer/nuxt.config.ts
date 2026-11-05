@@ -1,9 +1,10 @@
-import tailwindcss from '@tailwindcss/vite'
 import { fileURLToPath } from 'node:url'
 
 // Customer App — Mobile first, SSR สำหรับหน้า public
-// UI: shadcn-vue (reka-ui) + Tailwind v4 — คอมโพเนนต์อยู่ใน components/ui
+// UI/design tokens มาจาก layer ร่วม packages/ui (shadcn-vue + Tailwind v4 ตาม DESIGN.md)
 export default defineNuxtConfig({
+  extends: ['../../packages/ui'],
+
   compatibilityDate: '2026-11-01',
   ssr: true,
   devtools: { enabled: true },
@@ -16,26 +17,12 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: 'จองบริการนวดไทย Ifeew\'s Thaimassage ทุกสาขา' },
       ],
-      link: [
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'preconnect', href: 'https://fonts.gstatic.com', crossorigin: '' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap' },
-      ],
     },
   },
 
-  css: ['~/assets/css/main.css'],
-
-  modules: ['@nuxtjs/supabase', '@pinia/nuxt', '@vueuse/nuxt', 'shadcn-nuxt'],
-
-  // คอมโพเนนต์ของแอปลงทะเบียนอัตโนมัติ ยกเว้น components/ui ที่ shadcn-nuxt ลงทะเบียนเอง (ไม่มี prefix)
-  components: [{ path: '~/components', ignore: ['ui/**'] }],
-
-  shadcn: { prefix: '', componentDir: './components/ui' },
+  modules: ['@nuxtjs/supabase', '@pinia/nuxt', '@vueuse/nuxt'],
 
   build: { transpile: ['@ifeew/shared'] },
-
-  vite: { plugins: [tailwindcss()] },
 
   supabase: {
     types: fileURLToPath(new URL('../../packages/shared/src/database.types.ts', import.meta.url)),

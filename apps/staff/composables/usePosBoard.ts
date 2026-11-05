@@ -14,6 +14,7 @@ export function usePosBoard() {
   const error = ref<string | null>(null)
   let channel: ReturnType<typeof supabase.channel> | null = null
   let timer: ReturnType<typeof setTimeout> | null = null
+  const instanceId = Math.random().toString(36).slice(2, 10)
 
   async function load() {
     const branchId = activeBranch.value?.branch_id
@@ -45,8 +46,10 @@ export function usePosBoard() {
   function subscribe(branchId: string) {
     unsubscribe()
     const filter = `branch_id=eq.${branchId}`
+    // ชื่อ channel ต้องไม่ซ้ำต่อ instance: supabase-js คืน channel เดิมถ้าชื่อซ้ำ
+    // (เช่นสลับหน้า POS ↔ คิว แล้วหน้าใหม่ผูกก่อนหน้าเก่าเลิกผูก) → .on() หลัง subscribe() แล้ว error
     channel = supabase
-      .channel(`pos-board-${branchId}`)
+      .channel(`pos-board-${branchId}-${instanceId}`)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'queue_items', filter }, scheduleReload)
       .on('postgres_changes', { event: '*', schema: 'public', table: 'service_orders', filter }, scheduleReload)
       .subscribe()

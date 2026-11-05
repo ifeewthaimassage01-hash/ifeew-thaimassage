@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// แถบเวลาเปิดวันนี้: ช่วงเปิดเป็นแถบสีน้ำตาลอ่อน (สีข้อมูล) เส้นสีเข้มคือ "ตอนนี้" — ตอบว่า "ตอนนี้ไปได้ไหม ปิดกี่โมง"
+// แถบเวลาเปิดวันนี้: ช่วงเปิดเป็นแถบสี Accent เส้นสีเข้มคือ "ตอนนี้" — ตอบว่า "ตอนนี้ไปได้ไหม ปิดกี่โมง"
 import { bangkokMinutes, hhmm, type TodayHours } from '~/composables/useOpenToday'
 
 const props = defineProps<{ hours?: TodayHours | null }>()
@@ -23,13 +23,13 @@ const nowOnAxis = computed(() => {
   return open.value.closes! > 1440 && n < open.value.opens! && n + 1440 < open.value.closes! ? n + 1440 : n
 })
 
-const status = computed<{ text: string; variant: 'positive' | 'neutral' | 'warning' } | null>(() => {
+const status = computed<{ text: string; variant: 'success' | 'neutral' | 'pending' } | null>(() => {
   if (!props.hours) return null
   if (!open.value) return { text: props.hours.holiday ? `วันนี้ปิด · ${props.hours.holiday}` : 'วันนี้ปิด', variant: 'neutral' }
   const n = nowOnAxis.value
   if (n === null) return { text: `เปิด ${hhmm(open.value.opens!)}–${hhmm(open.value.closes!)} น.`, variant: 'neutral' }
-  if (n < open.value.opens!) return { text: `ยังไม่เปิด · เปิด ${hhmm(open.value.opens!)} น.`, variant: 'warning' }
-  if (n < open.value.closes!) return { text: `เปิดอยู่ · ปิด ${hhmm(open.value.closes!)} น.`, variant: 'positive' }
+  if (n < open.value.opens!) return { text: `ยังไม่เปิด · เปิด ${hhmm(open.value.opens!)} น.`, variant: 'pending' }
+  if (n < open.value.closes!) return { text: `เปิดอยู่ · ปิด ${hhmm(open.value.closes!)} น.`, variant: 'success' }
   return { text: 'ปิดแล้ววันนี้', variant: 'neutral' }
 })
 </script>
@@ -41,11 +41,11 @@ const status = computed<{ text: string; variant: 'positive' | 'neutral' | 'warni
       <span v-if="open && hours.holiday" class="text-sm text-muted-foreground">เวลาพิเศษ: {{ hours.holiday }}</span>
     </div>
     <div v-if="open && axis" class="relative pt-1" role="img" :aria-label="`เปิดวันนี้ ${hhmm(open.opens!)} ถึง ${hhmm(open.closes!)} น.`">
-      <div class="relative h-2 rounded-full bg-muted">
-        <div class="absolute inset-y-0 rounded-full bg-data" :style="{ left: `${pct(open.opens!)}%`, right: `${100 - pct(open.closes!)}%` }" />
+      <div class="relative h-2 rounded-full bg-secondary">
+        <div class="absolute inset-y-0 rounded-full bg-brand-accent" :style="{ left: `${pct(open.opens!)}%`, right: `${100 - pct(open.closes!)}%` }" />
         <div
           v-if="nowOnAxis !== null && nowOnAxis >= axis.from && nowOnAxis <= axis.to"
-          class="absolute -top-1.5 h-5 w-0.5 -translate-x-1/2 rounded-full bg-foreground ring-2 ring-card"
+          class="absolute -top-1.5 h-5 w-0.5 -translate-x-1/2 rounded-full bg-heading ring-2 ring-card"
           :style="{ left: `${pct(nowOnAxis)}%` }"
         />
       </div>

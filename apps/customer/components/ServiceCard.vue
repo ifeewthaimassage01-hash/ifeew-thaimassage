@@ -1,32 +1,32 @@
 <script setup lang="ts">
+import { Clock, HandHeart } from '@lucide/vue'
 import { formatBaht, formatDuration } from '@ifeew/shared'
 import type { CatalogItem } from '~/composables/useCatalog'
 
-// แถวบริการ: รูป (หรือ tile สีประจำหมวด) · ชื่อ · ราคาแต่ละระยะเวลา ชิดขวาเป็นตัวเลขตาราง
+// การ์ดบริการ: รูป (หรือพื้นทรายเรียบ + ไอคอนเส้น) · หมวด · ชื่อ · ระยะเวลา · ราคาเริ่มต้น
 const props = defineProps<{ item: CatalogItem; branchName?: string }>()
 const image = computed(() => serviceImageUrl(props.item.image_path))
-const initial = computed(() => props.item.name.trim().charAt(0))
+const from = computed(() => Math.min(...props.item.options.map((o) => o.price)))
+const durations = computed(() => props.item.options.map((o) => formatDuration(o.duration_minutes)).join(' · '))
 </script>
 
 <template>
   <NuxtLink
     :to="`/services/${item.branch_service_id}`"
-    class="group flex gap-4 rounded-xl border bg-card p-4 text-foreground no-underline transition-colors hover:border-input"
+    class="group flex flex-col overflow-hidden rounded-xl border border-border bg-card text-foreground no-underline transition-colors hover:border-input"
   >
-    <div class="size-16 shrink-0 overflow-hidden rounded-lg sm:size-20" :class="image ? 'bg-muted' : categoryTint(item.category_name)">
-      <img v-if="image" :src="image" :alt="item.name" class="size-full object-cover" loading="lazy">
-      <span v-else class="grid size-full place-items-center text-2xl font-semibold" aria-hidden="true">{{ initial }}</span>
+    <div class="aspect-[16/10] overflow-hidden bg-secondary/60">
+      <img v-if="image" :src="image" :alt="item.name" class="size-full object-cover transition-transform duration-300 group-hover:scale-[1.02]" loading="lazy">
+      <div v-else class="grid size-full place-items-center"><HandHeart class="size-10 text-brand-accent" :stroke-width="1.5" aria-hidden="true" /></div>
     </div>
-    <div class="min-w-0 flex-1">
+    <div class="flex flex-1 flex-col gap-1 p-4">
       <p class="m-0 text-sm text-muted-foreground">{{ item.category_name }}<span v-if="branchName"> · {{ branchName }}</span></p>
-      <h3 class="m-0 text-[17px] font-semibold leading-snug group-hover:underline">{{ item.name }}</h3>
+      <h3 class="m-0 text-[17px] font-semibold leading-snug">{{ item.name }}</h3>
       <p v-if="item.name_en" class="m-0 text-sm text-muted-foreground">{{ item.name_en }}</p>
-      <ul class="m-0 mt-2 grid list-none gap-0.5 p-0">
-        <li v-for="o in item.options" :key="o.option_id" class="flex max-w-xs justify-between gap-4 text-[15px]">
-          <span class="text-muted-foreground">{{ formatDuration(o.duration_minutes) }}</span>
-          <span class="num font-semibold">{{ formatBaht(o.price) }}</span>
-        </li>
-      </ul>
+      <div class="mt-auto flex items-end justify-between gap-3 pt-3">
+        <span class="flex items-center gap-1.5 text-sm text-muted-foreground"><Clock class="size-4" :stroke-width="1.75" aria-hidden="true" />{{ durations }}</span>
+        <span class="text-right text-sm text-muted-foreground">เริ่ม <span class="num text-[17px] font-semibold text-heading">{{ formatBaht(from) }}</span></span>
+      </div>
     </div>
   </NuxtLink>
 </template>

@@ -2,8 +2,12 @@
 // รายจ่าย: จำนวนเงิน + หมายเหตุ + รูปหลักฐาน (บังคับ) — จ่ายจากลิ้นชักต้องมีกะเปิด
 // ยกเลิก: กะยังเปิด = ยกเลิกทันที (เงินคืนลิ้นชัก); นอกนั้นส่งคำขอให้เจ้าของร้าน
 // OWNER: รายจ่ายสำนักงานใหญ่, อนุมัติ/ปฏิเสธคำขอยกเลิก
+import { Camera, Image as ImageIcon, Plus } from '@lucide/vue'
 import { addDays, bangkokToday, formatBaht, type ExpenseRow } from '@ifeew/shared'
 
+
+
+const { prompt } = useDialog()
 const supabase = useSupabaseClient()
 const { activeBranch, company, isOwner } = useAccess()
 
@@ -101,8 +105,16 @@ async function viewPhoto(r: ExpenseRow) {
 }
 
 async function voidExpense(r: ExpenseRow) {
-  const reason = window.prompt(r.void_requested_at ? 'อนุมัติยกเลิก: เหตุผล' : 'เหตุผลที่ยกเลิก (บังคับ)', r.void_request_reason ?? '')
-  if (!reason || reason.trim().length < 3) return
+  const reason = await prompt({
+    title: r.void_requested_at ? 'อนุมัติยกเลิกรายจ่าย' : 'ยกเลิกรายจ่าย',
+    label: 'เหตุผล',
+    defaultValue: r.void_request_reason ?? '',
+    minLength: 3,
+    confirmText: r.void_requested_at ? 'อนุมัติยกเลิก' : 'ยกเลิกรายจ่าย',
+    cancelText: 'ปิด',
+    destructive: true,
+  })
+  if (reason === null) return
   try {
     const res = (await must(supabase.rpc('pos_void_expense', { p_expense_id: r.expense_id, p_reason: reason.trim() }))) as string
     message.value = { type: 'success', text: res === 'REQUESTED' ? 'ส่งคำขอยกเลิกให้เจ้าของร้านแล้ว' : 'ยกเลิกรายจ่ายแล้ว' }
@@ -113,7 +125,7 @@ async function voidExpense(r: ExpenseRow) {
 }
 
 async function rejectVoid(r: ExpenseRow) {
-  const note = window.prompt('เหตุผลที่ไม่อนุมัติ', '')
+  const note = await prompt({ title: 'ไม่อนุมัติการยกเลิก', label: 'เหตุผล (ถ้ามี)', confirmText: 'ไม่อนุมัติ' })
   if (note === null) return
   try {
     await must(supabase.rpc('pos_reject_expense_void', { p_expense_id: r.expense_id, p_note: note.trim() || null }))
@@ -125,76 +137,89 @@ async function rejectVoid(r: ExpenseRow) {
 </script>
 
 <template>
-  <div class="max-w-4xl">
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">รายจ่าย · {{ scope === 'HQ' ? 'สำนักงานใหญ่' : activeBranch?.name }}</h1>
-      <v-btn color="primary" prepend-icon="mdi-plus" @click="openNew">บันทึกรายจ่าย</v-btn>
-    </div>
-    <div class="mb-4 flex flex-wrap items-center gap-2">
-      <v-btn-toggle v-if="isOwner" v-model="scope" mandatory color="primary" density="comfortable">
-        <v-btn value="BRANCH">สาขา</v-btn>
-        <v-btn value="HQ">สำนักงานใหญ่</v-btn>
-      </v-btn-toggle>
-      <v-text-field v-model="from" type="date" label="ตั้งแต่" hide-details density="compact" class="max-w-44" />
-      <v-text-field v-model="to" type="date" label="ถึง" hide-details density="compact" class="max-w-44" />
-      <span class="ml-auto font-medium">รวม {{ formatBaht(total) }}</span>
+  <div class="max-w-5xl">
+    <PageHeader title="รายจ่าย" :description="`${scope === 'HQ' ? 'สำนักงานใหญ่' : activeBranch?.name ?? ''} · ทุกรายการต้องแนบรูปหลักฐาน`">
+      <template #actions><Button @click="openNew"><Plus /> บันทึกรายจ่าย</Button></template>
+    </PageHeader>
+
+    <div class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
+      <div v-if="isOwner" class="grid gap-1.5">
+        <span class="text-sm font-medium text-heading">ของ</span>
+        <SegmentedControl v-model="scope" :items="[{ value: 'BRANCH', label: 'สาขา' }, { value: 'HQ', label: 'สำนักงานใหญ่' }]" label="รายจ่ายของ" />
+      </div>
+      <TextField v-model="from" type="date" label="ตั้งแต่" class="w-44" />
+      <TextField v-model="to" type="date" label="ถึง" class="w-44" />
+      <div class="ml-auto text-right">
+        <p class="m-0 text-sm text-muted-foreground">รวมรายจ่าย (ไม่นับที่ยกเลิก)</p>
+        <p class="num m-0 text-xl font-semibold text-heading">{{ formatBaht(total) }}</p>
+      </div>
     </div>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
-    <p v-if="!loading && !rows.length" class="text-light-brown">ไม่มีรายจ่ายในช่วงนี้</p>
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <LoadingBar v-if="loading" class="mb-3" />
+    <EmptyState v-if="!loading && !rows.length" title="ไม่มีรายจ่ายในช่วงนี้">
+      <Button variant="outline" @click="openNew"><Plus /> บันทึกรายจ่าย</Button>
+    </EmptyState>
 
-    <div class="grid gap-2">
-      <v-card v-for="r in rows" :key="r.expense_id" class="p-4" :class="{ 'opacity-60': r.status === 'VOID' }">
-        <div class="flex flex-wrap items-start justify-between gap-2">
+    <SectionCard v-if="rows.length" flush>
+      <ul class="m-0 grid list-none p-0">
+        <li v-for="r in rows" :key="r.expense_id" class="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-4 last:border-0" :class="{ 'opacity-60': r.status === 'VOID' }">
           <div class="min-w-0">
-            <p class="m-0 font-medium" :class="{ 'line-through': r.status === 'VOID' }">
-              {{ formatBaht(Number(r.amount)) }} · {{ r.note }}
-              <v-chip v-if="r.is_large" size="x-small" color="error" variant="tonal">รายจ่ายสูง</v-chip>
+            <p class="m-0 flex flex-wrap items-center gap-2 font-medium text-heading">
+              <span :class="{ 'line-through': r.status === 'VOID' }"><span class="num">{{ formatBaht(Number(r.amount)) }}</span> · {{ r.note }}</span>
+              <Badge v-if="r.is_large" variant="danger">รายจ่ายสูง</Badge>
+              <Badge v-if="r.status === 'VOID'" variant="neutral">ยกเลิกแล้ว</Badge>
             </p>
-            <p class="m-0 text-sm text-light-brown">
-              {{ r.occurred_on }} · {{ r.payment_source === 'CASH_DRAWER' ? 'จ่ายจากลิ้นชัก' : 'จ่ายทางอื่น' }} · {{ r.recorded_by_name ?? '-' }}
+            <p class="m-0 text-sm text-muted-foreground">
+              <span class="num">{{ r.occurred_on }}</span> · {{ r.payment_source === 'CASH_DRAWER' ? 'จ่ายจากลิ้นชัก' : 'จ่ายทางอื่น' }} · {{ r.recorded_by_name ?? '—' }}
             </p>
-            <p v-if="r.void_requested_at && r.status === 'RECORDED'" class="m-0 text-sm text-orange-800">ขอยกเลิก: {{ r.void_request_reason }}</p>
-            <p v-if="r.void_reason" class="m-0 text-sm text-red-700">ยกเลิก: {{ r.void_reason }}</p>
+            <p v-if="r.void_requested_at && r.status === 'RECORDED'" class="m-0 mt-1 text-sm text-pending-ink">ขอยกเลิก: {{ r.void_request_reason }}</p>
+            <p v-if="r.void_reason" class="m-0 mt-1 text-sm text-danger-ink">ยกเลิก: {{ r.void_reason }}</p>
           </div>
           <div class="flex flex-wrap gap-1">
-            <v-btn size="small" variant="text" prepend-icon="mdi-image-outline" @click="viewPhoto(r)">รูป</v-btn>
+            <Button size="sm" variant="ghost" @click="viewPhoto(r)"><ImageIcon /> รูป</Button>
             <template v-if="r.status === 'RECORDED'">
               <template v-if="isOwner && r.void_requested_at">
-                <v-btn size="small" color="error" variant="tonal" @click="voidExpense(r)">อนุมัติยกเลิก</v-btn>
-                <v-btn size="small" variant="text" @click="rejectVoid(r)">ไม่อนุมัติ</v-btn>
+                <Button size="sm" variant="outline" class="text-danger-ink" @click="voidExpense(r)">อนุมัติยกเลิก</Button>
+                <Button size="sm" variant="ghost" @click="rejectVoid(r)">ไม่อนุมัติ</Button>
               </template>
-              <v-btn v-else-if="!r.void_requested_at" size="small" variant="text" color="error" @click="voidExpense(r)">
+              <Button v-else-if="!r.void_requested_at" size="sm" variant="ghost" class="text-danger-ink" @click="voidExpense(r)">
                 {{ isOwner || r.session_open ? 'ยกเลิก' : 'ขอยกเลิก' }}
-              </v-btn>
+              </Button>
             </template>
           </div>
-        </div>
-      </v-card>
-    </div>
+        </li>
+      </ul>
+    </SectionCard>
 
-    <v-dialog v-model="dialog" max-width="460" scrollable>
-      <v-card class="p-6">
-        <p class="m-0 mb-3 text-lg font-medium">บันทึกรายจ่าย</p>
-        <v-text-field v-model="form.amount" type="number" label="จำนวนเงิน (บาท)" />
-        <v-textarea v-model="form.note" label="หมายเหตุ" rows="2" variant="outlined" />
-        <label class="mb-3 block">
-          <input type="file" accept="image/*" capture="environment" class="hidden" @change="onPhoto" >
-          <v-btn tag="span" prepend-icon="mdi-camera" variant="tonal">{{ photo ? 'เปลี่ยนรูป' : 'ถ่าย/เลือกรูปหลักฐาน' }}</v-btn>
-        </label>
-        <img v-if="photoPreview" :src="photoPreview" alt="รูปหลักฐาน" class="mb-3 max-h-48 rounded-lg" >
-        <v-text-field v-model="form.occurredOn" type="date" label="วันที่จ่าย" :max="bangkokToday()" />
-        <v-switch v-if="scope === 'BRANCH'" v-model="form.fromDrawer" color="primary" hide-details
-          label="จ่ายจากเงินสดในลิ้นชัก (ต้องเปิดกะอยู่)" />
-        <p v-if="Number(form.amount) > threshold" class="m-0 mt-2 text-sm text-red-700">
-          เกิน {{ formatBaht(threshold) }} = รายจ่ายสูง ระบบจะแจ้งเจ้าของร้าน
-        </p>
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="dialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="save">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="dialog">
+      <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>บันทึกรายจ่าย</DialogTitle>
+          <DialogDescription>{{ scope === 'HQ' ? 'สำนักงานใหญ่' : activeBranch?.name }}</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="save">
+          <TextField v-model="form.amount" type="number" label="จำนวนเงิน" suffix="บาท" class="num" />
+          <TextareaField v-model="form.note" label="หมายเหตุ" rows="2" placeholder="ซื้ออะไร ให้ใคร" />
+          <div class="grid gap-2">
+            <span class="text-sm font-medium text-heading">รูปหลักฐาน</span>
+            <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background/60 px-4 py-4 text-[15px] text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50">
+              <input type="file" accept="image/*" capture="environment" class="sr-only" @change="onPhoto">
+              <Camera class="size-5 text-brand-accent" /> {{ photo ? 'เปลี่ยนรูป' : 'ถ่าย/เลือกรูปหลักฐาน' }}
+            </label>
+            <img v-if="photoPreview" :src="photoPreview" alt="รูปหลักฐาน" class="max-h-48 rounded-lg border border-border object-contain">
+          </div>
+          <TextField v-model="form.occurredOn" type="date" label="วันที่จ่าย" :max="bangkokToday()" />
+          <SwitchField v-if="scope === 'BRANCH'" v-model="form.fromDrawer" label="จ่ายจากเงินสดในลิ้นชัก" hint="หักจากเงินสดในกะปัจจุบัน (ระบบเปิดกะให้อัตโนมัติ)" />
+          <Alert v-if="Number(form.amount) > threshold" variant="warning">
+            <AlertDescription>เกิน {{ formatBaht(threshold) }} ถือเป็นรายจ่ายสูง ระบบจะแจ้งเจ้าของร้าน</AlertDescription>
+          </Alert>
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="dialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

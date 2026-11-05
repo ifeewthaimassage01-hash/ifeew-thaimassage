@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // OWNER: พนักงาน — เพิ่ม, แก้ไข, รูป, ตั้ง PIN, ย้ายสาขา, ประวัติย้าย, เปลี่ยนสถานะ
 // การกระทำเสี่ยงสูงทั้งหมดผ่าน useStepUp (DB บังคับ TOTP ภายใน 5 นาที)
+import { ArrowLeftRight, EllipsisVertical, History, KeyRound, Pencil, UserCog, UserPlus } from '@lucide/vue'
 import {
   bangkokToday,
   employeeCodeSchema,
@@ -11,6 +12,8 @@ import {
   type Tables,
 } from '@ifeew/shared'
 
+
+const { confirm, prompt } = useDialog()
 definePageMeta({ ownerOnly: true })
 
 type Employee = Tables<'employees'>
@@ -273,8 +276,8 @@ async function openHistory(e: Employee) {
 }
 
 async function cancelTransfer(t: Transfer) {
-  const reason = window.prompt('เหตุผลที่ยกเลิกการย้าย')
-  if (!reason || reason.trim().length < 3) return
+  const reason = await prompt({ title: 'ยกเลิกการย้ายสาขา', label: 'เหตุผล', minLength: 3, confirmText: 'ยกเลิกการย้าย', cancelText: 'ปิด', destructive: true })
+  if (reason === null) return
   try {
     await run(() => must(supabase.rpc('cancel_employee_transfer', { p_transfer_id: t.id, p_reason: reason.trim() })))
     ok('ยกเลิกการย้ายแล้ว')
@@ -312,7 +315,7 @@ async function submitStatus() {
     fail(null, 'กรุณาระบุเหตุผล')
     return
   }
-  if (statusForm.status === 'RESIGNED' && !window.confirm(`ยืนยันบันทึกการลาออกของ ${e.nickname}? เปลี่ยนกลับไม่ได้`)) return
+  if (statusForm.status === 'RESIGNED' && !(await confirm({ title: `บันทึกการลาออกของ ${e.nickname}?`, description: 'เปลี่ยนกลับไม่ได้', confirmText: 'บันทึกลาออก', destructive: true }))) return
   saving.value = true
   try {
     const res = await run(() =>
@@ -338,178 +341,239 @@ onMounted(load)
 
 <template>
   <div>
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">พนักงาน</h1>
-      <div class="flex items-center gap-3">
-        <v-switch v-model="showResigned" color="primary" label="แสดงผู้ลาออก" hide-details density="compact" />
-        <v-btn color="primary" prepend-icon="mdi-account-plus-outline" @click="openCreate">เพิ่มพนักงาน</v-btn>
+    <PageHeader title="พนักงาน" description="พนักงานเข้าสู่ระบบด้วยการเลือกชื่อและกด PIN บนเครื่องประจำสาขาเท่านั้น">
+      <template #actions><Button @click="openCreate"><UserPlus /> เพิ่มพนักงาน</Button></template>
+    </PageHeader>
+
+    <MessageAlert :message="message" class="mb-6" @close="message = null" />
+
+    <SectionCard :description="`${visible.length} คน`" flush>
+      <template #header>
+        <div>
+          <h2 class="m-0 text-base font-semibold">รายชื่อพนักงาน</h2>
+          <p class="m-0 mt-0.5 text-sm text-muted-foreground"><span class="num">{{ visible.length }}</span> คน</p>
+        </div>
+      </template>
+      <template #actions><SwitchField v-model="showResigned" label="แสดงผู้ลาออก" class="gap-3" /></template>
+      <LoadingBar v-if="loading" />
+      <div class="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead>พนักงาน</TableHead><TableHead>สาขา</TableHead><TableHead>เริ่มงาน</TableHead><TableHead>สถานะ</TableHead>
+              <TableHead class="w-12 text-right"><span class="sr-only">จัดการ</span></TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="item in visible" :key="item.id">
+              <TableCell>
+                <div class="flex items-center gap-3">
+                  <span class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary font-semibold text-heading">
+                    <img v-if="item.photo_path && photoUrls[item.photo_path]" :src="photoUrls[item.photo_path]" :alt="item.nickname" class="size-full object-cover">
+                    <template v-else>{{ item.nickname.slice(0, 1) }}</template>
+                  </span>
+                  <span>
+                    <span class="block font-medium text-heading">{{ item.nickname }}</span>
+                    <span class="num block text-sm text-muted-foreground">{{ item.employee_code }}</span>
+                  </span>
+                </div>
+              </TableCell>
+              <TableCell>
+                {{ branchName(currentBranch(item)) }}
+                <span v-if="pendingBranch(item)" class="block text-sm text-pending-ink">
+                  ย้ายไป {{ branchName(pendingBranch(item)!.branch_id) }} {{ fmt(pendingBranch(item)!.effective_from) }}
+                </span>
+              </TableCell>
+              <TableCell class="num">{{ new Date(`${item.start_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}</TableCell>
+              <TableCell>
+                <Badge dot :variant="item.status === 'ACTIVE' ? 'success' : item.status === 'INACTIVE' ? 'pending' : 'neutral'">{{ employeeStatusLabels[item.status as Status] }}</Badge>
+              </TableCell>
+              <TableCell class="text-right">
+                <DropdownMenu>
+                  <DropdownMenuTrigger as-child>
+                    <Button variant="ghost" size="icon-sm" :aria-label="`จัดการ ${item.nickname}`"><EllipsisVertical /></Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" class="w-52">
+                    <DropdownMenuItem @select="openEdit(item)"><Pencil /> แก้ไขข้อมูล/รูป</DropdownMenuItem>
+                    <DropdownMenuItem v-if="item.status === 'ACTIVE'" @select="pinTarget = item; newPin = ''; pinDialog = true"><KeyRound /> ตั้ง PIN ใหม่</DropdownMenuItem>
+                    <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openTransfer(item)"><ArrowLeftRight /> ย้ายสาขา</DropdownMenuItem>
+                    <DropdownMenuItem @select="openHistory(item)"><History /> ประวัติย้ายสาขา</DropdownMenuItem>
+                    <template v-if="item.status !== 'RESIGNED'">
+                      <DropdownMenuSeparator />
+                      <DropdownMenuItem @select="openStatus(item)"><UserCog /> เปลี่ยนสถานะ</DropdownMenuItem>
+                    </template>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </TableCell>
+            </TableRow>
+            <TableRow v-if="!loading && !visible.length" class="hover:bg-transparent">
+              <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ยังไม่มีพนักงาน</TableCell>
+            </TableRow>
+          </TableBody>
+        </Table>
       </div>
-    </div>
-
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-6" closable :text="message.text" @click:close="message = null" />
-
-    <v-card class="p-2">
-      <v-data-table
-        :items="visible"
-        :loading="loading"
-        item-value="id"
-        no-data-text="ยังไม่มีพนักงาน"
-        :headers="[
-          { title: '', key: 'photo', sortable: false, width: 64 },
-          { title: 'รหัส', key: 'employee_code' },
-          { title: 'ชื่อเล่น', key: 'nickname' },
-          { title: 'สาขา', key: 'branch', sortable: false },
-          { title: 'เริ่มงาน', key: 'start_date' },
-          { title: 'สถานะ', key: 'status' },
-          { title: '', key: 'actions', sortable: false, align: 'end' },
-        ]"
-      >
-        <template #[`item.photo`]="{ item }">
-          <v-avatar size="40" color="secondary">
-            <v-img v-if="item.photo_path && photoUrls[item.photo_path]" :src="photoUrls[item.photo_path]" cover />
-            <span v-else>{{ item.nickname.slice(0, 1) }}</span>
-          </v-avatar>
-        </template>
-        <template #[`item.branch`]="{ item }">
-          <span>{{ branchName(currentBranch(item)) }}</span>
-          <div v-if="pendingBranch(item)" class="text-xs text-light-brown">
-            ย้ายไป {{ branchName(pendingBranch(item)!.branch_id) }} {{ fmt(pendingBranch(item)!.effective_from) }}
-          </div>
-        </template>
-        <template #[`item.start_date`]="{ item }">
-          {{ new Date(`${item.start_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}
-        </template>
-        <template #[`item.status`]="{ item }">
-          <v-chip :color="item.status === 'ACTIVE' ? 'success' : item.status === 'INACTIVE' ? 'warning' : 'error'" variant="tonal" size="small">
-            {{ employeeStatusLabels[item.status] }}
-          </v-chip>
-        </template>
-        <template #[`item.actions`]="{ item }">
-          <v-menu>
-            <template #activator="{ props }">
-              <v-btn v-bind="props" icon="mdi-dots-vertical" variant="text" aria-label="จัดการ" />
-            </template>
-            <v-list density="comfortable">
-              <v-list-item prepend-icon="mdi-pencil-outline" title="แก้ไขข้อมูล/รูป" @click="openEdit(item)" />
-              <v-list-item v-if="item.status === 'ACTIVE'" prepend-icon="mdi-dialpad" title="ตั้ง PIN ใหม่" @click="pinTarget = item; newPin = ''; pinDialog = true" />
-              <v-list-item v-if="item.status !== 'RESIGNED'" prepend-icon="mdi-swap-horizontal" title="ย้ายสาขา" @click="openTransfer(item)" />
-              <v-list-item prepend-icon="mdi-history" title="ประวัติย้ายสาขา" @click="openHistory(item)" />
-              <v-list-item v-if="item.status !== 'RESIGNED'" prepend-icon="mdi-account-cog-outline" title="เปลี่ยนสถานะ" @click="openStatus(item)" />
-            </v-list>
-          </v-menu>
-        </template>
-      </v-data-table>
-    </v-card>
+    </SectionCard>
 
     <!-- เพิ่มพนักงาน -->
-    <v-dialog v-model="createDialog" max-width="520">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">เพิ่มพนักงาน</p>
-        <div class="grid gap-x-4 md:grid-cols-2">
-          <v-text-field v-model="createForm.employee_code" label="รหัสพนักงาน" maxlength="20" />
-          <v-text-field v-model="createForm.nickname" label="ชื่อเล่น" maxlength="60" />
-          <v-select v-model="createForm.branch_id" :items="branches" item-title="name" item-value="branch_id" label="สาขา" />
-          <v-text-field v-model="createForm.start_date" type="date" label="วันเริ่มงาน" />
-          <v-text-field v-model="createForm.pin" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
-        </div>
-        <p class="m-0 text-xs text-light-brown">พนักงานเข้าสู่ระบบด้วยการเลือกชื่อ + PIN บนเครื่องประจำสาขาเท่านั้น</p>
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="createDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="creating" @click="submitCreate">เพิ่มพนักงาน</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="createDialog">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>เพิ่มพนักงาน</DialogTitle>
+          <DialogDescription>พนักงานเข้าสู่ระบบด้วยการเลือกชื่อ + PIN บนเครื่องประจำสาขาเท่านั้น</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitCreate">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <TextField v-model="createForm.employee_code" label="รหัสพนักงาน" maxlength="20" />
+            <TextField v-model="createForm.nickname" label="ชื่อเล่น" maxlength="60" />
+            <SelectField v-model="createForm.branch_id" :items="branches" item-title="name" item-value="branch_id" label="สาขา" placeholder="เลือกสาขา" />
+            <TextField v-model="createForm.start_date" type="date" label="วันเริ่มงาน" />
+            <TextField v-model="createForm.pin" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
+          </div>
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="createDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="creating">เพิ่มพนักงาน</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- แก้ไข -->
-    <v-dialog v-model="editDialog" max-width="520">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">แก้ไข {{ editTarget?.nickname }}</p>
-        <div class="grid gap-x-4 md:grid-cols-2">
-          <v-text-field v-model="editForm.employee_code" label="รหัสพนักงาน" maxlength="20" />
-          <v-text-field v-model="editForm.nickname" label="ชื่อเล่น" maxlength="60" />
-          <v-text-field v-model="editForm.start_date" type="date" label="วันเริ่มงาน" />
-        </div>
-        <v-file-input v-model="photoFile" label="รูปพนักงาน (JPG/PNG/WebP ไม่เกิน 2 MB)" accept="image/jpeg,image/png,image/webp" prepend-icon="mdi-camera-outline" variant="outlined" />
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="editDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitEdit">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="editDialog">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>แก้ไข {{ editTarget?.nickname }}</DialogTitle>
+          <DialogDescription>ข้อมูลและรูปที่แสดงในหน้าเข้าสู่ระบบ</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitEdit">
+          <div class="grid gap-4 sm:grid-cols-2">
+            <TextField v-model="editForm.employee_code" label="รหัสพนักงาน" maxlength="20" />
+            <TextField v-model="editForm.nickname" label="ชื่อเล่น" maxlength="60" />
+            <TextField v-model="editForm.start_date" type="date" label="วันเริ่มงาน" />
+          </div>
+          <div class="grid gap-1.5">
+            <Label for="emp-photo">รูปพนักงาน</Label>
+            <input
+              id="emp-photo"
+              type="file"
+              accept="image/jpeg,image/png,image/webp"
+              aria-describedby="emp-photo-hint"
+              class="block w-full cursor-pointer rounded-lg border border-input bg-card text-[15px] file:mr-3 file:h-10 file:cursor-pointer file:border-0 file:bg-secondary file:px-4 file:font-medium file:text-heading"
+              @change="(e) => (photoFile = (e.target as HTMLInputElement).files?.[0] ?? null)"
+            >
+            <p id="emp-photo-hint" class="m-0 text-sm text-muted-foreground">JPG, PNG หรือ WebP ไม่เกิน 2 MB</p>
+          </div>
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="editDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">บันทึก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- ตั้ง PIN -->
-    <v-dialog v-model="pinDialog" max-width="400">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">ตั้ง PIN ใหม่ให้ {{ pinTarget?.nickname }}</p>
-        <v-text-field v-model="newPin" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="pinDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitPin">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="pinDialog">
+      <DialogContent class="sm:max-w-sm">
+        <DialogHeader>
+          <DialogTitle>ตั้ง PIN ใหม่ให้ {{ pinTarget?.nickname }}</DialogTitle>
+          <DialogDescription>ตัวเลข 6 หลัก แจ้งพนักงานด้วยตัวเอง</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitPin">
+          <TextField v-model="newPin" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="pinDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">บันทึก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- ย้ายสาขา -->
-    <v-dialog v-model="transferDialog" max-width="520">
-      <v-card class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">ย้ายสาขา {{ transferTarget?.nickname }}</p>
-        <p class="m-0 mb-4 text-sm text-light-brown">ปัจจุบัน: {{ transferTarget ? branchName(currentBranch(transferTarget)) : '' }}</p>
-        <v-select v-model="transferForm.to_branch_id" :items="branches" item-title="name" item-value="branch_id" label="สาขาปลายทาง" />
-        <v-switch v-model="transferForm.immediate" color="primary" label="มีผลทันที" hide-details />
-        <div v-if="!transferForm.immediate" class="grid grid-cols-2 gap-4">
-          <v-text-field v-model="transferForm.date" type="date" label="วันที่มีผล" />
-          <v-text-field v-model="transferForm.time" type="time" label="เวลา" />
-        </div>
-        <v-textarea v-model="transferForm.reason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" class="mt-2" />
-        <p class="m-0 text-xs text-light-brown">ถ้ายังมีกะที่สาขาเดิมหลังวันมีผล ระบบจะไม่ให้ย้าย ให้ยกเลิกหรือแก้กะก่อน</p>
-        <div class="mt-4 flex justify-end gap-2">
-          <v-btn variant="text" @click="transferDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitTransfer">บันทึกการย้าย</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="transferDialog">
+      <DialogContent class="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>ย้ายสาขา {{ transferTarget?.nickname }}</DialogTitle>
+          <DialogDescription>ปัจจุบัน: {{ transferTarget ? branchName(currentBranch(transferTarget)) : '' }}</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitTransfer">
+          <SelectField v-model="transferForm.to_branch_id" :items="branches" item-title="name" item-value="branch_id" label="สาขาปลายทาง" placeholder="เลือกสาขา" />
+          <SwitchField v-model="transferForm.immediate" label="มีผลทันที" />
+          <div v-if="!transferForm.immediate" class="grid grid-cols-2 gap-4">
+            <TextField v-model="transferForm.date" type="date" label="วันที่มีผล" />
+            <TimeField v-model="transferForm.time" label="เวลา" />
+          </div>
+          <TextareaField v-model="transferForm.reason" label="เหตุผล" hint="บังคับ · ถ้ายังมีกะที่สาขาเดิมหลังวันมีผล ระบบจะไม่ให้ย้าย" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="transferDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="saving">บันทึกการย้าย</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- ประวัติย้ายสาขา -->
-    <v-dialog v-model="historyDialog" max-width="720">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">ประวัติย้ายสาขา {{ historyTarget?.nickname }}</p>
-        <v-table>
-          <thead><tr><th>มีผล</th><th>จาก</th><th>ไป</th><th>เหตุผล</th><th>สถานะ</th><th /></tr></thead>
-          <tbody>
-            <tr v-for="t in transfers" :key="t.id" :class="t.status === 'CANCELLED' ? 'opacity-50' : ''">
-              <td>{{ fmt(t.effective_from) }}</td>
-              <td>{{ t.from_branch_id ? branchName(t.from_branch_id) : 'เริ่มงาน' }}</td>
-              <td>{{ branchName(t.to_branch_id) }}</td>
-              <td>{{ t.status === 'CANCELLED' ? `${t.reason} (ยกเลิก: ${t.cancel_reason})` : t.reason }}</td>
-              <td>{{ t.status === 'CANCELLED' ? 'ยกเลิก' : new Date(t.effective_from) > new Date() ? 'รอมีผล' : 'มีผลแล้ว' }}</td>
-              <td class="text-right">
-                <v-btn
-                  v-if="t.status === 'ACTIVE' && t.from_branch_id && new Date(t.effective_from) > new Date()"
-                  variant="text" color="error" @click="cancelTransfer(t)"
-                >ยกเลิก</v-btn>
-              </td>
-            </tr>
-          </tbody>
-        </v-table>
-        <div class="mt-4 flex justify-end"><v-btn variant="text" @click="historyDialog = false">ปิด</v-btn></div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="historyDialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-3xl">
+        <DialogHeader>
+          <DialogTitle>ประวัติย้ายสาขา {{ historyTarget?.nickname }}</DialogTitle>
+          <DialogDescription>การย้ายที่ยังไม่ถึงวันมีผลยกเลิกได้</DialogDescription>
+        </DialogHeader>
+        <div class="-mx-6 overflow-auto px-6">
+          <div class="overflow-x-auto rounded-lg border border-border">
+            <Table>
+              <TableHeader>
+                <TableRow class="hover:bg-transparent">
+                  <TableHead>มีผล</TableHead><TableHead>จาก</TableHead><TableHead>ไป</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
+                  <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                <TableRow v-for="t in transfers" :key="t.id" :class="t.status === 'CANCELLED' ? 'text-muted-foreground' : ''">
+                  <TableCell class="num">{{ fmt(t.effective_from) }}</TableCell>
+                  <TableCell>{{ t.from_branch_id ? branchName(t.from_branch_id) : 'เริ่มงาน' }}</TableCell>
+                  <TableCell>{{ branchName(t.to_branch_id) }}</TableCell>
+                  <TableCell class="max-w-56 whitespace-normal">{{ t.status === 'CANCELLED' ? `${t.reason} (ยกเลิก: ${t.cancel_reason})` : t.reason }}</TableCell>
+                  <TableCell>
+                    <Badge :variant="t.status === 'CANCELLED' ? 'neutral' : new Date(t.effective_from) > new Date() ? 'pending' : 'success'">
+                      {{ t.status === 'CANCELLED' ? 'ยกเลิก' : new Date(t.effective_from) > new Date() ? 'รอมีผล' : 'มีผลแล้ว' }}
+                    </Badge>
+                  </TableCell>
+                  <TableCell class="text-right">
+                    <Button v-if="t.status === 'ACTIVE' && t.from_branch_id && new Date(t.effective_from) > new Date()" variant="ghost" size="sm" class="text-danger-ink" @click="cancelTransfer(t)">ยกเลิก</Button>
+                  </TableCell>
+                </TableRow>
+                <TableRow v-if="!transfers.length" class="hover:bg-transparent">
+                  <TableCell colspan="6" class="py-6 text-center text-muted-foreground">ยังไม่มีประวัติ</TableCell>
+                </TableRow>
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+        <DialogFooter><Button variant="outline" @click="historyDialog = false">ปิด</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- เปลี่ยนสถานะ -->
-    <v-dialog v-model="statusDialog" max-width="480">
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">เปลี่ยนสถานะ {{ statusTarget?.nickname }}</p>
-        <v-select v-model="statusForm.status" :items="statusOptions" label="สถานะใหม่" />
-        <v-alert v-if="statusForm.status === 'RESIGNED'" type="warning" variant="tonal" class="mb-4"
-          text="ลาออกเปลี่ยนกลับไม่ได้: ปิดสิทธิ์ทุกสาขา ยกเลิกกะและการย้ายในอนาคต และลบ PIN" />
-        <v-alert v-else-if="statusForm.status === 'INACTIVE'" type="info" variant="tonal" class="mb-4"
-          text="ระงับ: เข้าสู่ระบบไม่ได้และลบ PIN แต่คงสาขาไว้ เปิดใช้ใหม่ได้ภายหลัง" />
-        <v-textarea v-model="statusForm.reason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="statusDialog = false">ยกเลิก</v-btn>
-          <v-btn :color="statusForm.status === 'RESIGNED' ? 'error' : 'primary'" :loading="saving" @click="submitStatus">ยืนยัน</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="statusDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>เปลี่ยนสถานะ {{ statusTarget?.nickname }}</DialogTitle>
+          <DialogDescription>สถานะมีผลต่อการเข้าสู่ระบบและตารางงาน</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitStatus">
+          <SelectField v-model="statusForm.status" :items="statusOptions" label="สถานะใหม่" />
+          <Alert v-if="statusForm.status === 'RESIGNED'" variant="destructive">
+            <AlertDescription>ลาออกเปลี่ยนกลับไม่ได้: ปิดสิทธิ์ทุกสาขา ยกเลิกกะและการย้ายในอนาคต และลบ PIN</AlertDescription>
+          </Alert>
+          <Alert v-else-if="statusForm.status === 'INACTIVE'" variant="info">
+            <AlertDescription>ระงับ: เข้าสู่ระบบไม่ได้และลบ PIN แต่คงสาขาไว้ เปิดใช้ใหม่ได้ภายหลัง</AlertDescription>
+          </Alert>
+          <TextareaField v-model="statusForm.reason" label="เหตุผล" hint="บังคับ" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="statusDialog = false">ยกเลิก</Button>
+            <Button type="submit" :variant="statusForm.status === 'RESIGNED' ? 'destructive' : 'default'" :disabled="saving">ยืนยัน</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

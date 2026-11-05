@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // การจองของสาขา (รายวัน): สร้างการจองให้ลูกค้า, ตรวจสลิปมัดจำ, ยกเลิก, ไม่มาตามนัด, คืนมัดจำ (OWNER)
+import { CalendarPlus, ChevronLeft, ChevronRight, Copy, NotebookPen, ReceiptText, Search, UserPlus, X } from '@lucide/vue'
 import {
   addDays,
   bangkokTime,
@@ -17,6 +18,8 @@ import {
   type StaffBookingRow,
 } from '@ifeew/shared'
 
+
+const { confirm, prompt } = useDialog()
 type CatalogRow = Database['public']['Views']['v_public_branch_services']['Row']
 type SearchRow = { customer_id: string; display_name: string; phone_masked: string; is_member: boolean }
 
@@ -58,8 +61,10 @@ async function load() {
 
 watch([date, () => activeBranch.value?.branch_id], load, { immediate: true })
 
-const statusColor = (s: string) =>
-  ({ CONFIRMED: 'success', PENDING: 'warning', CANCELLED: 'error', EXPIRED: 'grey', NO_SHOW: 'error', CHECKED_IN: 'primary', COMPLETED: 'primary' })[s] ?? 'grey'
+// สีของสถานะการจอง (Badge variant ตาม DESIGN.md: Success = ยืนยัน/เสร็จ, Danger = ยกเลิก/ไม่มา)
+type StatusVariant = 'success' | 'danger' | 'pending' | 'neutral' | 'default'
+const statusVariant = (s: string): StatusVariant =>
+  (({ CONFIRMED: 'success', COMPLETED: 'success', PENDING: 'pending', CANCELLED: 'danger', NO_SHOW: 'danger', EXPIRED: 'neutral', CHECKED_IN: 'default' }) as Record<string, StatusVariant>)[s] ?? 'neutral'
 
 // ---------------------------------------------------------------------------
 // ตรวจสลิป
@@ -140,7 +145,7 @@ async function submitCancel() {
 }
 
 async function noShow(r: StaffBookingRow) {
-  if (!window.confirm(`บันทึกว่า ${r.customer_name} ไม่มาตามนัด? (มัดจำจะถูกริบ)`)) return
+  if (!(await confirm({ title: 'บันทึกว่าไม่มาตามนัด?', description: `${r.customer_name} · มัดจำจะถูกริบ`, confirmText: 'บันทึกไม่มา', destructive: true }))) return
   try {
     await must(supabase.rpc('mark_no_show', { p_booking_id: r.booking_id }))
     ok('บันทึกไม่มาตามนัดแล้ว')
@@ -151,8 +156,14 @@ async function noShow(r: StaffBookingRow) {
 }
 
 async function refund(r: StaffBookingRow) {
-  const ref = window.prompt(`เลขอ้างอิงการโอนคืนมัดจำ ${formatBaht(Number(r.deposit_required))} ให้ ${r.customer_name}`)
-  if (!ref || ref.trim().length < 3) return
+  const ref = await prompt({
+    title: 'บันทึกการคืนมัดจำ',
+    description: `โอนคืน ${formatBaht(Number(r.deposit_required))} ให้ ${r.customer_name}`,
+    label: 'เลขอ้างอิงการโอน',
+    minLength: 3,
+    confirmText: 'บันทึก',
+  })
+  if (ref === null) return
   try {
     await run(() => must(supabase.rpc('record_deposit_refund', { p_booking_id: r.booking_id, p_reference: ref.trim() })))
     ok('บันทึกการคืนมัดจำแล้ว')
@@ -163,7 +174,14 @@ async function refund(r: StaffBookingRow) {
 }
 
 async function editNote(r: StaffBookingRow) {
-  const note = window.prompt('หมายเหตุของร้าน (ลูกค้าไม่เห็น)', r.staff_note ?? '')
+  const note = await prompt({
+    title: 'หมายเหตุของร้าน',
+    description: 'ลูกค้าไม่เห็นข้อความนี้',
+    defaultValue: r.staff_note ?? '',
+    multiline: true,
+    maxLength: 500,
+    confirmText: 'บันทึก',
+  })
   if (note === null) return
   try {
     await must(supabase.rpc('set_booking_staff_note', { p_booking_id: r.booking_id, p_note: note }))
@@ -280,187 +298,216 @@ async function submitCreate() {
 
 <template>
   <div>
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">การจอง · {{ activeBranch?.name }}</h1>
+    <PageHeader title="การจอง" :description="`${activeBranch?.name ?? ''} · ตรวจสลิปมัดจำ ยกเลิก หรือบันทึกไม่มาตามนัด`">
+      <template #actions><Button @click="openCreate"><CalendarPlus /> สร้างการจอง</Button></template>
+    </PageHeader>
+
+    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
+      <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+        <Button variant="ghost" size="icon-sm" aria-label="วันก่อน" @click="date = addDays(date, -1)"><ChevronLeft /></Button>
+        <TextField v-model="date" type="date" aria-label="วันที่" class="num w-44 [&_input]:h-9 [&_input]:border-0" />
+        <Button variant="ghost" size="icon-sm" aria-label="วันถัดไป" @click="date = addDays(date, 1)"><ChevronRight /></Button>
+        <Button variant="ghost" size="sm" @click="date = bangkokToday()">วันนี้</Button>
+      </div>
       <div class="flex flex-wrap items-center gap-2">
-        <v-btn icon="mdi-chevron-left" variant="text" aria-label="วันก่อน" @click="date = addDays(date, -1)" />
-        <v-text-field v-model="date" type="date" hide-details density="compact" class="w-44" />
-        <v-btn icon="mdi-chevron-right" variant="text" aria-label="วันถัดไป" @click="date = addDays(date, 1)" />
-        <v-btn variant="text" @click="date = bangkokToday()">วันนี้</v-btn>
-        <v-btn color="primary" prepend-icon="mdi-calendar-plus" @click="openCreate">สร้างการจอง</v-btn>
+        <SegmentedControl
+          v-model="statusFilter"
+          :items="[{ value: 'ACTIVE', label: 'กำลังดำเนินการ' }, { value: 'REVIEW', label: reviewCount ? `รอตรวจสลิป (${reviewCount})` : 'รอตรวจสลิป' }, { value: 'ALL', label: 'ทั้งหมด' }]"
+          label="กรองสถานะ"
+        />
       </div>
     </div>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <LoadingBar v-if="loading" class="mb-3" />
+    <EmptyState v-else-if="!visible.length" :title="statusFilter === 'REVIEW' ? 'ไม่มีสลิปรอตรวจ' : 'ไม่มีการจองในวันนี้'">
+      <Button variant="outline" @click="openCreate"><CalendarPlus /> สร้างการจอง</Button>
+    </EmptyState>
 
-    <v-btn-toggle v-model="statusFilter" mandatory color="primary" density="comfortable" class="mb-4">
-      <v-btn value="ACTIVE">กำลังดำเนินการ</v-btn>
-      <v-btn value="REVIEW">รอตรวจสลิป <v-badge v-if="reviewCount" :content="reviewCount" color="error" inline /></v-btn>
-      <v-btn value="ALL">ทั้งหมด</v-btn>
-    </v-btn-toggle>
-
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
-    <p v-else-if="!visible.length" class="text-light-brown">ไม่มีการจอง</p>
-
-    <div class="grid gap-3">
-      <v-card v-for="r in visible" :key="r.booking_id" class="p-4">
-        <div class="flex flex-wrap items-start justify-between gap-3">
+    <SectionCard v-if="visible.length" flush>
+      <ul class="m-0 grid list-none p-0">
+        <li v-for="r in visible" :key="r.booking_id" class="grid gap-3 border-b border-border px-5 py-4 last:border-0 lg:grid-cols-[110px_minmax(0,1fr)_auto]">
+          <div>
+            <p class="num m-0 text-lg font-semibold text-heading">{{ bangkokTime(r.starts_at) }}</p>
+            <p class="num m-0 text-sm text-muted-foreground">ถึง {{ bangkokTime(r.ends_at) }}</p>
+          </div>
           <div class="min-w-0">
-            <p class="m-0 text-lg font-medium">
-              {{ bangkokTime(r.starts_at) }}–{{ bangkokTime(r.ends_at) }} · {{ r.customer_name }}
-              <v-chip v-if="r.is_member" size="x-small" color="primary" variant="tonal">สมาชิก</v-chip>
+            <p class="m-0 flex flex-wrap items-center gap-2 font-medium text-heading">
+              {{ r.customer_name }}
+              <Badge v-if="r.is_member" variant="default">สมาชิก</Badge>
             </p>
-            <p class="m-0 text-sm text-light-brown">
-              {{ r.booking_code ?? 'ยังไม่มีรหัส' }} · {{ r.phone_masked }} · {{ r.channel === 'ONLINE' ? 'ออนไลน์' : 'พนักงาน' }}
+            <p class="m-0 text-sm text-muted-foreground">
+              <span class="num">{{ r.booking_code ?? 'ยังไม่มีรหัส' }}</span> · <span class="num">{{ r.phone_masked }}</span> · {{ r.channel === 'ONLINE' ? 'ออนไลน์' : 'พนักงาน' }}
             </p>
-            <p class="m-0 mt-1 text-sm">
+            <p class="m-0 mt-1 text-[15px]">
               {{ r.items.map((i, n) => `คนที่ ${n + 1}: ${i.service_name} ${formatDuration(i.duration_minutes)}`).join(' · ') }}
-              — {{ formatBaht(Number(r.total_amount)) }}
+              · <span class="num font-medium text-heading">{{ formatBaht(Number(r.total_amount)) }}</span>
             </p>
-            <p v-if="r.customer_note" class="m-0 text-sm">ลูกค้า: {{ r.customer_note }}</p>
-            <p v-if="r.staff_note" class="m-0 text-sm text-light-brown">ร้าน: {{ r.staff_note }}</p>
-            <p v-if="r.cancel_reason" class="m-0 text-sm text-red-700">{{ r.cancel_reason }}</p>
-          </div>
-          <div class="flex flex-col items-end gap-1">
-            <v-chip :color="statusColor(r.status)" variant="tonal" size="small">{{ bookingStatusLabels[r.status] }}</v-chip>
-            <v-chip v-if="r.deposit_status !== 'NOT_REQUIRED'" size="small" variant="outlined">
-              {{ depositStatusLabels[r.deposit_status] }} {{ formatBaht(Number(r.deposit_required)) }}
-            </v-chip>
-          </div>
-        </div>
+            <p v-if="r.customer_note" class="m-0 mt-1 text-sm"><span class="text-muted-foreground">ลูกค้า:</span> {{ r.customer_note }}</p>
+            <p v-if="r.staff_note" class="m-0 text-sm"><span class="text-muted-foreground">ร้าน:</span> {{ r.staff_note }}</p>
+            <p v-if="r.cancel_reason" class="m-0 text-sm text-danger-ink">{{ r.cancel_reason }}</p>
 
-        <div v-if="r.deposits?.length" class="mt-2 flex flex-wrap gap-2">
-          <v-chip
-            v-for="d in r.deposits"
-            :key="d.deposit_id"
-            size="small"
-            :color="d.status === 'VERIFIED' ? 'success' : d.status === 'REJECTED' ? 'error' : 'warning'"
-            variant="tonal"
-            prepend-icon="mdi-receipt-text-outline"
-            @click="openSlip(r, d)"
-          >
-            สลิป {{ d.status === 'VERIFIED' ? 'ผ่าน' : d.status === 'REJECTED' ? 'ไม่ผ่าน' : 'รอตรวจ' }}
-          </v-chip>
-        </div>
+            <div v-if="r.deposits?.length" class="mt-2 flex flex-wrap gap-2">
+              <button
+                v-for="d in r.deposits"
+                :key="d.deposit_id"
+                type="button"
+                class="inline-flex items-center gap-1.5 rounded-md px-2.5 py-1 text-[13px] font-medium transition-opacity hover:opacity-80 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                :class="d.status === 'VERIFIED' ? 'bg-success-soft text-success-ink' : d.status === 'REJECTED' ? 'bg-danger-soft text-danger-ink' : 'bg-pending-soft text-pending-ink'"
+                @click="openSlip(r, d)"
+              ><ReceiptText class="size-3.5" /> สลิป{{ d.status === 'VERIFIED' ? 'ผ่าน' : d.status === 'REJECTED' ? 'ไม่ผ่าน' : 'รอตรวจ' }}</button>
+            </div>
 
-        <div class="mt-3 flex flex-wrap gap-2">
-          <v-btn v-if="['PENDING', 'CONFIRMED'].includes(r.status) && r.deposit_status !== 'PENDING_REVIEW'"
-            size="small" variant="text" color="error" @click="openCancel(r)">ยกเลิก</v-btn>
-          <v-btn v-if="r.status === 'CONFIRMED'" size="small" variant="text" @click="noShow(r)">ไม่มาตามนัด</v-btn>
-          <v-btn v-if="isOwner && r.deposit_status === 'REFUND_PENDING'" size="small" variant="tonal" color="primary" @click="refund(r)">
-            บันทึกคืนมัดจำ
-          </v-btn>
-          <v-btn size="small" variant="text" prepend-icon="mdi-note-edit-outline" @click="editNote(r)">หมายเหตุ</v-btn>
-        </div>
-      </v-card>
-    </div>
+            <div class="mt-2 flex flex-wrap gap-1">
+              <Button v-if="['PENDING', 'CONFIRMED'].includes(r.status) && r.deposit_status !== 'PENDING_REVIEW'" size="sm" variant="ghost" class="text-danger-ink" @click="openCancel(r)">ยกเลิก</Button>
+              <Button v-if="r.status === 'CONFIRMED'" size="sm" variant="ghost" @click="noShow(r)">ไม่มาตามนัด</Button>
+              <Button v-if="isOwner && r.deposit_status === 'REFUND_PENDING'" size="sm" variant="outline" @click="refund(r)">บันทึกคืนมัดจำ</Button>
+              <Button size="sm" variant="ghost" @click="editNote(r)"><NotebookPen /> หมายเหตุ</Button>
+            </div>
+          </div>
+          <div class="flex flex-row flex-wrap items-start gap-1.5 lg:flex-col lg:items-end">
+            <Badge :variant="statusVariant(r.status)" dot>{{ bookingStatusLabels[r.status] }}</Badge>
+            <Badge v-if="r.deposit_status !== 'NOT_REQUIRED'" variant="outline">
+              {{ depositStatusLabels[r.deposit_status] }} <span class="num">{{ formatBaht(Number(r.deposit_required)) }}</span>
+            </Badge>
+          </div>
+        </li>
+      </ul>
+    </SectionCard>
 
     <!-- ตรวจสลิป -->
-    <v-dialog v-model="slipDialog" max-width="560" scrollable>
-      <v-card v-if="slipDeposit" class="p-6">
-        <p class="m-0 mb-2 text-lg font-medium">สลิปมัดจำ · {{ slipRow?.customer_name }}</p>
-        <img v-if="slipUrl" :src="slipUrl" alt="สลิป" class="mx-auto mb-3 max-h-[50vh] rounded-lg" >
-        <div class="grid grid-cols-2 gap-1 text-sm">
-          <span class="text-light-brown">ยอดมัดจำ</span><span>{{ formatBaht(Number(slipDeposit.amount)) }}</span>
-          <span class="text-light-brown">ยอดในสลิป</span><span>{{ slipDeposit.slip_amount != null ? formatBaht(Number(slipDeposit.slip_amount)) : '-' }}</span>
-          <span class="text-light-brown">เลขอ้างอิง</span><span>{{ slipDeposit.slip_trans_ref ?? '-' }}</span>
-          <span class="text-light-brown">ผู้โอน</span><span>{{ slipDeposit.slip_sender_name ?? '-' }}</span>
-          <span class="text-light-brown">ผู้รับ</span><span>{{ slipDeposit.slip_receiver_name ?? '-' }}</span>
-          <span class="text-light-brown">ผลตรวจอัตโนมัติ</span><span>{{ slipDeposit.provider_message ?? '-' }}</span>
+    <Dialog v-model:open="slipDialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>สลิปมัดจำ · {{ slipRow?.customer_name }}</DialogTitle>
+          <DialogDescription>ตรวจยอดเงินเข้าบัญชีของสาขาจริงก่อนอนุมัติ</DialogDescription>
+        </DialogHeader>
+        <div v-if="slipDeposit" class="-mx-6 grid gap-4 overflow-y-auto px-6">
+          <img v-if="slipUrl" :src="slipUrl" alt="สลิปการโอนมัดจำ" class="mx-auto max-h-[45vh] rounded-lg border border-border">
+          <dl class="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[15px]">
+            <dt class="text-muted-foreground">ยอดมัดจำ</dt><dd class="num m-0 text-heading">{{ formatBaht(Number(slipDeposit.amount)) }}</dd>
+            <dt class="text-muted-foreground">ยอดในสลิป</dt><dd class="num m-0 text-heading">{{ slipDeposit.slip_amount != null ? formatBaht(Number(slipDeposit.slip_amount)) : '—' }}</dd>
+            <dt class="text-muted-foreground">เลขอ้างอิง</dt><dd class="num m-0 break-all">{{ slipDeposit.slip_trans_ref ?? '—' }}</dd>
+            <dt class="text-muted-foreground">ผู้โอน</dt><dd class="m-0">{{ slipDeposit.slip_sender_name ?? '—' }}</dd>
+            <dt class="text-muted-foreground">ผู้รับ</dt><dd class="m-0">{{ slipDeposit.slip_receiver_name ?? '—' }}</dd>
+            <dt class="text-muted-foreground">ผลตรวจอัตโนมัติ</dt><dd class="m-0">{{ slipDeposit.provider_message ?? '—' }}</dd>
+          </dl>
+          <TextareaField v-if="slipDeposit.status === 'PENDING_REVIEW'" v-model="reviewNote" label="หมายเหตุ" hint="บังคับเมื่อปฏิเสธ" rows="2" />
         </div>
-        <template v-if="slipDeposit.status === 'PENDING_REVIEW'">
-          <p class="m-0 mt-3 text-xs text-light-brown">ตรวจยอดเงินเข้าบัญชีของสาขาจริงก่อนอนุมัติ</p>
-          <v-textarea v-model="reviewNote" class="mt-2" label="หมายเหตุ (บังคับเมื่อปฏิเสธ)" rows="2" variant="outlined" />
-          <div class="flex justify-end gap-2">
-            <v-btn variant="text" color="error" :loading="saving" @click="review(false)">ปฏิเสธ</v-btn>
-            <v-btn color="primary" :loading="saving" @click="review(true)">อนุมัติ</v-btn>
-          </div>
-        </template>
-        <div v-else class="mt-3 flex justify-end"><v-btn variant="text" @click="slipDialog = false">ปิด</v-btn></div>
-      </v-card>
-    </v-dialog>
+        <DialogFooter class="gap-2">
+          <template v-if="slipDeposit?.status === 'PENDING_REVIEW'">
+            <Button variant="outline" class="text-danger-ink" :disabled="saving" @click="review(false)">ปฏิเสธ</Button>
+            <Button :disabled="saving" @click="review(true)">อนุมัติ</Button>
+          </template>
+          <Button v-else variant="outline" @click="slipDialog = false">ปิด</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- ยกเลิก -->
-    <v-dialog v-model="cancelDialog" max-width="480">
-      <v-card class="p-6">
-        <p class="m-0 mb-2 text-lg font-medium">ยกเลิกการจอง {{ cancelRow?.customer_name }}</p>
-        <p v-if="cancelRow?.deposit_status === 'PAID'" class="m-0 mb-3 text-sm text-light-brown">
-          ยกเลิกก่อนนัดตามนโยบาย = คืนมัดจำ, ช้ากว่านั้น = ริบมัดจำ
-        </p>
-        <v-textarea v-model="cancelForm.reason" label="เหตุผล (บังคับ)" rows="2" variant="outlined" />
-        <v-checkbox v-if="isOwner && cancelRow?.deposit_status === 'PAID'" v-model="cancelForm.forceRefund" color="primary" hide-details
-          label="คืนมัดจำแม้ยกเลิกช้า (เช่น ร้านปิดฉุกเฉิน) — ต้องยืนยันตัวตน" />
-        <div class="mt-3 flex justify-end gap-2">
-          <v-btn variant="text" @click="cancelDialog = false">ปิด</v-btn>
-          <v-btn color="error" :loading="saving" @click="submitCancel">ยืนยันยกเลิก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="cancelDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ยกเลิกการจอง {{ cancelRow?.customer_name }}</DialogTitle>
+          <DialogDescription>{{ cancelRow?.deposit_status === 'PAID' ? 'ยกเลิกก่อนนัดตามนโยบาย = คืนมัดจำ, ช้ากว่านั้น = ริบมัดจำ' : 'ลูกค้าจะเห็นสถานะยกเลิกในลิงก์ติดตาม' }}</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitCancel">
+          <TextareaField v-model="cancelForm.reason" label="เหตุผล" hint="บังคับ" rows="2" />
+          <CheckboxField v-if="isOwner && cancelRow?.deposit_status === 'PAID'" v-model="cancelForm.forceRefund"
+            label="คืนมัดจำแม้ยกเลิกช้า (เช่น ร้านปิดฉุกเฉิน) ต้องยืนยันตัวตน" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="cancelDialog = false">ปิด</Button>
+            <Button type="submit" variant="destructive" :disabled="saving">ยืนยันยกเลิก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- สร้างการจอง -->
-    <v-dialog v-model="createDialog" max-width="620" scrollable>
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">สร้างการจอง · {{ activeBranch?.name }}</p>
+    <Dialog v-model:open="createDialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>สร้างการจอง</DialogTitle>
+          <DialogDescription>{{ activeBranch?.name }} · {{ step === 1 ? 'ขั้นที่ 1 จาก 2: ลูกค้า' : step === 2 ? 'ขั้นที่ 2 จาก 2: บริการและเวลา' : 'เสร็จแล้ว' }}</DialogDescription>
+        </DialogHeader>
 
-        <template v-if="step === 1">
-          <p class="m-0 mb-2 text-sm font-medium">1. ลูกค้า</p>
-          <v-form class="flex gap-2" @submit.prevent="searchCustomer">
-            <v-text-field v-model="phone" label="เบอร์โทรเต็ม" type="tel" hide-details />
-            <v-btn type="submit" color="primary" class="!h-auto">ค้นหา</v-btn>
-          </v-form>
-          <v-list v-if="found?.length" class="mt-2">
-            <v-list-item
-              v-for="c in found"
-              :key="c.customer_id"
-              :title="c.display_name"
-              :subtitle="`${c.phone_masked} · ${c.is_member ? 'สมาชิก' : 'Guest'}`"
-              :active="customerId === c.customer_id"
-              rounded="lg"
-              @click="customerId = c.customer_id"
-            />
-          </v-list>
-          <p v-else-if="found" class="m-0 mt-2 text-sm text-light-brown">ไม่พบลูกค้า เพิ่มลูกค้าใหม่ได้ที่เมนู “ลูกค้า”</p>
-          <div class="mt-4 flex justify-end gap-2">
-            <v-btn variant="text" @click="createDialog = false">ยกเลิก</v-btn>
-            <v-btn color="primary" :disabled="!customerId" @click="step = 2">ถัดไป</v-btn>
-          </div>
-        </template>
+        <div class="-mx-6 grid content-start gap-4 overflow-y-auto px-6">
+          <template v-if="step === 1">
+            <form class="flex items-end gap-2" @submit.prevent="searchCustomer">
+              <TextField v-model="phone" label="เบอร์โทรเต็ม" type="tel" class="num flex-1" />
+              <Button type="submit"><Search /> ค้นหา</Button>
+            </form>
+            <div v-if="found?.length" class="grid gap-2" role="radiogroup" aria-label="เลือกลูกค้า">
+              <button
+                v-for="c in found"
+                :key="c.customer_id"
+                type="button"
+                role="radio"
+                :aria-checked="customerId === c.customer_id"
+                class="flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                :class="customerId === c.customer_id ? 'border-primary bg-secondary/50' : 'border-border hover:bg-muted/50'"
+                @click="customerId = c.customer_id"
+              >
+                <span>
+                  <span class="block font-medium text-heading">{{ c.display_name }}</span>
+                  <span class="num block text-sm text-muted-foreground">{{ c.phone_masked }}</span>
+                </span>
+                <Badge :variant="c.is_member ? 'default' : 'neutral'">{{ c.is_member ? 'สมาชิก' : 'Guest' }}</Badge>
+              </button>
+            </div>
+            <EmptyState v-else-if="found" compact title="ไม่พบลูกค้า" description="เพิ่มลูกค้าใหม่ได้ที่เมนู “ลูกค้า”" />
+          </template>
 
-        <template v-else-if="step === 2">
-          <p class="m-0 mb-2 text-sm font-medium">2. บริการ (คนละ 1 รายการ)</p>
-          <div v-for="(p, idx) in people" :key="idx" class="flex items-center gap-2">
-            <v-select v-model="p.option_id" :items="optionItems" :label="`คนที่ ${idx + 1}`" hide-details class="mb-2" />
-            <v-btn v-if="people.length > 1" icon="mdi-close" variant="text" size="small" aria-label="ลบ" @click="people.splice(idx, 1)" />
-          </div>
-          <v-btn v-if="people.length < 4" variant="text" size="small" prepend-icon="mdi-plus" @click="people.push({ option_id: null })">เพิ่มคน</v-btn>
+          <template v-else-if="step === 2">
+            <fieldset class="m-0 grid gap-2 border-0 p-0">
+              <legend class="mb-1 text-sm font-medium text-heading">บริการ (คนละ 1 รายการ)</legend>
+              <div v-for="(p, idx) in people" :key="idx" class="flex items-end gap-2">
+                <SelectField v-model="p.option_id" :items="optionItems" :aria-label="`บริการของคนที่ ${idx + 1}`" :placeholder="`คนที่ ${idx + 1}: เลือกบริการ`" class="flex-1" />
+                <Button v-if="people.length > 1" variant="ghost" size="icon" :aria-label="`ลบคนที่ ${idx + 1}`" @click="people.splice(idx, 1)"><X /></Button>
+              </div>
+              <Button v-if="people.length < 4" variant="outline" size="sm" class="w-fit" @click="people.push({ option_id: null })"><UserPlus /> เพิ่มคน</Button>
+            </fieldset>
 
-          <p class="m-0 mb-2 mt-4 text-sm font-medium">3. วันและเวลา</p>
-          <v-text-field v-model="newDate" type="date" label="วันที่" :min="bangkokToday()" />
-          <div class="grid grid-cols-5 gap-2">
-            <v-btn v-for="s in slots" :key="s.starts_at" size="small"
-              :color="slot?.starts_at === s.starts_at ? 'primary' : undefined"
-              :variant="slot?.starts_at === s.starts_at ? 'flat' : 'outlined'" @click="slot = s">{{ s.time }}</v-btn>
-          </div>
-          <p v-if="optionIds.length === people.length && !slots.length" class="m-0 text-sm text-light-brown">ไม่มีเวลาว่าง</p>
+            <TextField v-model="newDate" type="date" label="วันที่" :min="bangkokToday()" class="w-52" />
+            <div v-if="slots.length" class="grid grid-cols-4 gap-2 sm:grid-cols-6" role="radiogroup" aria-label="เวลาเริ่ม">
+              <button
+                v-for="s in slots"
+                :key="s.starts_at"
+                type="button"
+                role="radio"
+                :aria-checked="slot?.starts_at === s.starts_at"
+                class="num h-10 rounded-lg border text-[15px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                :class="slot?.starts_at === s.starts_at ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-heading hover:bg-muted'"
+                @click="slot = s"
+              >{{ s.time }}</button>
+            </div>
+            <p v-else-if="optionIds.length === people.length" class="m-0 rounded-lg border border-dashed border-input px-4 py-3 text-[15px] text-muted-foreground">ไม่มีเวลาว่างในวันนี้</p>
 
-          <v-textarea v-model="newNote" class="mt-3" label="หมายเหตุ" rows="2" variant="outlined" />
-          <v-switch v-model="collectDeposit" color="primary" hide-details
-            label="เก็บมัดจำ (ส่งลิงก์ให้ลูกค้าชำระและส่งสลิป)" />
-          <div class="mt-4 flex justify-end gap-2">
-            <v-btn variant="text" @click="step = 1">ย้อนกลับ</v-btn>
-            <v-btn color="primary" :disabled="!slot" :loading="saving" @click="submitCreate">สร้างการจอง</v-btn>
-          </div>
-        </template>
+            <TextareaField v-model="newNote" label="หมายเหตุ" rows="2" />
+            <SwitchField v-model="collectDeposit" label="เก็บมัดจำ" hint="ส่งลิงก์ให้ลูกค้าชำระและส่งสลิป" />
+          </template>
 
-        <template v-else>
-          <v-alert type="success" variant="tonal" class="mb-3" text="สร้างการจองแล้ว ส่งลิงก์นี้ให้ลูกค้าเพื่อชำระมัดจำ (ลิงก์ใช้ได้เฉพาะดูสถานะและชำระมัดจำ)" />
-          <v-text-field :model-value="trackingLink" readonly label="ลิงก์ชำระมัดจำ" />
-          <div class="flex justify-end gap-2">
-            <v-btn variant="tonal" prepend-icon="mdi-content-copy" @click="copyLink">คัดลอก</v-btn>
-            <v-btn color="primary" @click="createDialog = false">เสร็จสิ้น</v-btn>
-          </div>
-        </template>
-      </v-card>
-    </v-dialog>
+          <template v-else>
+            <Alert variant="success"><AlertDescription>สร้างการจองแล้ว ส่งลิงก์นี้ให้ลูกค้าเพื่อชำระมัดจำ (ลิงก์ใช้ได้เฉพาะดูสถานะและชำระมัดจำ)</AlertDescription></Alert>
+            <div class="flex items-end gap-2">
+              <TextField :model-value="trackingLink ?? ''" readonly label="ลิงก์ชำระมัดจำ" class="flex-1" />
+              <Button variant="outline" @click="copyLink"><Copy /> คัดลอก</Button>
+            </div>
+          </template>
+        </div>
+
+        <DialogFooter class="gap-2">
+          <template v-if="step === 1">
+            <Button variant="outline" @click="createDialog = false">ยกเลิก</Button>
+            <Button :disabled="!customerId" @click="step = 2">ถัดไป</Button>
+          </template>
+          <template v-else-if="step === 2">
+            <Button variant="outline" @click="step = 1">ย้อนกลับ</Button>
+            <Button :disabled="!slot || saving" @click="submitCreate">สร้างการจอง</Button>
+          </template>
+          <Button v-else @click="createDialog = false">เสร็จสิ้น</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

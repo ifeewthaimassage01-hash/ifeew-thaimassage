@@ -6,13 +6,17 @@
 export default defineNuxtRouteMiddleware(async (to) => {
   if (to.path === '/login' || to.path === '/set-password') return
 
-  const user = useSupabaseUser()
-  if (!user.value) return
-
+  // ใช้ session (ตั้งค่าทันทีหลัง login) ไม่ใช่ useSupabaseUser() ซึ่ง @nuxtjs/supabase v2
+  // เติมค่าแบบ async ผ่าน getClaims() — ตอน navigateTo('/') หลัง login user ยังเป็น null
+  // ทำให้ข้ามการโหลดสิทธิ์ และทุกหน้าไม่โหลดข้อมูล
   const supabase = useSupabaseClient()
+  const { data: sessionData } = await supabase.auth.getSession()
+  const userId = sessionData.session?.user.id
+  if (!userId) return
+
   const { access, company, isOwner, needsMfa, refresh } = useAccess()
 
-  if (!access.value || access.value.user_id !== user.value.sub) {
+  if (!access.value || access.value.user_id !== userId) {
     try {
       await refresh()
     } catch {

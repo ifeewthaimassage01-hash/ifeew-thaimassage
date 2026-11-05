@@ -1,9 +1,16 @@
 <script setup lang="ts">
+import { ChevronDown, ChevronRight, LogOut, Menu } from '@lucide/vue'
+
+// Shell ตาม DESIGN.md: Sidebar + Topbar + Main
+//   ≥1280 sidebar เต็ม · 768–1279 sidebar ย่อเหลือไอคอน · <768 drawer
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
+const route = useRoute()
 const { company, branches, activeBranchId, isOwner, clear } = useAccess()
+const { crumbs } = useStaffNav()
 
-const drawer = ref(true)
+const drawer = ref(false)
+watch(() => route.fullPath, () => (drawer.value = false))
 
 // ล็อกหน้าจออัตโนมัติเมื่อไม่มีการใช้งาน (ค่าจาก company_settings)
 const idleMinutes = ref(5)
@@ -36,82 +43,105 @@ watch(idle, (isIdle) => {
   if (isIdle && user.value) logout('idle')
 })
 
-const menu = computed(() => [
-  { title: 'แดชบอร์ด', icon: 'mdi-view-dashboard-outline', to: '/' },
-  { title: 'หน้าร้าน (POS)', icon: 'mdi-cash-register', to: '/pos' },
-  { title: 'คิว', icon: 'mdi-format-list-numbered', to: '/queue' },
-  { title: 'รายจ่าย', icon: 'mdi-receipt-text-minus-outline', to: '/expenses' },
-  { title: 'กะและเงินสด', icon: 'mdi-cash-multiple', to: '/sessions' },
-  { title: 'ปิดยอดรายวัน', icon: 'mdi-calendar-check', to: '/daily-closings' },
-  { title: 'การจอง', icon: 'mdi-calendar-check-outline', to: '/bookings' },
-  { title: 'ตารางงาน', icon: 'mdi-calendar-clock-outline', to: '/schedules' },
-  { title: 'ลูกค้า', icon: 'mdi-account-heart-outline', to: '/customers' },
-  { title: 'งานของฉัน', icon: 'mdi-hand-heart-outline', to: '/my-work' },
-  ...(isOwner.value
-    ? [
-        { title: 'ภาพรวมทุกสาขา', icon: 'mdi-chart-bar', to: '/owner' },
-        { title: 'รายงาน', icon: 'mdi-file-chart-outline', to: '/reports/finance' },
-        { title: 'ค่ามือหมอ', icon: 'mdi-hand-coin-outline', to: '/commissions' },
-        { title: 'ประกันมือ/ลงเวลา', icon: 'mdi-clock-check-outline', to: '/guarantees' },
-        { title: 'งวดบัญชี', icon: 'mdi-lock-clock', to: '/periods' },
-        { title: 'สรุปงานหมอ', icon: 'mdi-chart-box-outline', to: '/reports/therapists' },
-        { title: 'บริการและราคา', icon: 'mdi-spa-outline', to: '/services' },
-        { title: 'เตียงและอุปกรณ์', icon: 'mdi-bed-outline', to: '/resources' },
-        { title: 'พนักงาน', icon: 'mdi-account-group-outline', to: '/employees' },
-        { title: 'สาขา', icon: 'mdi-store-outline', to: '/branches' },
-        { title: 'ตั้งค่าบริษัท', icon: 'mdi-cog-outline', to: '/settings' },
-        { title: 'ตั้งค่าเครื่อง', icon: 'mdi-tablet-cellphone', to: '/settings/devices' },
-      ]
-    : []),
-])
+const displayName = computed(() => user.value?.user_metadata?.display_name || user.value?.email || 'ผู้ใช้')
+const initials = computed(() => String(displayName.value).trim().charAt(0).toUpperCase())
 </script>
 
 <template>
-  <v-app>
-    <v-navigation-drawer v-model="drawer" color="surface" width="248">
-      <div class="px-5 py-6">
-        <p class="m-0 text-lg font-semibold text-cocoa">Ifeew's Thaimassage</p>
-        <p class="m-0 text-sm text-light-brown">{{ company?.company_name }}</p>
-      </div>
-      <v-list nav density="comfortable">
-        <v-list-item
-          v-for="m in menu"
-          :key="m.to"
-          :to="m.to"
-          :prepend-icon="m.icon"
-          :title="m.title"
-          rounded="lg"
-          :exact="m.to === '/' || m.to === '/settings'"
-        />
-      </v-list>
-    </v-navigation-drawer>
+  <TooltipProvider :delay-duration="200">
+    <div class="min-h-dvh md:grid md:grid-cols-[68px_minmax(0,1fr)] xl:grid-cols-[var(--sidebar-width)_minmax(0,1fr)]">
+      <!-- Sidebar -->
+      <aside class="sticky top-0 hidden h-dvh flex-col border-r border-border bg-background md:flex">
+        <NuxtLink to="/" class="flex h-16 shrink-0 items-center gap-2.5 px-5 text-heading no-underline max-xl:justify-center max-xl:px-0" aria-label="แดชบอร์ด">
+          <BrandMark class="size-8" />
+          <span class="hidden min-w-0 xl:block">
+            <span class="block truncate text-[15px] leading-tight font-semibold">Ifeew's Thaimassage</span>
+            <span class="block truncate text-[13px] text-muted-foreground">{{ company?.company_name ?? 'ระบบร้าน' }}</span>
+          </span>
+        </NuxtLink>
+        <div class="scrollbar-hidden flex-1 overflow-y-auto px-3 pt-3 pb-6">
+          <StaffSidebarNav class="hidden xl:grid" />
+          <StaffSidebarNav compact class="xl:hidden" />
+        </div>
+      </aside>
 
-    <v-app-bar flat color="background">
-      <v-app-bar-nav-icon aria-label="เมนู" @click="drawer = !drawer" />
-      <v-select
-        v-if="branches.length > 1"
-        v-model="activeBranchId"
-        :items="branches"
-        item-title="name"
-        item-value="branch_id"
-        label="สาขา"
-        hide-details
-        class="ml-2 max-w-xs"
-      />
-      <span v-else class="ml-2 font-medium">{{ branches[0]?.name }}</span>
-      <v-spacer />
-      <v-chip class="mr-2" :color="isOwner ? 'primary' : 'success'" variant="tonal">
-        {{ isOwner ? 'เจ้าของร้าน' : 'พนักงาน' }}
-      </v-chip>
-      <v-btn variant="text" prepend-icon="mdi-logout" class="mr-2" @click="logout()">ออกจากระบบ</v-btn>
-    </v-app-bar>
+      <div class="flex min-w-0 flex-col">
+        <!-- Topbar -->
+        <header class="sticky top-0 z-30 border-b border-border bg-background">
+          <div class="flex h-16 items-center gap-3 px-4 md:px-6 xl:px-8">
+            <Sheet v-model:open="drawer">
+              <SheetTrigger as-child>
+                <Button variant="ghost" size="icon" class="-ml-2 md:hidden" aria-label="เปิดเมนู"><Menu class="size-5" /></Button>
+              </SheetTrigger>
+              <SheetContent side="left" class="w-[85vw] max-w-xs gap-0 bg-background p-0">
+                <SheetHeader class="h-16 flex-row items-center gap-2.5 border-b border-border px-5">
+                  <BrandMark class="size-8" />
+                  <SheetTitle class="text-[15px] text-heading">{{ company?.company_name ?? "Ifeew's Thaimassage" }}</SheetTitle>
+                  <SheetDescription class="sr-only">เมนูหลัก</SheetDescription>
+                </SheetHeader>
+                <div class="scrollbar-hidden overflow-y-auto px-3 py-4"><StaffSidebarNav @navigate="drawer = false" /></div>
+              </SheetContent>
+            </Sheet>
 
-    <v-main>
-      <div class="p-6">
-        <slot />
+            <nav aria-label="ตำแหน่งปัจจุบัน" class="hidden min-w-0 flex-1 sm:block">
+              <ol class="m-0 flex list-none items-center gap-1.5 p-0 text-[15px]">
+                <li v-for="(c, i) in crumbs" :key="i" class="flex min-w-0 items-center gap-1.5" :class="i === 0 && crumbs.length > 1 ? 'max-lg:hidden' : ''">
+                  <ChevronRight v-if="i > 0" class="size-4 shrink-0 text-muted-soft" :class="i === 1 ? 'max-lg:hidden' : ''" aria-hidden="true" />
+                  <NuxtLink v-if="c.to" :to="c.to" class="truncate text-muted-foreground no-underline hover:text-heading">{{ c.label }}</NuxtLink>
+                  <span v-else class="truncate" :class="i === crumbs.length - 1 ? 'font-medium text-heading' : 'text-muted-foreground'" :aria-current="i === crumbs.length - 1 ? 'page' : undefined">{{ c.label }}</span>
+                </li>
+              </ol>
+            </nav>
+            <div class="flex-1 sm:hidden" />
+
+            <!-- สาขาที่กำลังทำงาน -->
+            <SelectField
+              v-if="branches.length > 1"
+              v-model="activeBranchId"
+              :items="branches"
+              item-title="name"
+              item-value="branch_id"
+              placeholder="เลือกสาขา"
+              class="w-44 sm:w-56"
+              aria-label="สาขา"
+            />
+            <span v-else-if="branches[0]" class="hidden truncate text-[15px] font-medium text-heading md:block">{{ branches[0].name }}</span>
+
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <button
+                  type="button"
+                  class="flex h-10 items-center gap-2 rounded-lg pr-2 pl-1 text-heading transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  aria-label="เมนูบัญชี"
+                >
+                  <span class="grid size-8 place-items-center rounded-full bg-secondary text-sm font-semibold">{{ initials }}</span>
+                  <span class="hidden text-left lg:block">
+                    <span class="block max-w-40 truncate text-sm leading-tight font-medium">{{ displayName }}</span>
+                    <span class="block text-[13px] leading-tight text-muted-foreground">{{ isOwner ? 'เจ้าของร้าน' : 'พนักงาน' }}</span>
+                  </span>
+                  <ChevronDown class="hidden size-4 text-muted-foreground lg:block" />
+                </button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-60">
+                <DropdownMenuLabel class="font-normal">
+                  <span class="block truncate font-medium text-heading">{{ displayName }}</span>
+                  <span class="block truncate text-sm text-muted-foreground">{{ isOwner ? 'เจ้าของร้าน' : 'พนักงาน' }} · {{ company?.company_name }}</span>
+                </DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuItem @select="logout()"><LogOut /> ออกจากระบบ</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+        </header>
+
+        <main class="mx-auto w-full max-w-[1400px] flex-1 px-4 pt-6 pb-12 md:px-6 md:pt-8 xl:px-8">
+          <slot />
+        </main>
       </div>
-    </v-main>
+    </div>
 
     <StepUpDialog />
-  </v-app>
+    <AppDialogHost />
+    <Toaster position="top-center" :toast-options="{ classes: { toast: '!rounded-xl !border-border !bg-card !text-heading !shadow-sm', description: '!text-muted-foreground' } }" />
+  </TooltipProvider>
 </template>

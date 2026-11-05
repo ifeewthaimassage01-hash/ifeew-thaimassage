@@ -16,7 +16,7 @@ const uid = useId()
       <Checkbox :id="`${uid}-privacy`" v-model="privacyAccepted" class="mt-0.5" />
       <Label :for="`${uid}-privacy`" class="block text-[15px] leading-6 font-normal">
         ข้าพเจ้ารับทราบ
-        <button type="button" class="cursor-pointer text-link underline underline-offset-2" @click.prevent="showing = policies?.PRIVACY_NOTICE ?? null">นโยบายความเป็นส่วนตัว</button>
+        <button type="button" class="cursor-pointer text-primary underline underline-offset-2" @click.prevent="showing = policies?.PRIVACY_NOTICE ?? null">นโยบายความเป็นส่วนตัว</button>
         <span v-if="policies?.PRIVACY_NOTICE" class="text-muted-foreground"> (ฉบับ {{ policies.PRIVACY_NOTICE.version }})</span>
       </Label>
     </div>
@@ -24,7 +24,7 @@ const uid = useId()
       <Checkbox :id="`${uid}-marketing`" v-model="marketing" class="mt-0.5" />
       <Label :for="`${uid}-marketing`" class="block text-[15px] leading-6 font-normal">
         รับข่าวสารและโปรโมชัน <span class="text-muted-foreground">(ไม่บังคับ)</span>{{ ' ' }}
-        <button type="button" class="cursor-pointer text-link underline underline-offset-2" @click.prevent="showing = policies?.MARKETING ?? null">รายละเอียด</button>
+        <button type="button" class="cursor-pointer text-primary underline underline-offset-2" @click.prevent="showing = policies?.MARKETING ?? null">รายละเอียด</button>
       </Label>
     </div>
 

@@ -40,52 +40,58 @@ watch([branchId, from, to, () => company.value?.company_id], load, { immediate: 
 </script>
 
 <template>
-  <div class="max-w-5xl">
-    <h1 class="m-0 mb-4 text-2xl font-semibold text-cocoa">สรุปงานหมอ</h1>
+  <div>
+    <PageHeader title="สรุปงานหมอ" description="จำนวนบริการ เวลาทำงาน งานนอกกะ การส่งต่อ และค่ามือประมาณการของหมอแต่ละคน" />
 
-    <div class="mb-4 flex flex-wrap items-center gap-2">
-      <v-select v-model="branchId" :items="branchItems" label="สาขา" hide-details density="compact" class="max-w-52" />
-      <v-text-field v-model="from" type="date" label="ตั้งแต่" hide-details density="compact" class="max-w-44" />
-      <v-text-field v-model="to" type="date" label="ถึง" hide-details density="compact" class="max-w-44" />
-      <v-btn variant="text" size="small" @click="from = addDays(bangkokToday(), -6); to = bangkokToday()">7 วัน</v-btn>
+    <div class="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[220px_180px_180px_auto] lg:items-end">
+      <SelectField v-model="branchId" :items="branchItems" label="สาขา" />
+      <TextField v-model="from" type="date" label="ตั้งแต่" />
+      <TextField v-model="to" type="date" label="ถึง" />
+      <Button variant="outline" class="w-fit" @click="from = addDays(bangkokToday(), -6); to = bangkokToday()">7 วันล่าสุด</Button>
     </div>
 
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
+    <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <LoadingBar v-if="loading" class="mb-3" />
 
-    <v-card class="p-2">
-      <v-table>
-        <thead>
-          <tr>
-            <th>หมอ</th>
-            <th class="text-right">บริการ</th>
-            <th class="text-right">เวลาทำงาน</th>
-            <th class="text-right">นอกกะ</th>
-            <th class="text-right">ส่งต่อ</th>
-            <th class="text-right">ค่ามือ (ประมาณการ)</th>
-          </tr>
-        </thead>
-        <tbody>
-          <tr v-for="r in rows" :key="r.employee_id">
-            <td>{{ r.nickname }} <span class="text-xs text-light-brown">{{ r.employee_code }}</span></td>
-            <td class="text-right">{{ r.services }}</td>
-            <td class="text-right">{{ formatDuration(r.worked_minutes) }}</td>
-            <td class="text-right">{{ r.off_shift_count }}</td>
-            <td class="text-right">{{ r.handover_count }}</td>
-            <td class="text-right">{{ formatBaht(Number(r.fee_estimate)) }}</td>
-          </tr>
-          <tr v-if="!rows.length"><td colspan="6" class="text-center text-light-brown">ไม่มีข้อมูลในช่วงนี้</td></tr>
-          <tr v-else class="font-semibold">
-            <td>รวม</td>
-            <td class="text-right">{{ totals.services }}</td>
-            <td class="text-right">{{ formatDuration(totals.minutes) }}</td>
-            <td />
-            <td />
-            <td class="text-right">{{ formatBaht(totals.fee) }}</td>
-          </tr>
-        </tbody>
-      </v-table>
-    </v-card>
-    <p class="m-0 mt-2 text-xs text-light-brown">ค่ามือคิดจากราคาที่ตั้งไว้ต่อบริการ ไม่หักส่วนลด ยอดจ่ายจริงยืนยันในระบบคอมมิชชัน</p>
+    <SectionCard flush>
+      <div class="overflow-x-auto">
+        <Table>
+          <TableHeader>
+            <TableRow class="hover:bg-transparent">
+              <TableHead>หมอ</TableHead>
+              <TableHead class="text-right">บริการ</TableHead>
+              <TableHead class="text-right">เวลาทำงาน</TableHead>
+              <TableHead class="text-right">นอกกะ</TableHead>
+              <TableHead class="text-right">ส่งต่อ</TableHead>
+              <TableHead class="text-right">ค่ามือ (ประมาณการ)</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            <TableRow v-for="r in rows" :key="r.employee_id">
+              <TableCell><span class="text-heading">{{ r.nickname }}</span> <span class="text-sm text-muted-foreground">{{ r.employee_code }}</span></TableCell>
+              <TableCell class="num text-right">{{ r.services }}</TableCell>
+              <TableCell class="num text-right">{{ formatDuration(r.worked_minutes) }}</TableCell>
+              <TableCell class="num text-right">{{ r.off_shift_count }}</TableCell>
+              <TableCell class="num text-right">{{ r.handover_count }}</TableCell>
+              <TableCell class="num text-right text-heading">{{ formatBaht(Number(r.fee_estimate)) }}</TableCell>
+            </TableRow>
+            <TableRow v-if="!rows.length" class="hover:bg-transparent">
+              <TableCell colspan="6" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
+            </TableRow>
+          </TableBody>
+          <TableFooter v-if="rows.length">
+            <TableRow class="hover:bg-transparent">
+              <TableCell class="font-semibold text-heading">รวม</TableCell>
+              <TableCell class="num text-right font-semibold text-heading">{{ totals.services }}</TableCell>
+              <TableCell class="num text-right font-semibold text-heading">{{ formatDuration(totals.minutes) }}</TableCell>
+              <TableCell />
+              <TableCell />
+              <TableCell class="num text-right font-semibold text-heading">{{ formatBaht(totals.fee) }}</TableCell>
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </div>
+      <template #footer>ค่ามือคิดจากราคาที่ตั้งไว้ต่อบริการ ไม่หักส่วนลด ยอดจ่ายจริงยืนยันในระบบคอมมิชชัน</template>
+    </SectionCard>
   </div>
 </template>

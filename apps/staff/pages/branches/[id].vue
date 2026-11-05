@@ -1,5 +1,6 @@
 <script setup lang="ts">
 // OWNER: เวลาทำการรายวันและวันหยุดของสาขา
+import { Plus } from '@lucide/vue'
 import { isoDowLabels, type Tables } from '@ifeew/shared'
 
 definePageMeta({ ownerOnly: true })
@@ -102,54 +103,66 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
-    <v-btn variant="text" prepend-icon="mdi-arrow-left" to="/branches" class="mb-2">กลับ</v-btn>
-    <h1 class="m-0 mb-6 text-2xl font-semibold text-cocoa">{{ branchName }}</h1>
+  <div class="max-w-5xl">
+    <PageHeader :title="branchName || 'สาขา'" description="เวลาทำการรายวันและวันหยุด/เวลาพิเศษ ใช้คำนวณเวลาว่างในหน้าจองของลูกค้า">
+      <template #actions><Button as-child variant="outline"><NuxtLink to="/branches">สาขาทั้งหมด</NuxtLink></Button></template>
+    </PageHeader>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-6" closable :text="message.text" @click:close="message = null" />
+    <MessageAlert :message="message" class="mb-6" @close="message = null" />
 
-    <v-card class="mb-6 p-6">
-      <p class="m-0 mb-1 text-lg font-medium">เวลาทำการ</p>
-      <p class="m-0 mb-4 text-sm text-light-brown">ถ้าเวลาปิดน้อยกว่าเวลาเปิด หมายถึงปิดหลังเที่ยงคืนของวันถัดไป</p>
-      <div v-for="r in hours" :key="r.id" class="grid grid-cols-[110px_120px_1fr_1fr] items-center gap-3">
-        <span class="font-medium">{{ isoDowLabels[r.iso_dow] }}</span>
-        <v-switch v-model="r.is_closed" color="error" label="ปิด" hide-details density="compact" />
-        <v-text-field v-model="r.opens_at" type="time" label="เปิด" :disabled="r.is_closed" hide-details class="my-1" />
-        <v-text-field v-model="r.closes_at" type="time" label="ปิด" :disabled="r.is_closed" hide-details class="my-1" />
-      </div>
-      <div class="mt-4 flex justify-end">
-        <v-btn color="primary" :loading="savingHours" @click="saveHours">บันทึกเวลาทำการ</v-btn>
-      </div>
-    </v-card>
+    <div class="grid gap-6">
+      <SectionCard title="เวลาทำการ" description="ถ้าเวลาปิดน้อยกว่าเวลาเปิด หมายถึงปิดหลังเที่ยงคืนของวันถัดไป" flush>
+        <div class="grid">
+          <div
+            v-for="r in hours"
+            :key="r.id"
+            class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 border-b border-border px-5 py-3 sm:grid-cols-[120px_120px_minmax(0,1fr)_minmax(0,1fr)]"
+          >
+            <span class="font-medium text-heading">{{ isoDowLabels[r.iso_dow] }}</span>
+            <CheckboxField v-model="r.is_closed" label="ปิดทั้งวัน" />
+            <TimeField v-model="r.opens_at" :disabled="r.is_closed" :aria-label="`เวลาเปิดวัน${isoDowLabels[r.iso_dow]}`" />
+            <TimeField v-model="r.closes_at" :disabled="r.is_closed" :aria-label="`เวลาปิดวัน${isoDowLabels[r.iso_dow]}`" />
+          </div>
+        </div>
+        <div class="flex justify-end px-5 py-4">
+          <Button :disabled="savingHours" @click="saveHours">{{ savingHours ? 'กำลังบันทึก…' : 'บันทึกเวลาทำการ' }}</Button>
+        </div>
+      </SectionCard>
 
-    <v-card class="p-6">
-      <p class="m-0 mb-4 text-lg font-medium">วันหยุด / เวลาพิเศษ</p>
-      <div class="grid items-center gap-3 md:grid-cols-[160px_1fr_110px_120px_120px_auto]">
-        <v-text-field v-model="holidayForm.holiday_date" type="date" label="วันที่" hide-details />
-        <v-text-field v-model="holidayForm.name" label="ชื่อ เช่น สงกรานต์" hide-details />
-        <v-switch v-model="holidayForm.is_closed" color="error" label="ปิดทั้งวัน" hide-details density="compact" />
-        <v-text-field v-model="holidayForm.opens_at" type="time" label="เปิด" :disabled="holidayForm.is_closed" hide-details />
-        <v-text-field v-model="holidayForm.closes_at" type="time" label="ปิด" :disabled="holidayForm.is_closed" hide-details />
-        <v-btn color="primary" :loading="savingHoliday" @click="addHoliday">เพิ่ม</v-btn>
-      </div>
-
-      <v-table class="mt-4">
-        <thead>
-          <tr><th>วันที่</th><th>ชื่อ</th><th>เวลา</th><th>สถานะ</th><th /></tr>
-        </thead>
-        <tbody>
-          <tr v-for="h in holidays" :key="h.id" :class="h.is_active ? '' : 'opacity-50'">
-            <td>{{ new Date(`${h.holiday_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}</td>
-            <td>{{ h.name }}</td>
-            <td>{{ h.is_closed ? 'ปิดทั้งวัน' : `${hhmm(h.opens_at)} - ${hhmm(h.closes_at)}` }}</td>
-            <td>{{ h.is_active ? 'ใช้งาน' : 'ยกเลิกแล้ว' }}</td>
-            <td class="text-right">
-              <v-btn v-if="h.is_active" variant="text" color="error" @click="deactivateHoliday(h)">ยกเลิก</v-btn>
-            </td>
-          </tr>
-          <tr v-if="!holidays.length"><td colspan="5" class="text-center text-light-brown">ยังไม่มีวันหยุด</td></tr>
-        </tbody>
-      </v-table>
-    </v-card>
+      <SectionCard title="วันหยุดและเวลาพิเศษ" flush>
+        <form class="grid items-end gap-3 border-b border-border p-5 sm:grid-cols-2 lg:grid-cols-[160px_minmax(0,1fr)_auto_200px_200px_auto]" @submit.prevent="addHoliday">
+          <TextField v-model="holidayForm.holiday_date" type="date" label="วันที่" />
+          <TextField v-model="holidayForm.name" label="ชื่อวัน" placeholder="เช่น สงกรานต์" />
+          <CheckboxField v-model="holidayForm.is_closed" label="ปิดทั้งวัน" class="lg:pb-2.5" />
+          <TimeField v-model="holidayForm.opens_at" label="เปิด" :disabled="holidayForm.is_closed" />
+          <TimeField v-model="holidayForm.closes_at" label="ปิด" :disabled="holidayForm.is_closed" />
+          <Button type="submit" :disabled="savingHoliday"><Plus /> เพิ่ม</Button>
+        </form>
+        <div class="overflow-x-auto">
+          <Table>
+            <TableHeader>
+              <TableRow class="hover:bg-transparent">
+                <TableHead>วันที่</TableHead><TableHead>ชื่อ</TableHead><TableHead>เวลา</TableHead><TableHead>สถานะ</TableHead>
+                <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              <TableRow v-for="h in holidays" :key="h.id" :class="h.is_active ? '' : 'text-muted-foreground'">
+                <TableCell class="text-heading">{{ new Date(`${h.holiday_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}</TableCell>
+                <TableCell>{{ h.name }}</TableCell>
+                <TableCell class="num">{{ h.is_closed ? 'ปิดทั้งวัน' : `${hhmm(h.opens_at)}–${hhmm(h.closes_at)}` }}</TableCell>
+                <TableCell><Badge :variant="h.is_active ? 'success' : 'neutral'" dot>{{ h.is_active ? 'ใช้งาน' : 'ยกเลิกแล้ว' }}</Badge></TableCell>
+                <TableCell class="text-right">
+                  <Button v-if="h.is_active" variant="ghost" size="sm" class="text-danger-ink" @click="deactivateHoliday(h)">ยกเลิก</Button>
+                </TableCell>
+              </TableRow>
+              <TableRow v-if="!holidays.length" class="hover:bg-transparent">
+                <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ยังไม่มีวันหยุด</TableCell>
+              </TableRow>
+            </TableBody>
+          </Table>
+        </div>
+      </SectionCard>
+    </div>
   </div>
 </template>

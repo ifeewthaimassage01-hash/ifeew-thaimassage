@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// กราฟแท่งชุดเดียว (เช่น รายรับรายวัน) — สีหลักของธีม, ปลายแท่งมน 4px, เส้นกริดจาง, hover แสดงค่า
+// กราฟแท่งชุดเดียว (เช่น รายรับรายวัน) — สี Primary ตาม DESIGN.md, ปลายแท่งมน 4px, เส้นกริดสี Border, hover แสดงค่า
 // มีปุ่มสลับดูเป็นตาราง (ไม่พึ่งสีอย่างเดียว)
 const props = defineProps<{
   title: string
@@ -47,39 +47,50 @@ function barPath(i: number, v: number): string {
 
 <template>
   <div>
-    <div class="mb-2 flex items-center justify-between">
-      <p class="m-0 font-medium">{{ title }}</p>
-      <v-btn size="small" variant="text" @click="showTable = !showTable">{{ showTable ? 'ดูกราฟ' : 'ดูตาราง' }}</v-btn>
+    <div class="mb-3 flex items-center justify-between gap-3">
+      <h3 class="m-0 text-base font-semibold">{{ title }}</h3>
+      <SegmentedControl
+        :model-value="showTable ? 'table' : 'chart'"
+        :items="[{ value: 'chart', label: 'กราฟ' }, { value: 'table', label: 'ตาราง' }]"
+        size="sm"
+        :label="`มุมมอง ${title}`"
+        @update:model-value="(v) => (showTable = v === 'table')"
+      />
     </div>
 
-    <v-table v-if="showTable" density="compact" class="max-h-72 overflow-auto">
-      <tbody>
-        <tr v-for="p in points" :key="p.label"><td>{{ p.label }}</td><td class="text-right">{{ format(p.value) }}</td></tr>
-      </tbody>
-    </v-table>
+    <div v-if="showTable" class="max-h-72 overflow-auto rounded-lg border border-border">
+      <Table>
+        <TableBody>
+          <TableRow v-for="p in points" :key="p.label">
+            <TableCell class="py-2">{{ p.label }}</TableCell>
+            <TableCell class="num py-2 text-right text-heading">{{ format(p.value) }}</TableCell>
+          </TableRow>
+        </TableBody>
+      </Table>
+    </div>
 
     <div v-else class="relative">
       <svg :viewBox="`0 0 ${W} ${H}`" class="block h-auto w-full" role="img" :aria-label="title" @mouseleave="hover = null">
         <g>
           <line v-for="t in ticks" :key="t" :x1="PAD.left" :x2="W - PAD.right" :y1="y(t)" :y2="y(t)"
-            stroke="currentColor" stroke-opacity="0.12" stroke-width="1" />
+            stroke="var(--border)" stroke-width="1" />
           <text v-for="t in ticks" :key="'l' + t" :x="PAD.left - 8" :y="y(t) + 4" text-anchor="end"
-            class="fill-current text-[11px] opacity-60">{{ format(t) }}</text>
+            class="num text-[11px]" fill="var(--muted-foreground)">{{ format(t) }}</text>
         </g>
         <path v-for="(p, i) in points" :key="p.label" :d="barPath(i, p.value)"
-          :style="{ fill: 'rgb(var(--v-theme-primary))', opacity: hover === null || hover === i ? 1 : 0.45 }" />
+          :style="{ fill: 'var(--primary)', opacity: hover === null || hover === i ? 1 : 0.4 }" />
         <!-- พื้นที่ hover ใหญ่กว่าแท่ง -->
         <rect v-for="(p, i) in points" :key="'h' + p.label" :x="PAD.left + i * slot" :y="PAD.top" :width="slot" :height="innerH"
           fill="transparent" @mouseenter="hover = i" @touchstart.passive="hover = i" />
         <template v-for="(p, i) in points" :key="'x' + p.label">
           <text v-if="i % (labelEvery ?? 1) === 0 || i === points.length - 1" :x="PAD.left + i * slot + slot / 2" :y="H - 8"
-            text-anchor="middle" class="fill-current text-[11px] opacity-60">{{ p.label }}</text>
+            text-anchor="middle" class="text-[11px]" fill="var(--muted-foreground)">{{ p.label }}</text>
         </template>
       </svg>
       <div v-if="hover !== null && points[hover]"
-        class="pointer-events-none absolute top-0 rounded-lg bg-white px-3 py-1 text-sm shadow-soft"
+        class="pointer-events-none absolute top-0 rounded-lg border border-border bg-card px-3 py-1 text-sm shadow-sm"
         :style="{ left: `${((PAD.left + hover * slot + slot / 2) / W) * 100}%`, transform: 'translateX(-50%)' }">
-        <span class="text-light-brown">{{ points[hover].label }}</span> · <b>{{ format(points[hover].value) }}</b>
+        <span class="text-muted-foreground">{{ points[hover].label }}</span> · <b class="num text-heading">{{ format(points[hover].value) }}</b>
       </div>
     </div>
   </div>

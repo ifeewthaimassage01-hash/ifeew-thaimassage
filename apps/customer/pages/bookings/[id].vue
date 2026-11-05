@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // รายละเอียดการจองของสมาชิก + ชำระมัดจำ + ยกเลิก (ก่อนนัดตามนโยบาย)
-import { ArrowLeft } from '@lucide/vue'
+import { toast } from 'vue-sonner'
 import type { BookingView } from '@ifeew/shared'
 
 definePageMeta({ middleware: 'auth' })
@@ -13,7 +13,6 @@ const id = computed(() => String(route.params.id))
 
 const booking = ref<BookingView | null>(null)
 const loading = ref(true)
-const message = ref<{ type: 'success' | 'destructive'; text: string } | null>(null)
 const cancelDialog = ref(false)
 const cancelReason = ref('')
 const cancelling = ref(false)
@@ -36,28 +35,25 @@ async function cancel() {
   cancelling.value = false
   cancelDialog.value = false
   if (error) {
-    message.value = { type: 'destructive', text: error.message }
+    toast.error(error.message)
     return
   }
   booking.value = data as unknown as BookingView
-  message.value = {
-    type: 'success',
-    text: booking.value.deposit_status === 'REFUND_PENDING' ? 'ยกเลิกแล้ว ร้านจะโอนคืนมัดจำให้' : 'ยกเลิกการจองแล้ว',
-  }
+  toast.success(booking.value.deposit_status === 'REFUND_PENDING' ? 'ยกเลิกแล้ว ร้านจะโอนคืนมัดจำให้' : 'ยกเลิกการจองแล้ว')
 }
 
 onMounted(load)
 </script>
 
 <template>
-  <div class="grid gap-4">
-    <NuxtLink to="/bookings" class="inline-flex w-fit items-center gap-1.5 text-[15px] text-muted-foreground no-underline hover:text-foreground">
-      <ArrowLeft class="size-4" /> การจองของฉัน
-    </NuxtLink>
-    <h1 class="m-0 text-[28px] font-semibold leading-tight tracking-tight">รายละเอียดการจอง</h1>
-    <Alert v-if="message" :variant="message.type"><AlertDescription>{{ message.text }}</AlertDescription></Alert>
+  <div>
+    <PageHeader title="รายละเอียดการจอง" :description="booking?.booking_code ? `รหัสการจอง ${booking.booking_code}` : undefined">
+      <template #actions><Button as-child variant="outline"><NuxtLink to="/bookings">การจองทั้งหมด</NuxtLink></Button></template>
+    </PageHeader>
     <div v-if="loading" class="grid gap-4 md:grid-cols-2"><Skeleton class="h-80 rounded-xl" /><Skeleton class="h-80 rounded-xl" /></div>
-    <Alert v-else-if="!booking" variant="info"><AlertDescription>ไม่พบการจองนี้</AlertDescription></Alert>
+    <EmptyState v-else-if="!booking" title="ไม่พบการจองนี้" description="การจองอาจถูกลบหรือเป็นของบัญชีอื่น">
+      <Button as-child variant="outline"><NuxtLink to="/bookings">กลับไปการจองของฉัน</NuxtLink></Button>
+    </EmptyState>
     <BookingDetail v-else :booking="booking" :can-cancel="canCancel" @updated="(v) => (booking = { ...booking!, ...v })" @cancel="cancelDialog = true" />
 
     <Dialog v-model:open="cancelDialog">

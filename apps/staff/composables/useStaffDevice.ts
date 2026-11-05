@@ -17,6 +17,17 @@ export interface DeviceStaff {
   is_owner?: boolean
 }
 
+export interface LoginBranch {
+  branch_id: string
+  name: string
+}
+
+export interface BranchStaffList {
+  branches: LoginBranch[]
+  branch?: { company_id: string; branch_id: string; branch_name: string; idle_lock_minutes: number }
+  staff?: DeviceStaff[]
+}
+
 interface PinLoginResponse {
   session: { access_token: string; refresh_token: string; expires_at: number }
   user_id: string
@@ -78,6 +89,27 @@ export function useStaffDevice() {
     return res
   }
 
+  /** หน้า login: รายชื่อสาขา (+ พนักงานของสาขาที่เลือก) โดยไม่ต้องใช้เครื่องที่ผูก */
+  async function listBranchStaff(branchId?: string | null): Promise<BranchStaffList> {
+    return await call('branch-staff-list', { company_code: config.public.companyCode, branch_id: branchId ?? undefined })
+  }
+
+  /** พนักงาน: PIN ของสาขาที่เลือกจาก dropdown */
+  async function branchPinLogin(branchId: string, userId: string, pin: string): Promise<PinLoginResponse> {
+    const res = await call<PinLoginResponse>('staff-pin-login', {
+      company_code: config.public.companyCode,
+      branch_id: branchId,
+      user_id: userId,
+      pin,
+    })
+    const { error } = await supabase.auth.setSession({
+      access_token: res.session.access_token,
+      refresh_token: res.session.refresh_token,
+    })
+    if (error) throw error
+    return res
+  }
+
   /** เจ้าของร้าน: PIN อย่างเดียว (ไม่ต้องใช้เครื่องที่ผูก) */
   async function ownerPinLogin(pin: string): Promise<PinLoginResponse> {
     const res = await call<PinLoginResponse>('owner-pin-login', {
@@ -100,5 +132,5 @@ export function useStaffDevice() {
     token.value = null
   }
 
-  return { token, listStaff, pinLogin, ownerPinLogin, savePairing, forget, errorMessage }
+  return { token, listStaff, pinLogin, listBranchStaff, branchPinLogin, ownerPinLogin, savePairing, forget, errorMessage }
 }

@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// หน้าร้าน (POS): เปิดกะ, รับลูกค้า Walk-in, เช็กอินลูกค้าที่จอง, เพิ่มบริการ
+// หน้าร้าน (POS): กะเปิดอัตโนมัติ (migration 031), รับลูกค้า Walk-in, เช็กอินลูกค้าที่จอง, เพิ่มบริการ
 // ร้านไม่มีเครื่องพิมพ์: หลังสร้างคิวให้แจ้งเลขคิวที่แสดงบนจอแก่ลูกค้า
+import { Banknote, ListOrdered, Plus, Search, Store, UserPlus, X } from '@lucide/vue'
 import {
   bangkokTime,
   formatBaht,
@@ -18,6 +19,8 @@ import {
   type FinanceBoard,
 } from '@ifeew/shared'
 
+
+const { confirm } = useDialog()
 type CatalogRow = Database['public']['Views']['v_public_branch_services']['Row']
 type SearchRow = { customer_id: string; display_name: string; phone_masked: string; is_member: boolean }
 
@@ -50,6 +53,7 @@ async function submitCash() {
     }))
     cashDialog.value = false
     message.value = { type: 'success', text: 'บันทึกเงินเข้า/ออกลิ้นชักแล้ว' }
+    await load() // กะอาจถูกเปิดให้อัตโนมัติ
   } catch (e) {
     fail(e)
   } finally {
@@ -58,11 +62,11 @@ async function submitCash() {
 }
 
 async function payOutTips(t: FinanceBoard['unpaid_cash_tips'][number]) {
-  if (!activeBranch.value || !window.confirm(`จ่ายทิปเงินสด ${formatBaht(Number(t.amount))} ให้ ${t.nickname} จากลิ้นชัก?`)) return
+  if (!activeBranch.value || !(await confirm({ title: `จ่ายทิปให้ ${t.nickname}?`, description: `จ่ายเงินสด ${formatBaht(Number(t.amount))} จากลิ้นชัก`, confirmText: 'จ่ายทิป' }))) return
   try {
     await must(supabase.rpc('pos_pay_out_tips', { p_branch_id: activeBranch.value.branch_id, p_employee_id: t.employee_id }))
     message.value = { type: 'success', text: `จ่ายทิปให้ ${t.nickname} แล้ว` }
-    await loadFinance()
+    await Promise.all([loadFinance(), load()])
   } catch (e) {
     fail(e)
   }
@@ -111,34 +115,6 @@ const fail = (e: unknown, fallback?: string) => (message.value = { type: 'error'
 
 const orders = computed(() => [...(board.value?.orders ?? [])].reverse())
 const activeOrders = computed(() => orders.value.filter((o) => o.status !== 'CANCELLED'))
-
-// ---------------------------------------------------------------------------
-// เปิดกะ
-// ---------------------------------------------------------------------------
-const sessionDialog = ref(false)
-const openingCash = ref<number | string>('')
-const openingNote = ref('')
-
-async function openSession() {
-  const cash = Number(openingCash.value)
-  if (!activeBranch.value || openingCash.value === '' || !Number.isFinite(cash) || cash < 0) {
-    fail(null, 'กรุณาระบุเงินสดเริ่มต้น')
-    return
-  }
-  saving.value = true
-  try {
-    await must(supabase.rpc('pos_open_session', {
-      p_branch_id: activeBranch.value.branch_id, p_opening_cash: cash, p_note: openingNote.value.trim() || null,
-    }))
-    sessionDialog.value = false
-    message.value = { type: 'success', text: 'เปิดกะแล้ว' }
-    await load()
-  } catch (e) {
-    fail(e)
-  } finally {
-    saving.value = false
-  }
-}
 
 // ---------------------------------------------------------------------------
 // การจองวันนี้ที่รอเช็กอิน
@@ -300,246 +276,254 @@ const newQueues = computed(() => {
 
 <template>
   <div>
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h1 class="m-0 text-2xl font-semibold text-cocoa">หน้าร้าน · {{ activeBranch?.name }}</h1>
-      <div class="flex gap-2">
-        <v-btn color="primary" size="large" prepend-icon="mdi-account-plus-outline" @click="openWalkIn()">รับลูกค้า Walk-in</v-btn>
-        <v-btn variant="tonal" to="/queue" prepend-icon="mdi-format-list-numbered">ดูคิว</v-btn>
-      </div>
-    </div>
+    <PageHeader title="หน้าร้าน (POS)" :description="`${activeBranch?.name ?? ''} · รับลูกค้า เช็กอินการจอง และรับเงิน`">
+      <template #actions>
+        <Button as-child variant="outline"><NuxtLink to="/queue"><ListOrdered /> ดูคิว</NuxtLink></Button>
+        <Button size="lg" @click="openWalkIn()"><UserPlus /> รับลูกค้า Walk-in</Button>
+      </template>
+    </PageHeader>
 
-    <v-alert v-if="message" :type="message.type" variant="tonal" class="mb-4" closable :text="message.text" @click:close="message = null" />
-    <v-alert v-if="error" type="error" variant="tonal" class="mb-4" :text="error" />
-    <v-progress-linear v-if="loading" indeterminate color="primary" />
+    <MessageAlert :message="message" class="mb-4" @close="message = null" />
+    <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <LoadingBar v-if="loading" class="mb-4" />
 
-    <!-- ค้างชำระ / ทิป -->
-    <v-card v-if="finance && (outstanding.length || finance.unpaid_cash_tips.length)" class="mb-4 p-4">
-      <div v-if="outstanding.length">
-        <p class="m-0 mb-2 font-medium">ค้างชำระ {{ formatBaht(Number(finance.outstanding)) }}</p>
-        <div class="flex flex-wrap gap-2">
-          <v-chip v-for="i in outstanding" :key="i.invoice_id" :to="`/checkout/${i.service_order_id}`" color="warning" variant="tonal">
-            {{ i.invoice_number }} · {{ i.customer_name ?? 'ลูกค้าทั่วไป' }} · ค้าง {{ formatBaht(Number(i.balance)) }}
-          </v-chip>
-        </div>
-      </div>
-      <div v-if="finance.unpaid_cash_tips.length" class="mt-3">
-        <p class="m-0 mb-2 font-medium">ทิปเงินสดที่ยังไม่จ่ายหมอ</p>
-        <div class="flex flex-wrap gap-2">
-          <v-btn v-for="t in finance.unpaid_cash_tips" :key="t.employee_id" size="small" variant="tonal" :disabled="!board?.session"
-            @click="payOutTips(t)">จ่าย {{ t.nickname }} {{ formatBaht(Number(t.amount)) }}</v-btn>
-        </div>
-      </div>
-    </v-card>
-
-    <!-- กะ -->
-    <v-card class="mb-4 p-4">
-      <div v-if="board?.session" class="flex flex-wrap items-center justify-between gap-2">
-        <p class="m-0">
-          <v-icon icon="mdi-cash-register" color="success" class="mr-1" />
-          กะเปิดอยู่ตั้งแต่ {{ bangkokTime(board.session.opened_at) }} โดย {{ board.session.opened_by_name ?? '-' }}
-          · เงินสดเริ่มต้น {{ formatBaht(Number(board.session.opening_cash)) }}
+    <div class="grid gap-6">
+      <!-- กะ -->
+      <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4" :class="board?.session ? 'border-success/40 bg-success-soft/50' : 'border-border bg-card'">
+        <p class="m-0 flex items-center gap-2 text-[15px]" :class="board?.session ? 'text-success-ink' : 'text-muted-foreground'">
+          <Store class="size-5 shrink-0" />
+          <template v-if="board?.session">
+            <span>กะเปิดอยู่ตั้งแต่ <span class="num font-medium">{{ bangkokTime(board.session.opened_at) }}</span> โดย {{ board.session.opened_by_name ?? '—' }} · เงินสดเริ่มต้น <span class="num font-medium">{{ formatBaht(Number(board.session.opening_cash)) }}</span></span>
+          </template>
+          <span v-else>ยังไม่มีกะ ระบบจะเปิดกะให้อัตโนมัติเมื่อรับเงินหรือบันทึกเงินเข้า/ออกลิ้นชักครั้งแรก</span>
         </p>
         <div class="flex gap-2">
-          <v-btn variant="text" @click="cashDialog = true; cashForm.amount = ''; cashForm.reason = ''">เงินเข้า/ออกลิ้นชัก</v-btn>
-          <v-btn color="primary" variant="tonal" @click="openClose">ปิดกะ</v-btn>
+          <Button variant="ghost" size="sm" @click="cashDialog = true; cashForm.amount = ''; cashForm.reason = ''">เงินเข้า/ออกลิ้นชัก</Button>
+          <Button v-if="board?.session" variant="outline" size="sm" @click="openClose">ปิดกะ</Button>
         </div>
       </div>
-      <div v-else class="flex flex-wrap items-center justify-between gap-2">
-        <p class="m-0"><v-icon icon="mdi-cash-register" class="mr-1" /> ยังไม่เปิดกะ (รับลูกค้าได้ แต่ต้องเปิดกะก่อนรับเงิน)</p>
-        <v-btn color="primary" variant="tonal" @click="sessionDialog = true; openingCash = ''; openingNote = ''">เปิดกะ</v-btn>
-      </div>
-    </v-card>
 
-    <!-- เลขคิวที่เพิ่งสร้าง -->
-    <v-card v-if="created && newQueues.length" class="mb-4 border-2 border-soft-pink p-5">
-      <div class="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <p class="m-0 text-sm text-light-brown">แจ้งเลขคิวให้ลูกค้า · {{ created.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
-          <div class="mt-2 flex flex-wrap gap-4">
-            <div v-for="i in newQueues" :key="i.queue_id" class="rounded-2xl bg-cream px-5 py-3 text-center">
-              <p class="m-0 text-5xl font-semibold text-cocoa">{{ formatQueueNumber(i.queue_number) }}</p>
-              <p class="m-0 text-sm">{{ i.service_name }} {{ formatDuration(i.duration_minutes) }}</p>
-              <p class="m-0 text-xs text-light-brown">เริ่มประมาณ {{ bangkokTime(i.planned_starts_at) }}</p>
-            </div>
+      <!-- เลขคิวที่เพิ่งสร้าง -->
+      <section v-if="created && newQueues.length" class="rounded-xl border-2 border-primary/40 bg-card p-5" aria-live="polite" aria-labelledby="new-queue-h">
+        <div class="flex flex-wrap items-start justify-between gap-3">
+          <div>
+            <h2 id="new-queue-h" class="m-0 text-base font-semibold">แจ้งเลขคิวให้ลูกค้า</h2>
+            <p class="m-0 text-sm text-muted-foreground">{{ created.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
           </div>
+          <Button variant="ghost" size="icon" aria-label="ปิดเลขคิว" @click="created = null"><X /></Button>
         </div>
-        <v-btn icon="mdi-close" variant="text" aria-label="ปิด" @click="created = null" />
-      </div>
-    </v-card>
-
-    <div class="grid gap-4 lg:grid-cols-2">
-      <!-- รอเช็กอิน -->
-      <section>
-        <p class="m-0 mb-2 text-lg font-medium">ลูกค้าที่จองไว้วันนี้ ({{ awaiting.length }})</p>
-        <p v-if="!awaiting.length" class="text-light-brown">ไม่มีการจองที่รอเช็กอิน</p>
-        <div class="grid gap-3">
-          <v-card v-for="b in awaiting" :key="b.booking_id" class="p-4">
-            <div class="flex flex-wrap items-center justify-between gap-2">
-              <div>
-                <p class="m-0 font-medium">{{ bangkokTime(b.starts_at) }} · {{ b.customer_name }}</p>
-                <p class="m-0 text-sm text-light-brown">{{ b.booking_code }} · {{ b.phone_masked }}</p>
-                <p class="m-0 text-sm">{{ b.items.map((i) => `${i.service_name} ${formatDuration(i.duration_minutes)}`).join(' · ') }}</p>
-              </div>
-              <v-btn color="primary" :loading="saving" @click="checkIn(b)">เช็กอิน</v-btn>
-            </div>
-          </v-card>
+        <div class="mt-3 flex flex-wrap gap-3">
+          <div v-for="i in newQueues" :key="i.queue_id" class="min-w-40 rounded-xl bg-secondary/60 px-5 py-4 text-center">
+            <p class="num m-0 text-5xl leading-none font-semibold text-heading">{{ formatQueueNumber(i.queue_number) }}</p>
+            <p class="m-0 mt-2 text-[15px] text-heading">{{ i.service_name }} {{ formatDuration(i.duration_minutes) }}</p>
+            <p class="m-0 text-sm text-muted-foreground">เริ่มประมาณ <span class="num">{{ bangkokTime(i.planned_starts_at) }}</span></p>
+          </div>
         </div>
       </section>
 
-      <!-- Order วันนี้ -->
-      <section>
-        <p class="m-0 mb-2 text-lg font-medium">ลูกค้าวันนี้ ({{ activeOrders.length }})</p>
-        <p v-if="!activeOrders.length" class="text-light-brown">ยังไม่มีลูกค้า</p>
-        <div class="grid gap-3">
-          <v-card v-for="o in activeOrders" :key="o.order_id" class="p-4">
-            <div class="flex flex-wrap items-start justify-between gap-2">
+      <!-- ค้างชำระ / ทิป -->
+      <SectionCard v-if="finance && (outstanding.length || finance.unpaid_cash_tips.length)" title="ต้องจัดการ" flush>
+        <div v-if="outstanding.length" class="border-b border-border px-5 py-4 last:border-0">
+          <p class="m-0 mb-2 text-[15px] font-medium text-heading">ค้างชำระ <span class="num text-pending-ink">{{ formatBaht(Number(finance.outstanding)) }}</span></p>
+          <div class="flex flex-wrap gap-2">
+            <NuxtLink v-for="i in outstanding" :key="i.invoice_id" :to="`/checkout/${i.service_order_id}`"
+              class="rounded-lg border border-brand-accent/40 bg-pending-soft px-3 py-1.5 text-sm text-pending-ink no-underline hover:border-brand-accent">
+              <span class="num">{{ i.invoice_number }}</span> · {{ i.customer_name ?? 'ลูกค้าทั่วไป' }} · ค้าง <span class="num font-medium">{{ formatBaht(Number(i.balance)) }}</span>
+            </NuxtLink>
+          </div>
+        </div>
+        <div v-if="finance.unpaid_cash_tips.length" class="px-5 py-4">
+          <p class="m-0 mb-2 text-[15px] font-medium text-heading">ทิปเงินสดที่ยังไม่จ่ายหมอ</p>
+          <div class="flex flex-wrap gap-2">
+            <Button v-for="t in finance.unpaid_cash_tips" :key="t.employee_id" size="sm" variant="outline" @click="payOutTips(t)">
+              จ่าย {{ t.nickname }} <span class="num">{{ formatBaht(Number(t.amount)) }}</span>
+            </Button>
+          </div>
+        </div>
+      </SectionCard>
+
+      <div class="grid items-start gap-6 xl:grid-cols-2">
+        <!-- รอเช็กอิน -->
+        <SectionCard title="ลูกค้าที่จองไว้วันนี้" :description="`รอเช็กอิน ${awaiting.length} ราย`" flush>
+          <EmptyState v-if="!awaiting.length" compact title="ไม่มีการจองที่รอเช็กอิน" class="m-5" />
+          <ul v-else class="m-0 grid list-none p-0">
+            <li v-for="b in awaiting" :key="b.booking_id" class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-3.5 last:border-0">
               <div class="min-w-0">
-                <p class="m-0 font-medium">
+                <p class="m-0 font-medium text-heading"><span class="num">{{ bangkokTime(b.starts_at) }}</span> · {{ b.customer_name }}</p>
+                <p class="m-0 text-sm text-muted-foreground"><span class="num">{{ b.booking_code }}</span> · <span class="num">{{ b.phone_masked }}</span></p>
+                <p class="m-0 text-sm">{{ b.items.map((i) => `${i.service_name} ${formatDuration(i.duration_minutes)}`).join(' · ') }}</p>
+              </div>
+              <Button :disabled="saving" @click="checkIn(b)">เช็กอิน</Button>
+            </li>
+          </ul>
+        </SectionCard>
+
+        <!-- Order วันนี้ -->
+        <SectionCard title="ลูกค้าวันนี้" :description="`${activeOrders.length} ราย`" flush>
+          <EmptyState v-if="!activeOrders.length" compact title="ยังไม่มีลูกค้า" class="m-5">
+            <Button variant="outline" size="sm" @click="openWalkIn()"><UserPlus /> รับลูกค้า Walk-in</Button>
+          </EmptyState>
+          <ul v-else class="m-0 grid list-none p-0">
+            <li v-for="o in activeOrders" :key="o.order_id" class="flex flex-wrap items-start justify-between gap-3 border-b border-border px-5 py-3.5 last:border-0">
+              <div class="min-w-0">
+                <p class="m-0 flex flex-wrap items-center gap-2 font-medium text-heading">
                   {{ o.customer_name ?? 'ลูกค้าทั่วไป' }}
-                  <v-chip size="x-small" variant="tonal">{{ orderChannelLabels[o.channel] }}</v-chip>
-                  <v-chip v-if="o.status === 'COMPLETED'" size="x-small" color="primary" variant="tonal">เสร็จแล้ว</v-chip>
+                  <Badge variant="neutral">{{ orderChannelLabels[o.channel] }}</Badge>
+                  <Badge v-if="o.status === 'COMPLETED'" variant="success">เสร็จแล้ว</Badge>
                 </p>
-                <p v-for="i in o.items" :key="i.queue_id" class="m-0 text-sm" :class="{ 'line-through text-light-brown': i.queue_status === 'CANCELLED' }">
-                  คิว {{ formatQueueNumber(i.queue_number) }} · {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}
+                <p v-for="i in o.items" :key="i.queue_id" class="m-0 text-sm" :class="{ 'text-muted-foreground line-through': i.queue_status === 'CANCELLED' }">
+                  คิว <span class="num">{{ formatQueueNumber(i.queue_number) }}</span> · {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}
                   · {{ queueStatusLabels[i.queue_status] }}<span v-if="i.therapist"> · {{ i.therapist.nickname }}</span>
                 </p>
               </div>
-              <div class="flex flex-col items-end gap-1">
-                <v-chip v-if="invoiceOf(o.order_id)" size="x-small" variant="tonal">{{ invoiceStatusLabels[invoiceOf(o.order_id)!.status] }}</v-chip>
-                <v-btn v-if="o.items.some((i) => ['IN_SERVICE', 'COMPLETED'].includes(i.queue_status))" size="small" color="primary"
-                  variant="tonal" prepend-icon="mdi-cash" :to="`/checkout/${o.order_id}`">
-                  {{ invoiceOf(o.order_id)?.status === 'PAID' ? 'ดูการชำระ' : 'ชำระเงิน' }}
-                </v-btn>
-                <v-btn size="small" variant="text" prepend-icon="mdi-plus" @click="openWalkIn(o)">เพิ่มบริการ</v-btn>
+              <div class="flex flex-col items-end gap-1.5">
+                <Badge v-if="invoiceOf(o.order_id)" :variant="invoiceOf(o.order_id)!.status === 'PAID' ? 'success' : 'pending'">{{ invoiceStatusLabels[invoiceOf(o.order_id)!.status] }}</Badge>
+                <Button v-if="o.items.some((i) => ['IN_SERVICE', 'COMPLETED'].includes(i.queue_status))" as-child size="sm" :variant="invoiceOf(o.order_id)?.status === 'PAID' ? 'outline' : 'default'">
+                  <NuxtLink :to="`/checkout/${o.order_id}`"><Banknote /> {{ invoiceOf(o.order_id)?.status === 'PAID' ? 'ดูการชำระ' : 'ชำระเงิน' }}</NuxtLink>
+                </Button>
+                <Button size="sm" variant="ghost" @click="openWalkIn(o)"><Plus /> เพิ่มบริการ</Button>
               </div>
-            </div>
-          </v-card>
-        </div>
-      </section>
+            </li>
+          </ul>
+        </SectionCard>
+      </div>
     </div>
 
     <!-- เงินเข้า/ออกลิ้นชัก -->
-    <v-dialog v-model="cashDialog" max-width="420">
-      <v-card class="p-6">
-        <p class="m-0 mb-3 text-lg font-medium">เงินเข้า/ออกลิ้นชัก</p>
-        <v-btn-toggle v-model="cashForm.type" mandatory color="primary" class="mb-3">
-          <v-btn value="CASH_IN">เงินเข้า</v-btn>
-          <v-btn value="CASH_OUT">เงินออก</v-btn>
-        </v-btn-toggle>
-        <v-text-field v-model="cashForm.amount" type="number" label="จำนวนเงิน (บาท)" />
-        <v-text-field v-model="cashForm.reason" label="เหตุผล (เช่น แลกเหรียญ, นำเงินฝากธนาคาร)" />
-        <p class="m-0 mb-2 text-xs text-light-brown">รายจ่ายของร้านให้บันทึกที่เมนู “รายจ่าย”</p>
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="cashDialog = false">ปิด</v-btn>
-          <v-btn color="primary" :loading="saving" @click="submitCash">บันทึก</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+    <Dialog v-model:open="cashDialog">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>เงินเข้า/ออกลิ้นชัก</DialogTitle>
+          <DialogDescription>รายจ่ายของร้านให้บันทึกที่เมนู “รายจ่าย”</DialogDescription>
+        </DialogHeader>
+        <form class="grid gap-4" @submit.prevent="submitCash">
+          <SegmentedControl v-model="cashForm.type" :items="[{ value: 'CASH_IN', label: 'เงินเข้า' }, { value: 'CASH_OUT', label: 'เงินออก' }]" label="ประเภท" />
+          <TextField v-model="cashForm.amount" type="number" label="จำนวนเงิน" suffix="บาท" class="num" />
+          <TextField v-model="cashForm.reason" label="เหตุผล" placeholder="เช่น แลกเหรียญ, นำเงินฝากธนาคาร" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="cashDialog = false">ปิด</Button>
+            <Button type="submit" :disabled="saving">บันทึก</Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
 
     <!-- ปิดกะ -->
-    <v-dialog v-model="closeDialog" max-width="460" persistent>
-      <v-card class="p-6">
-        <p class="m-0 mb-1 text-lg font-medium">ปิดกะ</p>
-        <template v-if="!closeResult">
-          <p class="m-0 mb-3 text-sm text-light-brown">นับเงินสดในลิ้นชักทั้งหมด แล้วกรอกยอดที่นับได้ (ระบบจะแสดงยอดที่ควรมีหลังบันทึก)</p>
-          <v-text-field v-model="closeCash" type="number" label="เงินสดที่นับได้ (บาท)" />
-          <v-textarea v-if="closeNeedsNote" v-model="closeNote" label="เหตุผลที่เงินไม่ตรง (บังคับ)" rows="2" variant="outlined" />
-          <div class="flex justify-end gap-2">
-            <v-btn variant="text" @click="closeDialog = false">ยกเลิก</v-btn>
-            <v-btn color="primary" :disabled="closeCash === ''" :loading="saving" @click="submitClose">ปิดกะ</v-btn>
-          </div>
-        </template>
+    <Dialog v-model:open="closeDialog">
+      <DialogContent class="sm:max-w-md" @interact-outside.prevent>
+        <DialogHeader>
+          <DialogTitle>ปิดกะ</DialogTitle>
+          <DialogDescription>{{ closeResult ? 'ปิดกะแล้ว รอเจ้าของร้านตรวจ · รายการเงินถัดไปจะเปิดกะใหม่ให้อัตโนมัติ' : 'นับเงินสดในลิ้นชักทั้งหมด แล้วกรอกยอดที่นับได้ ระบบจะแสดงยอดที่ควรมีหลังบันทึก' }}</DialogDescription>
+        </DialogHeader>
+        <form v-if="!closeResult" class="grid gap-4" @submit.prevent="submitClose">
+          <TextField v-model="closeCash" type="number" label="เงินสดที่นับได้" suffix="บาท" class="num" />
+          <TextareaField v-if="closeNeedsNote" v-model="closeNote" label="เหตุผลที่เงินไม่ตรง" hint="บังคับ" rows="2" />
+          <DialogFooter class="gap-2">
+            <Button type="button" variant="outline" @click="closeDialog = false">ยกเลิก</Button>
+            <Button type="submit" :disabled="closeCash === '' || saving">ปิดกะ</Button>
+          </DialogFooter>
+        </form>
         <template v-else>
-          <div class="grid grid-cols-2 gap-1 text-sm">
-            <span>เงินสดเริ่มต้น</span><span class="text-right">{{ formatBaht(Number(closeResult.opening_cash)) }}</span>
-            <span>ขายเงินสด</span><span class="text-right">{{ formatBaht(Number(closeResult.cash_sales)) }}</span>
-            <span>ทิปเงินสด</span><span class="text-right">{{ formatBaht(Number(closeResult.cash_tips)) }}</span>
-            <span>เงินเข้า</span><span class="text-right">{{ formatBaht(Number(closeResult.cash_in)) }}</span>
-            <span>เงินออก</span><span class="text-right">−{{ formatBaht(Number(closeResult.cash_out)) }}</span>
-            <span>คืนเงินสด</span><span class="text-right">−{{ formatBaht(Number(closeResult.cash_refunds)) }}</span>
-            <span class="font-medium">ควรมี</span><span class="text-right font-medium">{{ formatBaht(Number(closeResult.expected_cash)) }}</span>
-            <span class="font-medium">นับได้</span><span class="text-right font-medium">{{ formatBaht(Number(closeResult.actual_cash)) }}</span>
-            <span class="font-medium">ผลต่าง</span>
-            <span class="text-right font-semibold" :class="Number(closeResult.cash_difference) === 0 ? 'text-green-800' : 'text-red-700'">
-              {{ formatBaht(Number(closeResult.cash_difference)) }}</span>
-            <span>โอน / QR</span><span class="text-right">{{ formatBaht(Number(closeResult.transfer_sales)) }} / {{ formatBaht(Number(closeResult.qr_sales)) }}</span>
-          </div>
-          <p class="m-0 mt-3 text-sm text-light-brown">ปิดกะแล้ว รอเจ้าของร้านตรวจ · เปิดกะใหม่ได้ทันที</p>
-          <div class="mt-3 flex justify-end"><v-btn color="primary" @click="closeDialog = false">เสร็จสิ้น</v-btn></div>
+          <dl class="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[15px]">
+            <dt class="text-muted-foreground">เงินสดเริ่มต้น</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.opening_cash)) }}</dd>
+            <dt class="text-muted-foreground">ขายเงินสด</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.cash_sales)) }}</dd>
+            <dt class="text-muted-foreground">ทิปเงินสด</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.cash_tips)) }}</dd>
+            <dt class="text-muted-foreground">เงินเข้า</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.cash_in)) }}</dd>
+            <dt class="text-muted-foreground">เงินออก</dt><dd class="num m-0 text-right">−{{ formatBaht(Number(closeResult.cash_out)) }}</dd>
+            <dt class="text-muted-foreground">คืนเงินสด</dt><dd class="num m-0 text-right">−{{ formatBaht(Number(closeResult.cash_refunds)) }}</dd>
+            <dt class="border-t border-border pt-2 font-medium text-heading">ควรมี</dt><dd class="num m-0 border-t border-border pt-2 text-right font-medium text-heading">{{ formatBaht(Number(closeResult.expected_cash)) }}</dd>
+            <dt class="font-medium text-heading">นับได้</dt><dd class="num m-0 text-right font-medium text-heading">{{ formatBaht(Number(closeResult.actual_cash)) }}</dd>
+            <dt class="font-medium text-heading">ผลต่าง</dt>
+            <dd class="num m-0 text-right font-semibold" :class="Number(closeResult.cash_difference) === 0 ? 'text-success-ink' : 'text-danger-ink'">{{ formatBaht(Number(closeResult.cash_difference)) }}</dd>
+            <dt class="text-muted-foreground">โอน / QR</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.transfer_sales)) }} / {{ formatBaht(Number(closeResult.qr_sales)) }}</dd>
+          </dl>
+          <DialogFooter><Button @click="closeDialog = false">เสร็จสิ้น</Button></DialogFooter>
         </template>
-      </v-card>
-    </v-dialog>
-
-    <!-- เปิดกะ -->
-    <v-dialog v-model="sessionDialog" max-width="420">
-      <v-card class="p-6">
-        <p class="m-0 mb-3 text-lg font-medium">เปิดกะ · {{ activeBranch?.name }}</p>
-        <v-text-field v-model="openingCash" type="number" min="0" label="เงินสดเริ่มต้นในลิ้นชัก (บาท)" />
-        <v-text-field v-model="openingNote" label="หมายเหตุ (ถ้ามี)" />
-        <div class="flex justify-end gap-2">
-          <v-btn variant="text" @click="sessionDialog = false">ยกเลิก</v-btn>
-          <v-btn color="primary" :loading="saving" @click="openSession">เปิดกะ</v-btn>
-        </div>
-      </v-card>
-    </v-dialog>
+      </DialogContent>
+    </Dialog>
 
     <!-- Walk-in / เพิ่มบริการ -->
-    <v-dialog v-model="walkDialog" max-width="620" scrollable>
-      <v-card class="p-6">
-        <p class="m-0 mb-4 text-lg font-medium">
-          {{ addToOrder ? `เพิ่มบริการ · ${addToOrder.customer_name ?? 'ลูกค้าทั่วไป'}` : 'รับลูกค้า Walk-in' }}
-        </p>
+    <Dialog v-model:open="walkDialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-2xl">
+        <DialogHeader>
+          <DialogTitle>{{ addToOrder ? `เพิ่มบริการ · ${addToOrder.customer_name ?? 'ลูกค้าทั่วไป'}` : 'รับลูกค้า Walk-in' }}</DialogTitle>
+          <DialogDescription>{{ step === 1 ? 'ค้นหาลูกค้าด้วยเบอร์โทร หรือเลือกลูกค้าทั่วไป' : `ลูกค้า: ${customerLabel}` }}</DialogDescription>
+        </DialogHeader>
 
-        <template v-if="step === 1">
-          <p class="m-0 mb-2 text-sm font-medium">1. ลูกค้า</p>
-          <v-form class="flex gap-2" @submit.prevent="searchCustomer">
-            <v-text-field v-model="phone" label="เบอร์โทรเต็ม" type="tel" hide-details />
-            <v-btn type="submit" color="primary" class="!h-auto">ค้นหา</v-btn>
-          </v-form>
-          <v-list v-if="found?.length" class="mt-2">
-            <v-list-item v-for="c in found" :key="c.customer_id" :title="c.display_name"
-              :subtitle="`${c.phone_masked} · ${c.is_member ? 'สมาชิก' : 'Guest'}`" rounded="lg" @click="chooseCustomer(c)" />
-          </v-list>
-          <p v-else-if="found" class="m-0 mt-2 text-sm text-light-brown">ไม่พบลูกค้า เพิ่มลูกค้าใหม่ได้ที่เมนู “ลูกค้า”</p>
-          <div class="mt-4 flex justify-between gap-2">
-            <v-btn variant="text" @click="walkDialog = false">ยกเลิก</v-btn>
-            <v-btn variant="tonal" @click="chooseCustomer(null)">ลูกค้าทั่วไป (ไม่ระบุ)</v-btn>
-          </div>
-        </template>
+        <div class="-mx-6 grid content-start gap-4 overflow-y-auto px-6">
+          <template v-if="step === 1">
+            <form class="flex items-end gap-2" @submit.prevent="searchCustomer">
+              <TextField v-model="phone" label="เบอร์โทรเต็ม" type="tel" class="num flex-1" />
+              <Button type="submit"><Search /> ค้นหา</Button>
+            </form>
+            <div v-if="found?.length" class="grid gap-2">
+              <button
+                v-for="c in found"
+                :key="c.customer_id"
+                type="button"
+                class="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                @click="chooseCustomer(c)"
+              >
+                <span>
+                  <span class="block font-medium text-heading">{{ c.display_name }}</span>
+                  <span class="num block text-sm text-muted-foreground">{{ c.phone_masked }}</span>
+                </span>
+                <Badge :variant="c.is_member ? 'default' : 'neutral'">{{ c.is_member ? 'สมาชิก' : 'Guest' }}</Badge>
+              </button>
+            </div>
+            <EmptyState v-else-if="found" compact title="ไม่พบลูกค้า" description="เพิ่มลูกค้าใหม่ได้ที่เมนู “ลูกค้า” หรือรับเป็นลูกค้าทั่วไป" />
+          </template>
 
-        <template v-else>
-          <p v-if="!addToOrder" class="m-0 mb-3 text-sm">ลูกค้า: <b>{{ customerLabel }}</b></p>
-          <p class="m-0 mb-2 text-sm font-medium">บริการ (คนละ 1 รายการ)</p>
-          <div v-for="(p, idx) in people" :key="idx" class="flex items-center gap-2">
-            <v-select v-model="p.option_id" :items="optionItems" :label="`คนที่ ${idx + 1}`" hide-details class="mb-2" />
-            <v-btn v-if="people.length > 1" icon="mdi-close" variant="text" size="small" aria-label="ลบ" @click="people.splice(idx, 1)" />
-          </div>
-          <v-btn v-if="people.length < 10" variant="text" size="small" prepend-icon="mdi-plus" @click="people.push({ option_id: null })">เพิ่มคน</v-btn>
+          <template v-else>
+            <fieldset class="m-0 grid gap-2 border-0 p-0">
+              <legend class="mb-1 text-sm font-medium text-heading">บริการ (คนละ 1 รายการ)</legend>
+              <div v-for="(p, idx) in people" :key="idx" class="flex items-end gap-2">
+                <SelectField v-model="p.option_id" :items="optionItems" :aria-label="`บริการของคนที่ ${idx + 1}`" :placeholder="`คนที่ ${idx + 1}: เลือกบริการ`" class="flex-1" />
+                <Button v-if="people.length > 1" variant="ghost" size="icon" :aria-label="`ลบคนที่ ${idx + 1}`" @click="people.splice(idx, 1)"><X /></Button>
+              </div>
+              <Button v-if="people.length < 10" variant="outline" size="sm" class="w-fit" @click="people.push({ option_id: null })"><UserPlus /> เพิ่มคน</Button>
+            </fieldset>
 
-          <p class="m-0 mb-2 mt-4 text-sm font-medium">เวลาเริ่ม (วันนี้)</p>
-          <v-progress-linear v-if="startsLoading" indeterminate color="primary" />
-          <div class="grid grid-cols-4 gap-2 sm:grid-cols-6">
-            <v-btn v-for="(s, n) in starts" :key="s.starts_at" size="small"
-              :color="startAt === s.starts_at ? 'primary' : undefined"
-              :variant="startAt === s.starts_at ? 'flat' : 'outlined'" @click="startAt = s.starts_at">
-              {{ n === 0 ? `${s.time} เร็วสุด` : s.time }}
-            </v-btn>
-          </div>
-          <p v-if="optionIds.length && optionIds.length === people.length && !startsLoading && !starts.length" class="m-0 text-sm text-light-brown">
-            วันนี้ไม่มีเวลาว่างสำหรับบริการนี้
-          </p>
+            <div class="grid gap-2">
+              <p class="m-0 text-sm font-medium text-heading">เวลาเริ่ม (วันนี้)</p>
+              <LoadingBar v-if="startsLoading" />
+              <div v-if="starts.length" class="grid grid-cols-3 gap-2 sm:grid-cols-5" role="radiogroup" aria-label="เวลาเริ่ม">
+                <button
+                  v-for="(s, n) in starts"
+                  :key="s.starts_at"
+                  type="button"
+                  role="radio"
+                  :aria-checked="startAt === s.starts_at"
+                  class="h-11 rounded-lg border text-[15px] font-medium transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none md:h-10"
+                  :class="startAt === s.starts_at ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-heading hover:bg-muted'"
+                  @click="startAt = s.starts_at"
+                ><span class="num">{{ s.time }}</span><span v-if="n === 0" class="ml-1 text-[13px] opacity-80">เร็วสุด</span></button>
+              </div>
+              <p v-else-if="optionIds.length && optionIds.length === people.length && !startsLoading" class="m-0 rounded-lg border border-dashed border-input px-4 py-3 text-[15px] text-muted-foreground">
+                วันนี้ไม่มีเวลาว่างสำหรับบริการนี้
+              </p>
+            </div>
 
-          <v-textarea v-if="!addToOrder" v-model="note" class="mt-3" label="หมายเหตุ" rows="2" variant="outlined" />
-          <p class="m-0 mt-2 text-right">รวม <b>{{ formatBaht(total) }}</b></p>
-          <div class="mt-4 flex justify-end gap-2">
-            <v-btn v-if="!addToOrder" variant="text" @click="step = 1">ย้อนกลับ</v-btn>
-            <v-btn v-else variant="text" @click="walkDialog = false">ยกเลิก</v-btn>
-            <v-btn color="primary" :disabled="!startAt || optionIds.length !== people.length" :loading="saving" @click="submitWalkIn">
-              สร้างคิว
-            </v-btn>
-          </div>
-        </template>
-      </v-card>
-    </v-dialog>
+            <TextareaField v-if="!addToOrder" v-model="note" label="หมายเหตุ" rows="2" />
+            <div class="flex items-baseline justify-between border-t border-border pt-3">
+              <span class="font-medium text-heading">รวม</span>
+              <span class="num text-xl font-semibold text-heading">{{ formatBaht(total) }}</span>
+            </div>
+          </template>
+        </div>
+
+        <DialogFooter class="gap-2">
+          <template v-if="step === 1">
+            <Button variant="outline" @click="walkDialog = false">ยกเลิก</Button>
+            <Button variant="secondary" @click="chooseCustomer(null)">ลูกค้าทั่วไป (ไม่ระบุ)</Button>
+          </template>
+          <template v-else>
+            <Button v-if="!addToOrder" variant="outline" @click="step = 1">ย้อนกลับ</Button>
+            <Button v-else variant="outline" @click="walkDialog = false">ยกเลิก</Button>
+            <Button :disabled="!startAt || optionIds.length !== people.length || saving" @click="submitWalkIn">สร้างคิว</Button>
+          </template>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

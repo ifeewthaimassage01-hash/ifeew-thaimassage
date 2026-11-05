@@ -1,8 +1,10 @@
-import vuetify, { transformAssetUrls } from 'vite-plugin-vuetify'
 import { fileURLToPath } from 'node:url'
 
 // Staff App — Desktop first, ใช้บนเครื่องประจำสาขา (SPA: device token เก็บใน localStorage)
+// UI/design tokens มาจาก layer ร่วม packages/ui (shadcn-vue + Tailwind v4 ตาม DESIGN.md)
 export default defineNuxtConfig({
+  extends: ['../../packages/ui'],
+
   compatibilityDate: '2026-11-01',
   ssr: false,
   devtools: { enabled: true },
@@ -12,30 +14,16 @@ export default defineNuxtConfig({
       htmlAttrs: { lang: 'th' },
       title: "Ifeew's Thaimassage — Staff",
       meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
-      link: [
-        { rel: 'preconnect', href: 'https://fonts.googleapis.com' },
-        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap' },
-      ],
     },
   },
 
   modules: [
     '@nuxtjs/supabase',
-    '@nuxtjs/tailwindcss',
     '@pinia/nuxt',
     '@vueuse/nuxt',
-    (_options, nuxt) => {
-      nuxt.hooks.hook('vite:extendConfig', (config) => {
-        config.plugins?.push(vuetify({ autoImport: true }))
-      })
-    },
   ],
 
-  build: { transpile: ['vuetify', '@ifeew/shared'] },
-
-  vite: {
-    vue: { template: { transformAssetUrls } },
-  },
+  build: { transpile: ['@ifeew/shared'] },
 
   supabase: {
     types: fileURLToPath(new URL('../../packages/shared/src/database.types.ts', import.meta.url)),
