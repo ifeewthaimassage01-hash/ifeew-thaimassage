@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// ชำระเงินของ Order: ร่าง Invoice → ส่วนลด → ออก Invoice (หักมัดจำอัตโนมัติ) → รับเงิน (เงินสด / โอน / QR + สลิป) + ทิป
-// Void (ต้องมีเหตุผล) / คืนเงิน (OWNER) — ใบเสร็จเก็บในระบบเท่านั้น
+// ชำระเงินของ Order: ออก Invoice ให้อัตโนมัติ (ข้ามขั้นร่าง · หักมัดจำอัตโนมัติ) → รับเงิน (เงินสด / โอน+สลิป — QR รวมกับโอน) + ทิป
+// ยกเลิกบิล (Void ต้องมีเหตุผล) / คืนเงิน (OWNER) — ใบเสร็จเก็บในระบบเท่านั้น
 import { Camera } from '@lucide/vue'
 import {
   formatBaht,
@@ -34,6 +34,10 @@ async function load() {
   loading.value = true
   try {
     invoice.value = (await must(supabase.rpc('pos_create_invoice', { p_order_id: orderId.value }))) as unknown as InvoiceView
+    // ข้ามขั้นร่าง: ออก Invoice ทันทีแล้วไปบันทึกรับเงิน
+    if (invoice.value.status === 'DRAFT') {
+      invoice.value = (await must(supabase.rpc('pos_issue_invoice', { p_invoice_id: invoice.value.invoice_id }))) as unknown as InvoiceView
+    }
   } catch (e) {
     fail(e, 'สร้าง Invoice ไม่สำเร็จ')
   } finally {
@@ -97,7 +101,8 @@ async function issue() {
 // ---------------------------------------------------------------------------
 // รับเงิน
 // ---------------------------------------------------------------------------
-const method = ref<'CASH' | 'QR' | 'BANK_TRANSFER'>('CASH')
+// โอน = รวม QR หน้าร้าน + โอนเข้าบัญชี (บันทึกเป็น BANK_TRANSFER)
+const method = ref<'CASH' | 'BANK_TRANSFER'>('CASH')
 const amount = ref<number | string>('')
 const tendered = ref<number | string>('')
 const tipAmount = ref<number | string>('')
@@ -199,7 +204,7 @@ async function submitVoid() {
       p_invoice_id: id, p_reason: voidReason.value.trim(), p_idempotency_key: voidKey,
     })))) as unknown as InvoiceView
     voidDialog.value = false
-    ok('Void Invoice แล้ว ออกใบใหม่ได้ด้วยปุ่ม “สร้าง Invoice ใหม่”')
+    ok('ยกเลิกบิลแล้ว ออกบิลใหม่ได้ด้วยปุ่ม “ออกบิลใหม่”')
   } catch (e) {
     fail(e)
   } finally {
@@ -250,14 +255,14 @@ async function submitRefund() {
           <Badge dot :variant="invoice.status === 'PAID' ? 'success' : invoice.status === 'VOID' ? 'danger' : invoice.status === 'DRAFT' ? 'neutral' : 'pending'">
             {{ invoiceStatusLabels[invoice.status] }}
           </Badge>
-          <Button v-if="invoice.status === 'VOID'" @click="load">สร้าง Invoice ใหม่</Button>
-          <Button v-else variant="ghost" class="text-danger-ink" @click="voidDialog = true; voidReason = ''">Void Invoice</Button>
+          <Button v-if="invoice.status === 'VOID'" @click="load">ออกบิลใหม่</Button>
+          <Button v-else variant="ghost" class="text-danger-ink" @click="voidDialog = true; voidReason = ''">ยกเลิกบิล</Button>
           <Button as-child variant="outline"><NuxtLink to="/payments">กลับหน้าชำระเงิน</NuxtLink></Button>
         </template>
       </PageHeader>
       <div v-if="invoice.receipt_number || invoice.void_reason" class="-mt-4 mb-6 grid gap-1 text-[15px]">
         <p v-if="invoice.receipt_number" class="m-0">ใบเสร็จ (เก็บในระบบ): <span class="num text-heading">{{ invoice.receipt_number }}</span></p>
-        <p v-if="invoice.void_reason" class="m-0 text-danger-ink">Void: {{ invoice.void_reason }}</p>
+        <p v-if="invoice.void_reason" class="m-0 text-danger-ink">ยกเลิกบิล: {{ invoice.void_reason }}</p>
       </div>
 
       <div class="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
@@ -332,7 +337,7 @@ async function submitRefund() {
         <!-- รับเงิน -->
         <SectionCard v-if="payable" title="รับเงิน" class="xl:sticky xl:top-24">
           <form class="grid gap-4" @submit.prevent="pay">
-            <SegmentedControl v-model="method" :items="[{ value: 'CASH', label: 'เงินสด' }, { value: 'QR', label: 'QR' }, { value: 'BANK_TRANSFER', label: 'โอน' }]" label="วิธีรับเงิน" class="w-full [&>button]:flex-1" />
+            <SegmentedControl v-model="method" :items="[{ value: 'CASH', label: 'เงินสด' }, { value: 'BANK_TRANSFER', label: 'โอน / QR' }]" label="วิธีรับเงิน" class="w-full [&>button]:flex-1" />
             <TextField v-model="amount" type="number" label="ยอดรับ" :hint="`ค้าง ${formatBaht(Number(invoice.balance))}`" suffix="บาท" class="num" />
             <TextField v-if="method === 'CASH'" v-model="tendered" type="number" label="รับเงินมา" :hint="`ทอน ${formatBaht(change)}`" suffix="บาท" class="num" />
             <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
@@ -341,7 +346,7 @@ async function submitRefund() {
             </div>
 
             <div v-if="method !== 'CASH'" class="grid gap-3 rounded-lg bg-background/70 p-4">
-              <p class="m-0 text-[15px]">ลูกค้าโอนผ่าน QR หน้าร้าน ยอด <span class="num font-semibold text-heading">{{ formatBaht((Number(amount) || 0) + tip) }}</span> แล้วถ่ายรูปสลิป</p>
+              <p class="m-0 text-[15px]">ลูกค้าสแกน QR หรือโอนเข้าบัญชีร้าน ยอด <span class="num font-semibold text-heading">{{ formatBaht((Number(amount) || 0) + tip) }}</span> แล้วถ่ายรูปสลิป</p>
               <label
                 class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-card px-4 py-3 text-[15px] text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50"
                 :class="slipUploading || !(Number(amount) > 0) ? 'pointer-events-none opacity-50' : ''"
@@ -381,17 +386,17 @@ async function submitRefund() {
       </DialogContent>
     </Dialog>
 
-    <!-- Void -->
+    <!-- ยกเลิกบิล -->
     <Dialog v-model:open="voidDialog">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>Void Invoice</DialogTitle>
+          <DialogTitle>ยกเลิกบิล</DialogTitle>
           <DialogDescription>ถ้ารับเงินแล้ว ต้องให้เจ้าของร้านยืนยันตัวตน และเงินต้องอยู่ในกะที่ยังเปิด (นอกนั้นใช้คืนเงิน)</DialogDescription>
         </DialogHeader>
         <TextareaField v-model="voidReason" label="เหตุผล" hint="บังคับ" rows="2" />
         <DialogFooter class="gap-2">
           <Button variant="outline" @click="voidDialog = false">ปิด</Button>
-          <Button variant="destructive" :disabled="saving" @click="submitVoid">ยืนยัน Void</Button>
+          <Button variant="destructive" :disabled="saving" @click="submitVoid">ยืนยันยกเลิกบิล</Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>
@@ -405,7 +410,7 @@ async function submitRefund() {
         </DialogHeader>
         <form class="grid gap-4" @submit.prevent="submitRefund">
           <TextField v-model="refundForm.amount" type="number" label="ยอดคืน" suffix="บาท" class="num" />
-          <SegmentedControl v-model="refundForm.method" :items="[{ value: 'CASH', label: 'เงินสดจากลิ้นชัก' }, { value: 'BANK_TRANSFER', label: 'โอนคืน' }]" label="วิธีคืนเงิน" />
+          <SegmentedControl v-model="refundForm.method" :items="[{ value: 'CASH', label: 'คืนเงินสด' }, { value: 'BANK_TRANSFER', label: 'โอนคืน' }]" label="วิธีคืนเงิน" />
           <TextField v-if="refundForm.method === 'BANK_TRANSFER'" v-model="refundForm.reference" label="เลขอ้างอิงการโอนคืน" />
           <TextareaField v-model="refundForm.reason" label="เหตุผล" hint="บังคับ" rows="2" />
           <DialogFooter class="gap-2">

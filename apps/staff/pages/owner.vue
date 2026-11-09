@@ -58,7 +58,6 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
         <div class="grid sm:grid-cols-2 xl:grid-cols-3">
           <NuxtLink
             v-for="a in [
-              { to: '/sessions', label: 'กะรอตรวจ', value: String(dash.actions.sessions_pending), alert: !!dash.actions.sessions_pending },
               { to: '/daily-closings', label: 'ปิดยอดรอตรวจ', value: String(dash.actions.closings_pending), alert: !!dash.actions.closings_pending },
               { to: '/expenses', label: 'คำขอยกเลิกรายจ่าย', value: String(dash.actions.expense_void_requests), alert: !!dash.actions.expense_void_requests },
               { to: '/reports/finance', label: 'รายจ่ายสูงเดือนนี้', value: String(dash.actions.large_expenses_month), alert: false },

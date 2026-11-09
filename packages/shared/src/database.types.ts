@@ -74,6 +74,7 @@ export type Database = {
           timezone: string
           cancellation_cutoff_hours: number
           large_expense_threshold: number
+          freelance_fuel_amount: number
           staff_pin_max_attempts: number
           staff_pin_lockout_minutes: number
           staff_idle_lock_minutes: number
@@ -93,6 +94,7 @@ export type Database = {
           timezone?: string
           cancellation_cutoff_hours?: number
           large_expense_threshold?: number
+          freelance_fuel_amount?: number
           staff_pin_max_attempts?: number
           staff_pin_lockout_minutes?: number
           staff_idle_lock_minutes?: number
@@ -100,6 +102,7 @@ export type Database = {
         Update: {
           cancellation_cutoff_hours?: number
           large_expense_threshold?: number
+          freelance_fuel_amount?: number
           staff_pin_max_attempts?: number
           staff_pin_lockout_minutes?: number
           staff_idle_lock_minutes?: number
@@ -1167,6 +1170,16 @@ export type Database = {
       pos_check_in_booking: { Args: { p_booking_id: string }; Returns: Json }
       queue_call: {
         Args: { p_queue_id: string; p_employee_id: string; p_confirm_off_shift?: boolean; p_reason?: string | null }
+        Returns: Json
+      }
+      queue_call_start: {
+        Args: {
+          p_queue_id: string
+          p_employee_id?: string | null
+          p_confirm_off_shift?: boolean
+          p_freelance_name?: string | null
+          p_with_fuel?: boolean
+        }
         Returns: Json
       }
       queue_accept: { Args: { p_queue_id: string }; Returns: Json }

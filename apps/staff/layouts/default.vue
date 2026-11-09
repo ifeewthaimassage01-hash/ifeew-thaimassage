@@ -12,35 +12,20 @@ const { crumbs } = useStaffNav()
 const drawer = ref(false)
 watch(() => route.fullPath, () => (drawer.value = false))
 
-// ล็อกหน้าจออัตโนมัติเมื่อไม่มีการใช้งาน (ค่าจาก company_settings)
-const idleMinutes = ref(5)
-const { lastActive } = useIdle()
-const now = ref(Date.now())
-useIntervalFn(() => (now.value = Date.now()), 15_000)
-const idle = computed(() => now.value - lastActive.value > idleMinutes.value * 60_000)
-
-watch(
-  () => company.value?.company_id,
-  async (companyId) => {
-    if (!companyId) return
-    const { data } = await supabase
-      .from('company_settings')
-      .select('staff_idle_lock_minutes')
-      .eq('company_id', companyId)
-      .maybeSingle()
-    if (data) idleMinutes.value = data.staff_idle_lock_minutes
-  },
-  { immediate: true },
-)
-
 async function logout(reason?: string) {
   await supabase.auth.signOut()
   clear()
+  clearLoginMark()
   await navigateTo(reason ? `/login?error=${reason}` : '/login')
 }
 
-watch(idle, (isIdle) => {
-  if (isIdle && user.value) logout('idle')
+// ออกจากระบบอัตโนมัติเมื่อขึ้นวันทำงานใหม่ (ตี 3 เวลาไทย) — ตรวจทุก 30 วินาที และตอนกลับมาที่แท็บ
+function checkWorkDay() {
+  if (user.value && loginExpired()) logout('day_end')
+}
+useIntervalFn(checkWorkDay, 30_000)
+useEventListener(document, 'visibilitychange', () => {
+  if (document.visibilityState === 'visible') checkWorkDay()
 })
 
 const displayName = computed(() => user.value?.user_metadata?.display_name || user.value?.email || 'ผู้ใช้')

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // หน้าร้าน (POS): กะเปิดอัตโนมัติ (migration 031), รับลูกค้า Walk-in, เช็กอินลูกค้าที่จอง, เพิ่มบริการ
 // ร้านไม่มีเครื่องพิมพ์: หลังสร้างคิวให้แจ้งเลขคิวที่แสดงบนจอแก่ลูกค้า
-import { Banknote, ListOrdered, Plus, Search, Store, UserPlus, X } from '@lucide/vue'
+import { Banknote, ListOrdered, Plus, Search, UserPlus, X } from '@lucide/vue'
 import {
   bangkokTime,
   formatBaht,
@@ -37,75 +37,18 @@ async function loadFinance() {
   const { data } = await supabase.rpc('pos_finance_board', { p_branch_id: activeBranch.value.branch_id })
   finance.value = (data ?? null) as unknown as FinanceBoard | null
 }
-watch(() => [board.value?.session?.session_id, board.value?.orders.length, activeBranch.value?.branch_id], loadFinance, { immediate: true })
+watch(() => [board.value?.orders.length, activeBranch.value?.branch_id], loadFinance, { immediate: true })
 const invoiceOf = (orderId: string) => finance.value?.invoices.find((i) => i.service_order_id === orderId && i.status !== 'VOID')
 const outstanding = computed(() => (finance.value?.invoices ?? []).filter((i) => ['ISSUED', 'PARTIALLY_PAID'].includes(i.status)))
 
-// เงินเข้า/ออกลิ้นชัก
-const cashDialog = ref(false)
-const cashForm = reactive({ type: 'CASH_IN' as 'CASH_IN' | 'CASH_OUT', amount: '' as number | string, reason: '' })
-async function submitCash() {
-  if (!activeBranch.value) return
-  saving.value = true
-  try {
-    await must(supabase.rpc('pos_cash_adjustment', {
-      p_branch_id: activeBranch.value.branch_id, p_type: cashForm.type, p_amount: Number(cashForm.amount), p_reason: cashForm.reason.trim(),
-    }))
-    cashDialog.value = false
-    message.value = { type: 'success', text: 'บันทึกเงินเข้า/ออกลิ้นชักแล้ว' }
-    await load() // กะอาจถูกเปิดให้อัตโนมัติ
-  } catch (e) {
-    fail(e)
-  } finally {
-    saving.value = false
-  }
-}
-
 async function payOutTips(t: FinanceBoard['unpaid_cash_tips'][number]) {
-  if (!activeBranch.value || !(await confirm({ title: `จ่ายทิปให้ ${t.nickname}?`, description: `จ่ายเงินสด ${formatBaht(Number(t.amount))} จากลิ้นชัก`, confirmText: 'จ่ายทิป' }))) return
+  if (!activeBranch.value || !(await confirm({ title: `จ่ายทิปให้ ${t.nickname}?`, description: `จ่ายเงินสด ${formatBaht(Number(t.amount))}`, confirmText: 'จ่ายทิป' }))) return
   try {
     await must(supabase.rpc('pos_pay_out_tips', { p_branch_id: activeBranch.value.branch_id, p_employee_id: t.employee_id }))
     message.value = { type: 'success', text: `จ่ายทิปให้ ${t.nickname} แล้ว` }
     await Promise.all([loadFinance(), load()])
   } catch (e) {
     fail(e)
-  }
-}
-
-// ปิดกะ: นับเงินก่อน (ไม่แสดงยอดที่ระบบคาดไว้) แล้วระบบแจ้งผลต่าง
-const closeDialog = ref(false)
-const closeCash = ref<number | string>('')
-const closeNote = ref('')
-const closeNeedsNote = ref(false)
-const closeResult = ref<Record<string, number> | null>(null)
-function openClose() {
-  closeCash.value = ''
-  closeNote.value = ''
-  closeNeedsNote.value = false
-  closeResult.value = null
-  closeDialog.value = true
-}
-async function submitClose() {
-  if (!board.value?.session || closeCash.value === '') return
-  saving.value = true
-  try {
-    const { data, error: err } = await supabase.rpc('pos_close_session', {
-      p_session_id: board.value.session.session_id, p_actual_cash: Number(closeCash.value), p_note: closeNote.value.trim() || null,
-    })
-    if (err) {
-      if ((err as { hint?: string }).hint === 'DIFFERENCE_NOTE') {
-        closeNeedsNote.value = true
-        message.value = { type: 'error', text: err.message }
-        return
-      }
-      throw err
-    }
-    closeResult.value = data as unknown as Record<string, number>
-    await load()
-  } catch (e) {
-    fail(e)
-  } finally {
-    saving.value = false
   }
 }
 
@@ -141,7 +84,7 @@ async function checkIn(b: StaffBookingRow) {
   try {
     addToOrder.value = null
     created.value = (await must(supabase.rpc('pos_check_in_booking', { p_booking_id: b.booking_id }))) as unknown as PosOrder
-    await load()
+    await goToQueue()
   } catch (e) {
     fail(e)
   } finally {
@@ -258,7 +201,7 @@ async function submitWalkIn() {
           p_idempotency_key: idemKey,
         }))) as unknown as PosOrder)
     walkDialog.value = false
-    await load()
+    await goToQueue()
   } catch (e) {
     fail(e, 'สร้างคิวไม่สำเร็จ')
   } finally {
@@ -272,6 +215,12 @@ const newQueues = computed(() => {
   const before = new Set((addToOrder.value?.items ?? []).map((i) => i.queue_id))
   return created.value.items.filter((i) => !before.has(i.queue_id) && i.queue_status !== 'CANCELLED')
 })
+
+// สร้างคิว/เช็กอินเสร็จ → ไปหน้าคิวทันที (หน้าคิวแสดงเลขคิวใหม่และไฮไลต์การ์ด)
+async function goToQueue() {
+  const ids = newQueues.value.map((i) => i.queue_id)
+  await navigateTo({ path: '/queue', query: ids.length ? { new: ids.join(',') } : undefined })
+}
 </script>
 
 <template>
@@ -288,21 +237,6 @@ const newQueues = computed(() => {
     <LoadingBar v-if="loading" class="mb-4" />
 
     <div class="grid gap-6">
-      <!-- กะ -->
-      <div class="flex flex-wrap items-center justify-between gap-3 rounded-xl border px-5 py-4" :class="board?.session ? 'border-success/40 bg-success-soft/50' : 'border-border bg-card'">
-        <p class="m-0 flex items-center gap-2 text-[15px]" :class="board?.session ? 'text-success-ink' : 'text-muted-foreground'">
-          <Store class="size-5 shrink-0" />
-          <template v-if="board?.session">
-            <span>กะเปิดอยู่ตั้งแต่ <span class="num font-medium">{{ bangkokTime(board.session.opened_at) }}</span> โดย {{ board.session.opened_by_name ?? '—' }} · เงินสดเริ่มต้น <span class="num font-medium">{{ formatBaht(Number(board.session.opening_cash)) }}</span></span>
-          </template>
-          <span v-else>ยังไม่มีกะ ระบบจะเปิดกะให้อัตโนมัติเมื่อรับเงินหรือบันทึกเงินเข้า/ออกลิ้นชักครั้งแรก</span>
-        </p>
-        <div class="flex gap-2">
-          <Button variant="ghost" size="sm" @click="cashDialog = true; cashForm.amount = ''; cashForm.reason = ''">เงินเข้า/ออกลิ้นชัก</Button>
-          <Button v-if="board?.session" variant="outline" size="sm" @click="openClose">ปิดกะ</Button>
-        </div>
-      </div>
-
       <!-- เลขคิวที่เพิ่งสร้าง -->
       <section v-if="created && newQueues.length" class="rounded-xl border-2 border-primary/40 bg-card p-5" aria-live="polite" aria-labelledby="new-queue-h">
         <div class="flex flex-wrap items-start justify-between gap-3">
@@ -388,59 +322,6 @@ const newQueues = computed(() => {
         </SectionCard>
       </div>
     </div>
-
-    <!-- เงินเข้า/ออกลิ้นชัก -->
-    <Dialog v-model:open="cashDialog">
-      <DialogContent class="sm:max-w-md">
-        <DialogHeader>
-          <DialogTitle>เงินเข้า/ออกลิ้นชัก</DialogTitle>
-          <DialogDescription>รายจ่ายของร้านให้บันทึกที่เมนู “รายจ่าย”</DialogDescription>
-        </DialogHeader>
-        <form class="grid gap-4" @submit.prevent="submitCash">
-          <SegmentedControl v-model="cashForm.type" :items="[{ value: 'CASH_IN', label: 'เงินเข้า' }, { value: 'CASH_OUT', label: 'เงินออก' }]" label="ประเภท" />
-          <TextField v-model="cashForm.amount" type="number" label="จำนวนเงิน" suffix="บาท" class="num" />
-          <TextField v-model="cashForm.reason" label="เหตุผล" placeholder="เช่น แลกเหรียญ, นำเงินฝากธนาคาร" />
-          <DialogFooter class="gap-2">
-            <Button type="button" variant="outline" @click="cashDialog = false">ปิด</Button>
-            <Button type="submit" :disabled="saving">บันทึก</Button>
-          </DialogFooter>
-        </form>
-      </DialogContent>
-    </Dialog>
-
-    <!-- ปิดกะ -->
-    <Dialog v-model:open="closeDialog">
-      <DialogContent class="sm:max-w-md" @interact-outside.prevent>
-        <DialogHeader>
-          <DialogTitle>ปิดกะ</DialogTitle>
-          <DialogDescription>{{ closeResult ? 'ปิดกะแล้ว รอเจ้าของร้านตรวจ · รายการเงินถัดไปจะเปิดกะใหม่ให้อัตโนมัติ' : 'นับเงินสดในลิ้นชักทั้งหมด แล้วกรอกยอดที่นับได้ ระบบจะแสดงยอดที่ควรมีหลังบันทึก' }}</DialogDescription>
-        </DialogHeader>
-        <form v-if="!closeResult" class="grid gap-4" @submit.prevent="submitClose">
-          <TextField v-model="closeCash" type="number" label="เงินสดที่นับได้" suffix="บาท" class="num" />
-          <TextareaField v-if="closeNeedsNote" v-model="closeNote" label="เหตุผลที่เงินไม่ตรง" hint="บังคับ" rows="2" />
-          <DialogFooter class="gap-2">
-            <Button type="button" variant="outline" @click="closeDialog = false">ยกเลิก</Button>
-            <Button type="submit" :disabled="closeCash === '' || saving">ปิดกะ</Button>
-          </DialogFooter>
-        </form>
-        <template v-else>
-          <dl class="m-0 grid grid-cols-2 gap-x-4 gap-y-1.5 text-[15px]">
-            <dt class="text-muted-foreground">เงินสดเริ่มต้น</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.opening_cash)) }}</dd>
-            <dt class="text-muted-foreground">ขายเงินสด</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.cash_sales)) }}</dd>
-            <dt class="text-muted-foreground">ทิปเงินสด</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.cash_tips)) }}</dd>
-            <dt class="text-muted-foreground">เงินเข้า</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.cash_in)) }}</dd>
-            <dt class="text-muted-foreground">เงินออก</dt><dd class="num m-0 text-right">−{{ formatBaht(Number(closeResult.cash_out)) }}</dd>
-            <dt class="text-muted-foreground">คืนเงินสด</dt><dd class="num m-0 text-right">−{{ formatBaht(Number(closeResult.cash_refunds)) }}</dd>
-            <dt class="border-t border-border pt-2 font-medium text-heading">ควรมี</dt><dd class="num m-0 border-t border-border pt-2 text-right font-medium text-heading">{{ formatBaht(Number(closeResult.expected_cash)) }}</dd>
-            <dt class="font-medium text-heading">นับได้</dt><dd class="num m-0 text-right font-medium text-heading">{{ formatBaht(Number(closeResult.actual_cash)) }}</dd>
-            <dt class="font-medium text-heading">ผลต่าง</dt>
-            <dd class="num m-0 text-right font-semibold" :class="Number(closeResult.cash_difference) === 0 ? 'text-success-ink' : 'text-danger-ink'">{{ formatBaht(Number(closeResult.cash_difference)) }}</dd>
-            <dt class="text-muted-foreground">โอน / QR</dt><dd class="num m-0 text-right">{{ formatBaht(Number(closeResult.transfer_sales)) }} / {{ formatBaht(Number(closeResult.qr_sales)) }}</dd>
-          </dl>
-          <DialogFooter><Button @click="closeDialog = false">เสร็จสิ้น</Button></DialogFooter>
-        </template>
-      </DialogContent>
-    </Dialog>
 
     <!-- Walk-in / เพิ่มบริการ -->
     <Dialog v-model:open="walkDialog">

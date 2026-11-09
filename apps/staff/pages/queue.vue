@@ -2,7 +2,7 @@
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
 // แท็บ "คิวของฉัน" สำหรับหมอที่ login ด้วย PIN บนเครื่องสาขา
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
-import { Clock, KeyRound, RefreshCw, UserRound } from '@lucide/vue'
+import { Clock, KeyRound, RefreshCw, UserRound, X } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -29,7 +29,7 @@ type Row = PosOrderItem & { order: PosOrder }
 
 const supabase = useSupabaseClient()
 const user = useSupabaseUser()
-const { activeBranch } = useAccess()
+const { activeBranch, company } = useAccess()
 const { board, loading, error, load } = usePosBoard()
 
 const tab = ref<'all' | 'mine'>('all')
@@ -44,12 +44,19 @@ useIntervalFn(() => (now.value = Date.now()), 30_000)
 const rows = computed<Row[]>(() =>
   (board.value?.orders ?? []).flatMap((o) => o.items.map((i) => ({ ...i, order: o }))),
 )
+// คิวที่เพิ่งสร้างจากหน้าร้าน (?new=id,id) — แสดงเลขคิวให้แจ้งลูกค้า และไฮไลต์การ์ด
+const route = useRoute()
+const router = useRouter()
+const newIds = computed(() => new Set(String(route.query.new ?? '').split(',').filter(Boolean)))
+const newRows = computed(() => rows.value.filter((r) => newIds.value.has(r.queue_id)).sort((a, b) => a.queue_number - b.queue_number))
+const dismissNew = () => router.replace({ query: { ...route.query, new: undefined } })
+
 const mine = computed(() =>
   rows.value.filter((r) => r.therapist?.user_id === user.value?.sub && !['COMPLETED', 'CANCELLED'].includes(r.queue_status)),
 )
 const columns: Array<{ key: string; title: string; statuses: QueueStatus[] }> = [
-  { key: 'waiting', title: 'รอเรียก', statuses: ['WAITING'] },
-  { key: 'called', title: 'เรียกแล้ว / หมอรับแล้ว', statuses: ['CALLED', 'ACCEPTED'] },
+  // CALLED/ACCEPTED = คิวที่เรียกแบบเดิม (ก่อน migration 033) แสดงรวมกับรอเรียก
+  { key: 'waiting', title: 'รอเรียก', statuses: ['WAITING', 'CALLED', 'ACCEPTED'] },
   { key: 'service', title: 'กำลังให้บริการ', statuses: ['IN_SERVICE'] },
   { key: 'done', title: 'เสร็จ / ยกเลิก', statuses: ['COMPLETED', 'CANCELLED'] },
 ]
@@ -92,13 +99,25 @@ async function act(r: Row, fn: () => PromiseLike<{ data: unknown; error: unknown
   }
 }
 
-const accept = (r: Row) =>
-  act(r, () => supabase.rpc('queue_accept', { p_queue_id: r.queue_id }), `รับคิว ${formatQueueNumber(r.queue_number)} แล้ว`)
-const start = (r: Row) =>
-  act(r, () => supabase.rpc('queue_start', { p_queue_id: r.queue_id }), `เริ่มบริการคิว ${formatQueueNumber(r.queue_number)}`)
+// จบบริการ → ไปหน้าชำระเงินของลูกค้าคนนั้นทันที
+//   (ถ้าลูกค้ายังมีคิวอื่นรอ/กำลังทำอยู่ เช่นต่อเวลาที่เริ่มต่อให้อัตโนมัติ จะอยู่หน้าคิวต่อ)
 async function complete(r: Row) {
   if (!(await confirm({ title: `จบบริการคิว ${formatQueueNumber(r.queue_number)}?`, description: r.service_name, confirmText: 'จบบริการ' }))) return
-  act(r, () => supabase.rpc('queue_complete', { p_queue_id: r.queue_id }), `จบบริการคิว ${formatQueueNumber(r.queue_number)} แล้ว`)
+  busy.value = r.queue_id
+  try {
+    const order = (await must(supabase.rpc('queue_complete', { p_queue_id: r.queue_id }))) as unknown as PosOrder
+    const pending = order.items.some((i) => ['WAITING', 'CALLED', 'ACCEPTED', 'IN_SERVICE'].includes(i.queue_status))
+    if (!pending) {
+      await navigateTo(`/checkout/${order.order_id}`)
+      return
+    }
+    ok(`จบบริการคิว ${formatQueueNumber(r.queue_number)} แล้ว · ลูกค้ายังมีคิวอื่นอยู่`)
+    await load()
+  } catch (e) {
+    fail(e)
+  } finally {
+    busy.value = null
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -108,12 +127,59 @@ const callDialog = ref(false)
 const callRow = ref<Row | null>(null)
 const callReason = ref('')
 const offShift = ref<{ therapist: PosTherapist; text: string } | null>(null)
+// เรียกคิว: เลือกประเภทหมอ — หมอวิ่งกรอกชื่อ + ค่าน้ำมัน (บันทึกเป็นรายจ่ายของร้าน)
+const callKind = ref<'regular' | 'freelance'>('regular')
+const freelance = reactive({ name: '', fuel: false })
+// ค่าน้ำมันต่อครั้ง: เจ้าของร้านตั้งที่ “ตั้งค่าบริษัท” (company_settings.freelance_fuel_amount)
+const fuelSetting = ref(0)
+async function loadFuelSetting() {
+  if (!company.value) return
+  const { data } = await supabase.from('company_settings').select('freelance_fuel_amount').eq('company_id', company.value.company_id).maybeSingle()
+  fuelSetting.value = Number(data?.freelance_fuel_amount ?? 0)
+}
+const isHandover = computed(() => callRow.value?.queue_status === 'IN_SERVICE')
 
 function openCall(r: Row) {
   callRow.value = r
   callReason.value = ''
   offShift.value = null
+  callKind.value = 'regular'
+  Object.assign(freelance, { name: '', fuel: false })
   callDialog.value = true
+  loadFuelSetting()
+}
+
+const canCallFreelance = computed(() => freelance.name.trim().length > 0 && (!freelance.fuel || fuelSetting.value > 0))
+
+async function callStart(args: { employeeId?: string; confirmOffShift?: boolean; therapist?: PosTherapist }) {
+  const r = callRow.value
+  if (!r) return
+  const isFreelance = !args.employeeId
+  busy.value = r.queue_id
+  try {
+    const { error: err } = await supabase.rpc('queue_call_start', {
+      p_queue_id: r.queue_id,
+      p_employee_id: args.employeeId ?? null,
+      p_confirm_off_shift: args.confirmOffShift ?? false,
+      p_freelance_name: isFreelance ? freelance.name.trim() : null,
+      p_with_fuel: isFreelance && freelance.fuel,
+    })
+    if (err) {
+      if ((err as { hint?: string }).hint === 'OFF_SHIFT' && args.therapist) {
+        offShift.value = { therapist: args.therapist, text: err.message }
+        return
+      }
+      throw err
+    }
+    callDialog.value = false
+    const who = isFreelance ? `หมอวิ่ง ${freelance.name.trim()}` : args.therapist?.nickname ?? ''
+    ok(`เริ่มบริการคิว ${formatQueueNumber(r.queue_number)} · ${who}${isFreelance && freelance.fuel ? ` · ค่าน้ำมัน ${formatBaht(fuelSetting.value)}` : ''}`)
+    await load()
+  } catch (e) {
+    fail(e)
+  } finally {
+    busy.value = null
+  }
 }
 
 const therapists = computed(() => board.value?.therapists ?? [])
@@ -121,6 +187,7 @@ const therapists = computed(() => board.value?.therapists ?? [])
 async function pick(t: PosTherapist, confirmOffShift = false) {
   const r = callRow.value
   if (!r) return
+  if (r.queue_status !== 'IN_SERVICE') return callStart({ employeeId: t.employee_id, confirmOffShift, therapist: t })
   const changing = !!r.therapist
   if (changing && !reasonSchema.safeParse(callReason.value).success) {
     message.value = { type: 'error', text: 'กรุณาระบุเหตุผลที่เปลี่ยนหมอ' }
@@ -335,6 +402,22 @@ async function submitClock(pin: string) {
       </template>
     </PageHeader>
 
+    <section v-if="newRows.length" class="mb-6 rounded-xl border-2 border-primary/40 bg-card p-5" aria-live="polite" aria-labelledby="new-queue-h">
+      <div class="mb-3 flex items-start justify-between gap-3">
+        <div>
+          <h2 id="new-queue-h" class="m-0 text-lg font-semibold">สร้างคิวแล้ว · แจ้งเลขคิวให้ลูกค้า</h2>
+          <p class="m-0 text-sm text-muted-foreground">{{ newRows[0]!.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
+        </div>
+        <Button variant="ghost" size="icon" aria-label="ปิดเลขคิว" @click="dismissNew"><X /></Button>
+      </div>
+      <div class="flex flex-wrap gap-3">
+        <div v-for="r in newRows" :key="r.queue_id" class="min-w-40 rounded-xl bg-secondary/60 px-5 py-4 text-center">
+          <p class="num m-0 text-4xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
+          <p class="m-0 mt-2 text-sm text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
+        </div>
+      </div>
+    </section>
+
     <SegmentedControl
       v-model="tab"
       :items="[{ value: 'all', label: 'คิวทั้งหมด' }, { value: 'mine', label: mine.length ? `คิวของฉัน (${mine.length})` : 'คิวของฉัน' }]"
@@ -361,8 +444,6 @@ async function submitClock(pin: string) {
           </div>
           <p v-if="minutesLeft(r) !== null" class="m-0 px-6 pb-4 text-lg">เหลือประมาณ <span class="num font-semibold text-heading">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</p>
           <div class="border-t border-border p-4">
-            <Button v-if="r.queue_status === 'CALLED'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="accept(r)">รับคิว</Button>
-            <Button v-if="r.queue_status === 'ACCEPTED'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="start(r)">เริ่มบริการ</Button>
             <Button v-if="r.queue_status === 'IN_SERVICE'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="complete(r)">จบบริการ</Button>
           </div>
         </Card>
@@ -370,7 +451,7 @@ async function submitClock(pin: string) {
     </template>
 
     <!-- คิวทั้งหมด -->
-    <div v-else class="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-[repeat(4,minmax(0,1fr))_240px]">
+    <div v-else class="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-[repeat(3,minmax(0,1fr))_240px]">
       <section v-for="c in columns" :key="c.key" class="grid gap-3 rounded-xl bg-secondary/35 p-3" :aria-labelledby="`col-${c.key}`">
         <h2 :id="`col-${c.key}`" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
           {{ c.title }} <span class="num rounded-md bg-card px-2 text-sm font-medium text-muted-foreground">{{ byColumn(c.statuses).length }}</span>
@@ -380,7 +461,7 @@ async function submitClock(pin: string) {
           v-for="r in byColumn(c.statuses)"
           :key="r.queue_id"
           class="grid gap-1 rounded-lg border bg-card p-4"
-          :class="[isOverdue(r) ? 'border-danger ring-1 ring-danger/40' : 'border-border', c.key === 'done' ? 'opacity-70' : '']"
+          :class="[isOverdue(r) ? 'border-danger ring-1 ring-danger/40' : newIds.has(r.queue_id) ? 'border-primary ring-2 ring-primary/30' : 'border-border', c.key === 'done' ? 'opacity-70' : '']"
         >
           <div class="flex items-start justify-between gap-2">
             <p class="num m-0 text-3xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
@@ -400,24 +481,23 @@ async function submitClock(pin: string) {
           </p>
           <p v-if="r.therapist" class="m-0 flex flex-wrap items-center gap-1.5 text-sm">
             <UserRound class="size-4 text-muted-soft" aria-hidden="true" /><span class="text-heading">{{ r.therapist.nickname }}</span>
+            <Badge v-if="r.therapist.is_freelance" variant="outline">หมอวิ่ง</Badge>
+            <span v-if="r.therapist.fuel_amount" class="text-muted-foreground">· ค่าน้ำมัน <span class="num">{{ formatBaht(Number(r.therapist.fuel_amount)) }}</span></span>
             <Badge v-if="r.therapist.off_shift_confirmed" variant="outline">นอกกะ</Badge>
             <span v-if="r.handovers.length" class="text-muted-foreground">(ต่อจาก {{ r.handovers.map((h) => h.nickname).join(', ') }})</span>
           </p>
           <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 text-sm text-danger-ink">{{ r.cancel_reason }}</p>
 
           <div v-if="c.key !== 'done'" class="mt-2 grid gap-2">
-            <Button v-if="r.queue_status === 'WAITING'" size="sm" :disabled="busy === r.queue_id" @click="openCall(r)">เรียกคิว</Button>
-            <Button v-if="r.queue_status === 'CALLED'" size="sm" :disabled="busy === r.queue_id" @click="accept(r)">หมอรับคิว</Button>
-            <Button v-if="r.queue_status === 'ACCEPTED'" size="sm" :disabled="busy === r.queue_id" @click="start(r)">เริ่มบริการ</Button>
+            <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" size="sm" :disabled="busy === r.queue_id" @click="openCall(r)">เรียกคิว</Button>
             <Button v-if="r.queue_status === 'IN_SERVICE'" size="sm" :disabled="busy === r.queue_id" @click="complete(r)">จบบริการ</Button>
             <div class="flex flex-wrap gap-1">
-              <Button v-if="['CALLED', 'ACCEPTED'].includes(r.queue_status)" size="xs" variant="ghost" @click="openCall(r)">เปลี่ยนหมอ</Button>
               <template v-if="r.queue_status === 'IN_SERVICE'">
                 <Button size="xs" variant="ghost" @click="openExtend(r)">ต่อเวลา</Button>
                 <Button size="xs" variant="ghost" @click="openCall(r)">เปลี่ยนหมอ</Button>
                 <Button v-if="withinUndo(r.started_at)" size="xs" variant="ghost" @click="openUndo(r)">ย้อนเริ่ม</Button>
               </template>
-              <Button v-if="device.token.value && r.therapist && ['CALLED', 'ACCEPTED', 'IN_SERVICE'].includes(r.queue_status)" size="xs" variant="outline" @click="openPin(r)">
+              <Button v-if="device.token.value && r.therapist?.user_id && r.queue_status === 'IN_SERVICE'" size="xs" variant="outline" @click="openPin(r)">
                 <KeyRound /> หมอกด PIN
               </Button>
               <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" size="xs" variant="ghost" class="text-danger-ink" @click="openCancel(r)">ยกเลิก</Button>
@@ -451,16 +531,40 @@ async function submitClock(pin: string) {
       <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {{ callRow?.queue_status === 'IN_SERVICE' ? 'เปลี่ยนหมอระหว่างบริการ' : callRow?.therapist ? 'เปลี่ยนหมอ' : 'เรียกคิว' }}
+            {{ isHandover ? 'เปลี่ยนหมอระหว่างบริการ' : 'เรียกคิว' }}
             <span class="num">{{ callRow ? formatQueueNumber(callRow.queue_number) : '' }}</span>
           </DialogTitle>
           <DialogDescription>
             {{ callRow?.service_name }} {{ callRow ? formatDuration(callRow.duration_minutes) : '' }}
-            <template v-if="callRow?.queue_status === 'IN_SERVICE'"> · ค่ามือแบ่งตามเวลาที่หมอแต่ละคนทำจริง</template>
+            <template v-if="isHandover"> · ค่ามือแบ่งตามเวลาที่หมอแต่ละคนทำจริง</template>
+            <template v-else> · เลือกหมอแล้วเริ่มบริการทันที</template>
           </DialogDescription>
         </DialogHeader>
         <div v-if="callRow" class="-mx-6 grid content-start gap-3 overflow-y-auto px-6">
-          <TextareaField v-if="callRow.therapist" v-model="callReason" label="เหตุผลที่เปลี่ยนหมอ" hint="บังคับ" rows="2" />
+          <TextareaField v-if="isHandover" v-model="callReason" label="เหตุผลที่เปลี่ยนหมอ" hint="บังคับ" rows="2" />
+          <SegmentedControl
+            v-else
+            v-model="callKind"
+            :items="[{ value: 'regular', label: 'หมอประจำ' }, { value: 'freelance', label: 'หมอวิ่ง' }]"
+            label="ประเภทหมอ"
+          />
+
+          <!-- หมอวิ่ง: กรอกชื่อ + ค่าน้ำมัน (เฉพาะหมอวิ่ง) -->
+          <form v-if="!isHandover && callKind === 'freelance'" class="grid gap-4" novalidate @submit.prevent="callStart({})">
+            <TextField v-model="freelance.name" label="ชื่อหมอวิ่ง" maxlength="60" autocomplete="off" />
+            <div class="grid gap-1.5">
+              <CheckboxField
+                v-model="freelance.fuel"
+                :disabled="fuelSetting <= 0"
+                :label="fuelSetting > 0 ? `มีค่าน้ำมัน ${formatBaht(fuelSetting)}` : 'มีค่าน้ำมัน'"
+              />
+              <p class="m-0 pl-7 text-sm text-muted-foreground">
+                <template v-if="fuelSetting > 0">บันทึกเป็นรายจ่ายของร้าน (ค่าน้ำมันหมอวิ่ง)</template>
+                <template v-else>เจ้าของร้านยังไม่ได้ตั้งค่าน้ำมันหมอวิ่ง (เมนู “ตั้งค่าบริษัท”)</template>
+              </p>
+            </div>
+            <Button type="submit" :disabled="!canCallFreelance || busy === callRow.queue_id">เริ่มบริการ</Button>
+          </form>
           <Alert v-if="offShift" variant="warning">
             <AlertDescription class="grid gap-2">
               <span>{{ offShift.text }}</span>
@@ -470,7 +574,7 @@ async function submitClock(pin: string) {
               </span>
             </AlertDescription>
           </Alert>
-          <div class="grid gap-2 sm:grid-cols-2">
+          <div v-if="isHandover || callKind === 'regular'" class="grid gap-2 sm:grid-cols-2">
             <button
               v-for="t in therapists"
               :key="t.employee_id"
@@ -486,7 +590,7 @@ async function submitClock(pin: string) {
               </span>
             </button>
           </div>
-          <p v-if="!therapists.length" class="m-0 text-sm text-muted-foreground">ไม่มีพนักงานในสาขานี้</p>
+          <p v-if="(isHandover || callKind === 'regular') && !therapists.length" class="m-0 text-sm text-muted-foreground">ไม่มีหมอประจำในสาขานี้ · ใช้แท็บ “หมอวิ่ง”</p>
         </div>
         <DialogFooter><Button variant="outline" @click="callDialog = false">ปิด</Button></DialogFooter>
       </DialogContent>

@@ -14,6 +14,14 @@ export default defineNuxtRouteMiddleware(async (to) => {
   const userId = sessionData.session?.user.id
   if (!userId) return
 
+  // เลยตี 3 ของวันทำงานที่ login แล้ว (เช่นเปิดแอปค้างข้ามคืน) → ออกจากระบบ ให้ login ใหม่ = เข้างานวันใหม่
+  if (loginExpired()) {
+    await supabase.auth.signOut()
+    useAccess().clear()
+    clearLoginMark()
+    return navigateTo('/login?error=day_end')
+  }
+
   const { access, company, isOwner, needsMfa, refresh } = useAccess()
 
   if (!access.value || access.value.user_id !== userId) {

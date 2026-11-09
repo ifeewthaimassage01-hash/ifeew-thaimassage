@@ -1,6 +1,5 @@
 import type { Component } from 'vue'
 import {
-  Banknote,
   BedDouble,
   Building2,
   CalendarCheck,
@@ -63,7 +62,6 @@ export function useStaffNav() {
       label: 'เงินของสาขา',
       items: [
         { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText },
-        { to: '/sessions', label: 'กะและเงินสด', icon: Banknote },
         { to: '/daily-closings', label: 'ปิดยอดรายวัน', icon: ClipboardCheck },
       ],
     },

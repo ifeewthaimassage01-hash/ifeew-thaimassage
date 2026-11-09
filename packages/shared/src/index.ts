@@ -366,9 +366,13 @@ export interface PosOrderItem {
   completed_at: string | null
   cancel_reason: string | null
   therapist: {
-    employee_id: string
+    /** null = หมอวิ่ง (กรอกชื่อ) */
+    employee_id: string | null
     nickname: string
-    user_id: string
+    user_id: string | null
+    is_freelance?: boolean
+    /** ค่าน้ำมันหมอวิ่ง (บาท) ที่บันทึกเป็นรายจ่าย */
+    fuel_amount?: number | null
     assignment_status: 'ASSIGNED' | 'ACCEPTED' | 'IN_SERVICE' | 'COMPLETED'
     off_shift_confirmed: boolean
     started_at: string | null
@@ -491,7 +495,7 @@ export const invoiceStatusLabels: Record<InvoiceStatus, string> = {
   ISSUED: 'รอชำระ',
   PARTIALLY_PAID: 'จ่ายบางส่วน',
   PAID: 'จ่ายครบ',
-  VOID: 'ยกเลิก (Void)',
+  VOID: 'ยกเลิกบิลแล้ว',
 }
 
 export const paymentMethodLabels: Record<PaymentMethod, string> = {
@@ -601,7 +605,9 @@ export interface ExpenseRow {
   expense_id: string
   amount: number
   note: string
-  photo_path: string
+  /** null = ค่าน้ำมันหมอวิ่ง (ระบบบันทึกเอง ไม่มีรูป) */
+  photo_path: string | null
+  category?: 'GENERAL' | 'FREELANCE_FUEL'
   occurred_on: string
   payment_source: 'CASH_DRAWER' | 'OTHER'
   is_large: boolean

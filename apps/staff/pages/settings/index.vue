@@ -9,6 +9,7 @@ const info = reactive({ name: '', legal_name: '', tax_id: '' })
 const settings = reactive({
   cancellation_cutoff_hours: 3,
   large_expense_threshold: 5000,
+  freelance_fuel_amount: 0,
   staff_pin_max_attempts: 5,
   staff_pin_lockout_minutes: 15,
   staff_idle_lock_minutes: 5,
@@ -43,6 +44,7 @@ async function load() {
     Object.assign(settings, {
       cancellation_cutoff_hours: s.data.cancellation_cutoff_hours,
       large_expense_threshold: Number(s.data.large_expense_threshold),
+      freelance_fuel_amount: Number(s.data.freelance_fuel_amount),
       staff_pin_max_attempts: s.data.staff_pin_max_attempts,
       staff_pin_lockout_minutes: s.data.staff_pin_lockout_minutes,
       staff_idle_lock_minutes: s.data.staff_idle_lock_minutes,
@@ -72,6 +74,7 @@ async function save() {
         .update({
           cancellation_cutoff_hours: Number(settings.cancellation_cutoff_hours),
           large_expense_threshold: Number(settings.large_expense_threshold),
+          freelance_fuel_amount: Number(settings.freelance_fuel_amount) || 0,
           staff_pin_max_attempts: Number(settings.staff_pin_max_attempts),
           staff_pin_lockout_minutes: Number(settings.staff_pin_lockout_minutes),
           staff_idle_lock_minutes: Number(settings.staff_idle_lock_minutes),
@@ -115,12 +118,21 @@ onMounted(load)
 
       <section class="grid gap-4 border-t border-border pt-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10" aria-labelledby="s-expense">
         <div>
-          <h2 id="s-expense" class="m-0 text-base font-semibold">การยกเลิกและรายจ่าย</h2>
+          <h2 id="s-expense" class="m-0 text-base font-semibold">การยกเลิก รายจ่าย และค่าน้ำมัน</h2>
           <p class="m-0 mt-1 text-sm text-muted-foreground">เงื่อนไขที่ลูกค้าและพนักงานเห็น</p>
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-2">
           <TextField v-model="settings.cancellation_cutoff_hours" type="number" label="ยกเลิกการจองได้ก่อนนัด" hint="0-168" suffix="ชั่วโมง" />
           <TextField v-model="settings.large_expense_threshold" type="number" label="รายจ่ายที่ต้องแนบหลักฐาน" suffix="บาท" />
+          <TextField
+            v-model="settings.freelance_fuel_amount"
+            type="number"
+            min="0"
+            label="ค่าน้ำมันหมอวิ่ง (ต่อครั้ง)"
+            hint="ใช้ตอนเรียกคิวให้หมอวิ่งแล้วติ๊ก “มีค่าน้ำมัน” · บันทึกเป็นรายจ่ายของร้าน · 0 = ไม่ใช้"
+            suffix="บาท"
+            class="num"
+          />
         </Card>
       </section>
 
@@ -146,12 +158,12 @@ onMounted(load)
       <section class="grid gap-4 border-t border-border pt-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10" aria-labelledby="s-security">
         <div>
           <h2 id="s-security" class="m-0 text-base font-semibold">ความปลอดภัยของพนักงาน</h2>
-          <p class="m-0 mt-1 text-sm text-muted-foreground">PIN และการล็อกหน้าจอบนเครื่องประจำสาขา</p>
+          <p class="m-0 mt-1 text-sm text-muted-foreground">PIN และการออกจากระบบอัตโนมัติ</p>
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-3">
           <TextField v-model="settings.staff_pin_max_attempts" type="number" label="กด PIN ผิดได้" hint="3-10" suffix="ครั้ง" />
           <TextField v-model="settings.staff_pin_lockout_minutes" type="number" label="ล็อก PIN" hint="1-1440" suffix="นาที" />
-          <TextField v-model="settings.staff_idle_lock_minutes" type="number" label="ล็อกเมื่อไม่ใช้งาน" hint="1-120" suffix="นาที" />
+          <p class="m-0 self-center text-sm text-muted-foreground">ออกจากระบบอัตโนมัติทุกวันตอนตี 3 · เข้าสู่ระบบด้วย PIN = ลงเวลาเข้างานของวันนั้น</p>
         </Card>
       </section>
 

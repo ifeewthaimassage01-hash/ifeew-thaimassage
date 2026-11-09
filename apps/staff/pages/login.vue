@@ -33,6 +33,7 @@ const queryErrors: Record<string, string> = {
   not_staff: 'บัญชีนี้ไม่ใช่บัญชีพนักงานหรือเจ้าของร้าน',
   access: 'ไม่สามารถตรวจสอบสิทธิ์ได้ กรุณาเข้าสู่ระบบใหม่',
   idle: 'ออกจากระบบอัตโนมัติเนื่องจากไม่มีการใช้งาน',
+  day_end: 'ออกจากระบบอัตโนมัติเมื่อขึ้นวันใหม่ (ตี 3) · เข้าสู่ระบบเพื่อเริ่มงานวันนี้',
 }
 const banner = computed(() => queryErrors[String(route.query.error ?? '')] ?? null)
 
@@ -88,13 +89,21 @@ function choose(s: DeviceStaff) {
   pinError.value = null
 }
 
+// เข้าใช้งาน = ลงเวลาเข้างานของวันนั้น (ครั้งแรกของวัน) — ลงไปแล้ว/ไม่ใช่พนักงานสาขาก็ข้ามไป ไม่ขวางการ login
+async function clockInToday(branchId: string) {
+  const { error } = await supabase.rpc('attendance_clock', { p_branch_id: branchId, p_action: 'CLOCK_IN' })
+  if (error && error.code !== '23514' && error.code !== '42501') console.warn('clock-in', error.message)
+}
+
 async function submitPin(pin: string) {
   if (!selected.value || !branchId.value) return
   pinLoading.value = true
   pinError.value = null
   try {
     clearAccess()
-    await branchPinLogin(branchId.value, selected.value.user_id, pin)
+    const res = await branchPinLogin(branchId.value, selected.value.user_id, pin)
+    markLogin()
+    await clockInToday(res.branch_id)
     await navigateTo('/')
   } catch (e) {
     const err = errorMessage(e)
@@ -125,6 +134,7 @@ async function ownerLogin() {
       return
     }
     password.value = ''
+    markLogin()
     await navigateTo('/')
   } finally {
     ownerLoading.value = false
@@ -158,6 +168,7 @@ async function submitOwnerPin(pin: string) {
   try {
     clearAccess()
     await ownerPinLogin(pin)
+    markLogin()
     await navigateTo('/')
   } catch (e) {
     const err = errorMessage(e)

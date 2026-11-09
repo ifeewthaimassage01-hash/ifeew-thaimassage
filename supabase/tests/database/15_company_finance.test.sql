@@ -241,18 +241,18 @@ reset role;
 -- ---------------------------------------------------------------------------
 -- ปิดยอดรายวัน
 -- ---------------------------------------------------------------------------
+-- (034) ไม่ใช้ระบบกะ/ลิ้นชัก: ส่งปิดยอดได้เลย ระบบปิดกะที่ค้างของวันนั้นให้อัตโนมัติ (ผลต่าง 0, อนุมัติแล้ว)
 select pg_temp.as_user('10000000-0000-4000-8000-000000000002');
 set local role authenticated;
-select throws_ok(format($$select public.submit_daily_closing('30000000-0000-4000-8000-000000000001', %L, null)$$, pg_temp.v('bd')),
-  '23514', null, 'ยังมีกะเปิดอยู่ ส่งปิดยอดไม่ได้');
-reset role;
-select pg_temp.put('exp', (private.session_figures((select id from public.pos_sessions where status = 'OPEN'
-  and branch_id = '30000000-0000-4000-8000-000000000001')) ->> 'expected_cash'));
-select pg_temp.as_user('10000000-0000-4000-8000-000000000002');
-set local role authenticated;
-select public.pos_close_session((select id from public.pos_sessions where status = 'OPEN'
-  and branch_id = '30000000-0000-4000-8000-000000000001'), pg_temp.v('exp')::numeric, null);
 select pg_temp.put('dc', public.submit_daily_closing('30000000-0000-4000-8000-000000000001', pg_temp.v('bd')::date, 'ปิดยอดวันนี้')::text);
+reset role;
+select ok(not exists (select 1 from public.pos_sessions where branch_id = '30000000-0000-4000-8000-000000000001'
+                        and business_date = pg_temp.v('bd')::date and status = 'OPEN')
+          and exists (select 1 from public.pos_sessions where branch_id = '30000000-0000-4000-8000-000000000001'
+                        and business_date = pg_temp.v('bd')::date and review_status = 'APPROVED' and cash_difference = 0),
+  'ส่งปิดยอดแล้ว กะที่ค้างของวันนั้นถูกปิดอัตโนมัติ (ผลต่าง 0, อนุมัติ)');
+select pg_temp.as_user('10000000-0000-4000-8000-000000000002');
+set local role authenticated;
 select ok((select status = 'SUBMITTED' and figures ? 'guarantee_topups' from public.branch_daily_closings where id = pg_temp.v('dc')::uuid),
   'ส่งปิดยอดรายวัน (มีสรุปเงินเติมประกันมือให้ OWNER เห็น)');
 select throws_ok(format($$select public.review_daily_closing(%L, true, null, 0, null)$$, pg_temp.v('dc')),

@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ปิดยอดรายวัน: พนักงานดูสรุปและส่ง (ต้องปิดกะครบ) → OWNER อนุมัติ (+ยอดปรับปรุง) / ปฏิเสธพร้อมเหตุผล
+// ปิดยอดรายวัน: พนักงานดูสรุปและส่ง (ระบบปิดกะภายในให้เอง — migration 034) → OWNER อนุมัติ (+ยอดปรับปรุง) / ปฏิเสธพร้อมเหตุผล
 import { addDays, bangkokToday, formatBaht, type DailyClosingFigures, type DailyClosingRow } from '@ifeew/shared'
 
 const supabase = useSupabaseClient()
@@ -32,7 +32,7 @@ async function load() {
 watch([date, () => activeBranch.value?.branch_id], load, { immediate: true })
 
 const canSubmit = computed(() =>
-  !!preview.value && preview.value.open_sessions === 0 && preview.value.sessions > 0
+  !!preview.value
   && (!preview.value.closing || preview.value.closing.status === 'REJECTED'))
 
 async function submit() {
@@ -84,7 +84,7 @@ const lines = (f: DailyClosingFigures): Array<[string, number]> => [
 
 <template>
   <div class="max-w-5xl">
-    <PageHeader title="ปิดยอดรายวัน" :description="`${activeBranch?.name ?? ''} · ปิดกะให้ครบ แล้วส่งสรุปยอดของวันให้เจ้าของร้านตรวจ`" />
+    <PageHeader title="ปิดยอดรายวัน" :description="`${activeBranch?.name ?? ''} · ตรวจยอดของวัน แล้วส่งสรุปให้เจ้าของร้านตรวจ`" />
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
     <div class="grid gap-6">
@@ -118,8 +118,6 @@ const lines = (f: DailyClosingFigures): Array<[string, number]> => [
             </ul>
           </div>
 
-          <Alert v-if="preview.open_sessions" variant="warning"><AlertDescription>ยังมีกะเปิดอยู่ {{ preview.open_sessions }} กะ ปิดกะก่อนส่งปิดยอด</AlertDescription></Alert>
-          <Alert v-if="preview.rejected_sessions" variant="destructive"><AlertDescription>มีกะที่เจ้าของร้านปฏิเสธ {{ preview.rejected_sessions }} กะ</AlertDescription></Alert>
           <p v-if="preview.closing?.review_note" class="m-0 text-[15px]"><span class="text-muted-foreground">ผลตรวจ:</span> {{ preview.closing.review_note }}</p>
 
           <form v-if="canSubmit" class="flex flex-wrap items-end gap-3" @submit.prevent="submit">

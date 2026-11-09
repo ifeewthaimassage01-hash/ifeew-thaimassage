@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // แดชบอร์ด STAFF ของสาขาที่เลือก (ส่วนที่ไม่ใช่เงิน — ยอดขาย/ค้างชำระเพิ่มใน Phase 7)
-import { Banknote, CalendarCheck, CircleCheck, ListOrdered, ReceiptText, Store, Wallet } from '@lucide/vue'
-import { bangkokTime, formatBaht, formatDuration, formatQueueNumber, queueStatusLabels, type StaffDashboard } from '@ifeew/shared'
+import { Banknote, CalendarCheck, CircleCheck, ListOrdered, ReceiptText, Wallet } from '@lucide/vue'
+import { formatBaht, formatDuration, formatQueueNumber, queueStatusLabels, type StaffDashboard } from '@ifeew/shared'
 
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
@@ -72,7 +72,7 @@ useIntervalFn(load, 30_000)
       </SectionCard>
 
       <!-- สรุปวันนี้ -->
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
         <StatCard label="คิวรอเรียก" :icon="ListOrdered" :value="dash.queue.waiting" to="/queue">
           <template #hint>
             เรียกแล้ว <span class="num">{{ dash.queue.called }}</span> · กำลังบริการ <span class="num">{{ dash.queue.in_service }}</span>
@@ -84,14 +84,6 @@ useIntervalFn(load, 30_000)
           <template #hint>
             รอเช็กอิน <span class="num">{{ dash.bookings.awaiting_check_in }}</span> · มาแล้ว <span class="num">{{ dash.bookings.checked_in }}</span>
             <span v-if="dash.bookings.slip_review" class="block font-medium text-danger-ink">สลิปรอตรวจ {{ dash.bookings.slip_review }}</span>
-          </template>
-        </StatCard>
-        <StatCard label="กะ POS" :icon="Store" to="/pos">
-          <span v-if="dash.session" class="text-success-ink">เปิดอยู่</span>
-          <span v-else class="text-muted-foreground">ยังไม่มีกะ</span>
-          <template #hint>
-            <template v-if="dash.session">ตั้งแต่ <span class="num">{{ bangkokTime(dash.session.opened_at) }}</span> · เงินทอน <span class="num">{{ formatBaht(Number(dash.session.opening_cash)) }}</span></template>
-            <template v-else>เปิดให้อัตโนมัติเมื่อรับเงินครั้งแรก</template>
           </template>
         </StatCard>
       </div>
@@ -116,8 +108,8 @@ useIntervalFn(load, 30_000)
 
         <!-- เงินวันนี้ -->
         <div v-if="money" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-2">
-          <StatCard label="ยอดรับวันนี้" :icon="Banknote" :value="formatBaht(Number(money.today_sales))" to="/pos" hint="ไม่รวมทิป" />
-          <StatCard label="ยอดค้างชำระ" :icon="Wallet" to="/pos" :hint="Number(money.outstanding) > 0 ? 'มีบิลที่ยังเก็บเงินไม่ครบ' : 'ไม่มียอดค้าง'">
+          <StatCard label="ยอดรับวันนี้" :icon="Banknote" :value="formatBaht(Number(money.today_sales))" to="/payments" hint="ไม่รวมทิป" />
+          <StatCard label="ยอดค้างชำระ" :icon="Wallet" to="/payments" :hint="Number(money.outstanding) > 0 ? 'มีบิลที่ยังเก็บเงินไม่ครบ' : 'ไม่มียอดค้าง'">
             <span :class="Number(money.outstanding) > 0 ? 'text-danger-ink' : ''">{{ formatBaht(Number(money.outstanding)) }}</span>
           </StatCard>
           <StatCard v-if="isOwner" label="คำขอยกเลิกรายจ่าย" :icon="ReceiptText" :value="money.pending_void_requests" to="/expenses" class="sm:col-span-2"

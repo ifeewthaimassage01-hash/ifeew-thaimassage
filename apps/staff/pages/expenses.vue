@@ -1,6 +1,6 @@
 <script setup lang="ts">
-// รายจ่าย: จำนวนเงิน + หมายเหตุ + รูปหลักฐาน (บังคับ) — จ่ายจากลิ้นชักต้องมีกะเปิด
-// ยกเลิก: กะยังเปิด = ยกเลิกทันที (เงินคืนลิ้นชัก); นอกนั้นส่งคำขอให้เจ้าของร้าน
+// รายจ่าย: จำนวนเงิน + หมายเหตุ + รูปหลักฐาน (บังคับ) — ไม่ผูกกับลิ้นชัก (migration 034)
+// ยกเลิก: เจ้าของร้านยกเลิกได้ทันที; พนักงานส่งคำขอให้เจ้าของร้าน
 // OWNER: รายจ่ายสำนักงานใหญ่, อนุมัติ/ปฏิเสธคำขอยกเลิก
 import { Camera, Image as ImageIcon, Plus } from '@lucide/vue'
 import { addDays, bangkokToday, formatBaht, type ExpenseRow } from '@ifeew/shared'
@@ -48,12 +48,12 @@ watch(() => company.value?.company_id, async (id) => {
 // บันทึกรายจ่าย
 // ---------------------------------------------------------------------------
 const dialog = ref(false)
-const form = reactive({ amount: '' as number | string, note: '', fromDrawer: true, occurredOn: bangkokToday() })
+const form = reactive({ amount: '' as number | string, note: '', occurredOn: bangkokToday() })
 const photo = ref<File | null>(null)
 const photoPreview = ref<string | null>(null)
 
 function openNew() {
-  Object.assign(form, { amount: '', note: '', fromDrawer: scope.value === 'BRANCH', occurredOn: bangkokToday() })
+  Object.assign(form, { amount: '', note: '', occurredOn: bangkokToday() })
   photo.value = null
   photoPreview.value = null
   dialog.value = true
@@ -86,7 +86,7 @@ async function save() {
       p_amount: Number(form.amount),
       p_note: form.note.trim(),
       p_photo_path: path,
-      p_from_drawer: scope.value === 'BRANCH' && form.fromDrawer,
+      p_from_drawer: false,
       p_occurred_on: form.occurredOn,
     }))
     dialog.value = false
@@ -100,6 +100,7 @@ async function save() {
 }
 
 async function viewPhoto(r: ExpenseRow) {
+  if (!r.photo_path) return
   const { data } = await supabase.storage.from('expense-photos').createSignedUrl(r.photo_path, 300)
   if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
 }
@@ -167,17 +168,18 @@ async function rejectVoid(r: ExpenseRow) {
           <div class="min-w-0">
             <p class="m-0 flex flex-wrap items-center gap-2 font-medium text-heading">
               <span :class="{ 'line-through': r.status === 'VOID' }"><span class="num">{{ formatBaht(Number(r.amount)) }}</span> · {{ r.note }}</span>
+              <Badge v-if="r.category === 'FREELANCE_FUEL'" variant="outline">หมอวิ่ง</Badge>
               <Badge v-if="r.is_large" variant="danger">รายจ่ายสูง</Badge>
               <Badge v-if="r.status === 'VOID'" variant="neutral">ยกเลิกแล้ว</Badge>
             </p>
             <p class="m-0 text-sm text-muted-foreground">
-              <span class="num">{{ r.occurred_on }}</span> · {{ r.payment_source === 'CASH_DRAWER' ? 'จ่ายจากลิ้นชัก' : 'จ่ายทางอื่น' }} · {{ r.recorded_by_name ?? '—' }}
+              <span class="num">{{ r.occurred_on }}</span> · {{ r.recorded_by_name ?? '—' }}
             </p>
             <p v-if="r.void_requested_at && r.status === 'RECORDED'" class="m-0 mt-1 text-sm text-pending-ink">ขอยกเลิก: {{ r.void_request_reason }}</p>
             <p v-if="r.void_reason" class="m-0 mt-1 text-sm text-danger-ink">ยกเลิก: {{ r.void_reason }}</p>
           </div>
           <div class="flex flex-wrap gap-1">
-            <Button size="sm" variant="ghost" @click="viewPhoto(r)"><ImageIcon /> รูป</Button>
+            <Button v-if="r.photo_path" size="sm" variant="ghost" @click="viewPhoto(r)"><ImageIcon /> รูป</Button>
             <template v-if="r.status === 'RECORDED'">
               <template v-if="isOwner && r.void_requested_at">
                 <Button size="sm" variant="outline" class="text-danger-ink" @click="voidExpense(r)">อนุมัติยกเลิก</Button>
@@ -210,7 +212,6 @@ async function rejectVoid(r: ExpenseRow) {
             <img v-if="photoPreview" :src="photoPreview" alt="รูปหลักฐาน" class="max-h-48 rounded-lg border border-border object-contain">
           </div>
           <TextField v-model="form.occurredOn" type="date" label="วันที่จ่าย" :max="bangkokToday()" />
-          <SwitchField v-if="scope === 'BRANCH'" v-model="form.fromDrawer" label="จ่ายจากเงินสดในลิ้นชัก" hint="หักจากเงินสดในกะปัจจุบัน (ระบบเปิดกะให้อัตโนมัติ)" />
           <Alert v-if="Number(form.amount) > threshold" variant="warning">
             <AlertDescription>เกิน {{ formatBaht(threshold) }} ถือเป็นรายจ่ายสูง ระบบจะแจ้งเจ้าของร้าน</AlertDescription>
           </Alert>
