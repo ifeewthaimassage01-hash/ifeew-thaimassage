@@ -252,7 +252,7 @@ async function submitRefund() {
           </Badge>
           <Button v-if="invoice.status === 'VOID'" @click="load">สร้าง Invoice ใหม่</Button>
           <Button v-else variant="ghost" class="text-danger-ink" @click="voidDialog = true; voidReason = ''">Void Invoice</Button>
-          <Button as-child variant="outline"><NuxtLink to="/pos">กลับหน้าร้าน</NuxtLink></Button>
+          <Button as-child variant="outline"><NuxtLink to="/payments">กลับหน้าชำระเงิน</NuxtLink></Button>
         </template>
       </PageHeader>
       <div v-if="invoice.receipt_number || invoice.void_reason" class="-mt-4 mb-6 grid gap-1 text-[15px]">
