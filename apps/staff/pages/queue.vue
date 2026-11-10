@@ -2,7 +2,7 @@
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
 // มือถือ: แท็บ รอเรียก / กำลังให้บริการ / เสร็จ-ยกเลิก · จอใหญ่แสดงครบทุกคอลัมน์
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
-import { Clock, EllipsisVertical, KeyRound, RefreshCw, UserRound } from '@lucide/vue'
+import { Clock, EllipsisVertical, KeyRound, Users } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -29,7 +29,59 @@ const supabase = useSupabaseClient()
 const { activeBranch, company } = useAccess()
 const { board, loading, error, load } = usePosBoard()
 
-const mobileColumn = ref('waiting')
+// มือถือ: 2 แท็บ — "คิวตอนนี้" (รอเรียก + กำลังให้บริการ) / "เสร็จ / ยกเลิก" · จอใหญ่แสดงครบ 3 คอลัมน์
+const mobileTab = ref<'active' | 'done'>('active')
+const isDesktop = useMediaQuery('(min-width: 1024px)')
+// กล่องที่แสดง: จอใหญ่ = 3 คอลัมน์ · มือถือ "คิวตอนนี้" = กล่องเดียว (รอเรียก + กำลังให้บริการ มีป้ายสถานะบนการ์ด)
+const panels = computed(() => {
+  if (isDesktop.value) return columns
+  if (mobileTab.value === 'done') return [columns[2]!]
+  return [{ key: 'active', title: 'คิวตอนนี้', statuses: [...columns[0]!.statuses, ...columns[1]!.statuses] }]
+})
+// รวมกลุ่ม: ย้ายคิวทั้งออเดอร์ไปอยู่กับออเดอร์อื่นของวันนี้ (pos_merge_orders — migration 049)
+const activeItems = (o: PosOrder) => o.items.filter((i) => i.queue_status !== 'CANCELLED')
+function groupLabel(o: PosOrder) {
+  const nums = activeItems(o).map((i) => i.queue_number).sort((a, b) => a - b)
+  if (!nums.length) return 'กลุ่มนี้'
+  return nums.length === 1
+    ? `คิว ${formatQueueNumber(nums[0]!)}`
+    : `คิว ${formatQueueNumber(nums[0]!)}–${formatQueueNumber(nums[nums.length - 1]!)} (${nums.length} คน)`
+}
+const mergeTargets = (r: Row) =>
+  (board.value?.orders ?? []).filter((o) => o.order_id !== r.order.order_id && o.status === 'OPEN' && activeItems(o).length)
+// ย้ายได้: ออเดอร์ยังเปิด ไม่ได้มาจากการจอง และมีกลุ่มอื่นให้ไปรวม
+const canMerge = (r: Row) => r.order.status === 'OPEN' && !r.order.booking_id && mergeTargets(r).length > 0
+const mergeDialog = ref(false)
+const mergeRow = ref<Row | null>(null)
+function openMerge(r: Row) {
+  mergeRow.value = r
+  mergeDialog.value = true
+}
+async function merge(r: Row, target: PosOrder) {
+  busy.value = r.queue_id
+  try {
+    await must(supabase.rpc('pos_merge_orders', { p_source_order_id: r.order.order_id, p_target_order_id: target.order_id }))
+    mergeDialog.value = false
+    ok(`ย้ายคิว ${formatQueueNumber(r.queue_number)} ไปรวมกับ${groupLabel(target)}แล้ว`)
+    await load()
+  } catch (e) {
+    fail(e)
+  } finally {
+    busy.value = null
+  }
+}
+
+// จัดกลุ่มคิวในกล่องตามออเดอร์ (มาด้วยกัน) โดยคงลำดับเลขคิว — กลุ่มอยู่ตำแหน่งของคิวแรกในกลุ่ม
+function groupsOf(statuses: QueueStatus[]) {
+  const groups: Array<{ orderId: string; rows: Row[] }> = []
+  for (const r of byColumn(statuses)) {
+    const g = groups.find((x) => x.orderId === r.order.order_id)
+    if (g) g.rows.push(r)
+    else groups.push({ orderId: r.order.order_id, rows: [r] })
+  }
+  return groups
+}
+const isWaiting = (s: QueueStatus) => ['WAITING', 'CALLED', 'ACCEPTED'].includes(s)
 const message = ref<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 const busy = ref<string | null>(null)
 const ok = (text: string) => (message.value = { type: 'success', text })
@@ -391,7 +443,6 @@ async function submitClock(pin: string) {
     <PageHeader title="คิววันนี้" description="กด “เริ่มนวด” เพื่อเลือกหมอ · นวดจบแล้วกด “นวดเสร็จแล้ว”">
       <template #actions>
         <Button v-if="device.token.value" variant="outline" @click="openClock"><Clock /> ลงเวลา</Button>
-        <Button variant="ghost" size="icon" aria-label="โหลดคิวใหม่" @click="load"><RefreshCw :class="loading ? 'animate-spin' : ''" /></Button>
       </template>
     </PageHeader>
 
@@ -401,40 +452,68 @@ async function submitClock(pin: string) {
 
     <!-- มือถือ/แท็บเล็ต: แสดงทีละคอลัมน์เป็นแท็บ (จอใหญ่แสดงครบทุกคอลัมน์) -->
     <SegmentedControl
-      v-model="mobileColumn"
-      :items="columns.map((c) => ({ value: c.key, label: `${c.title} (${byColumn(c.statuses).length})` }))"
+      v-model="mobileTab"
+      :items="[
+        { value: 'active', label: `คิวตอนนี้ (${byColumn(columns[0]!.statuses).length + byColumn(columns[1]!.statuses).length})` },
+        { value: 'done', label: `เสร็จ / ยกเลิก (${byColumn(columns[2]!.statuses).length})` },
+      ]"
       label="สถานะคิว"
       class="mx-auto mb-4 flex w-fit justify-center lg:hidden"
     />
 
     <div class="grid items-start gap-4 lg:grid-cols-3">
       <section
-        v-for="c in columns"
+        v-for="c in panels"
         :key="c.key"
         class="grid gap-3 rounded-xl bg-secondary p-3"
-        :class="c.key === mobileColumn ? '' : 'max-lg:hidden'"
         :aria-labelledby="`col-${c.key}`"
       >
         <h2 :id="`col-${c.key}`" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
           {{ c.title }} <span class="num rounded-md bg-card px-2 text-sm font-medium text-muted-foreground">{{ byColumn(c.statuses).length }}</span>
         </h2>
         <p v-if="!byColumn(c.statuses).length" class="m-0 rounded-lg border border-dashed border-input px-3 py-4 text-center text-sm text-muted-foreground">ไม่มีคิว</p>
+        <!-- คิวที่มาด้วยกัน (ออเดอร์เดียวกัน) อยู่ในกรอบเดียว · มาคนเดียว = การ์ดเดี่ยว -->
+        <div
+          v-for="g in groupsOf(c.statuses)"
+          :key="g.orderId"
+          :class="g.rows.length > 1 ? 'grid gap-1.5 rounded-xl border border-dashed border-brand-accent/60 bg-card/40 p-1.5' : 'contents'"
+        >
+        <p v-if="g.rows.length > 1" class="m-0 flex flex-wrap items-center gap-x-2 px-1.5 pt-0.5 text-sm font-medium text-heading">
+          <Users class="size-4 text-brand-accent" aria-hidden="true" /> มาด้วยกัน {{ g.rows.length }} คน
+          <span class="font-normal text-muted-foreground">· {{ g.rows[0]!.order.customer_name ?? 'ลูกค้าทั่วไป' }} · คิว <span class="num">{{ formatQueueNumber(g.rows[0]!.queue_number) }}–{{ formatQueueNumber(g.rows[g.rows.length - 1]!.queue_number) }}</span></span>
+        </p>
+        <!-- การ์ดคิวแบบกะทัดรัด: แถวบน = เลขคิว | บริการ | สถานะ/⋮ · แถวล่าง = หมอ · เวลา · ปุ่มหลัก -->
         <article
-          v-for="r in byColumn(c.statuses)"
+          v-for="r in g.rows"
           :key="r.queue_id"
-          class="grid gap-1 rounded-lg border bg-card p-4"
+          class="grid gap-2 rounded-lg border bg-card px-3 py-2.5"
           :class="[isOverdue(r) ? 'border-danger ring-1 ring-danger/40' : newIds.has(r.queue_id) ? 'border-primary ring-2 ring-primary/30' : 'border-border', c.key === 'done' ? 'opacity-70' : '']"
         >
-          <div class="flex items-start justify-between gap-2">
-            <div class="min-w-0">
-              <p class="num m-0 text-3xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
-              <p class="m-0 mt-1.5 text-[15px] font-medium text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
-              <p class="m-0 text-sm text-muted-foreground">{{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
+          <div class="flex items-center gap-3">
+            <span class="num w-11 shrink-0 text-xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</span>
+            <div class="min-w-0 flex-1">
+              <p class="m-0 truncate text-[15px] leading-snug font-medium text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
+              <p class="m-0 truncate text-[13px] leading-snug text-muted-foreground">
+                <template v-if="r.therapist">{{ r.therapist.nickname }}{{ r.therapist.is_freelance ? ' (หมอวิ่ง)' : '' }}</template>
+                <template v-else-if="g.rows.length === 1">{{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }}</template>
+                <template v-else>ยังไม่มีหมอ</template>
+                <span v-if="isOverdue(r)" class="font-medium text-danger-ink"> · เลยเวลา {{ -(minutesLeft(r) ?? 0) }} นาที</span>
+                <span v-else-if="minutesLeft(r) !== null" class="text-heading"> · เหลือ <span class="num font-semibold">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</span>
+                <span v-else-if="isWaiting(r.queue_status)"> · เวลา <span class="num">{{ bangkokTime(r.planned_starts_at) }}</span></span>
+                <span v-if="r.follows_queue_id"> · ต่อจากคิว <span class="num">{{ queueNo(r.follows_queue_id) }}</span></span>
+              </p>
+              <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 truncate text-[13px] text-danger-ink">ยกเลิก: {{ r.cancel_reason }}</p>
             </div>
+            <!-- กล่องรวม (มือถือ): ป้ายสถานะ -->
+            <span
+              v-if="c.key === 'active'"
+              class="shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium"
+              :class="isWaiting(r.queue_status) ? 'bg-pending-soft text-pending-ink' : 'bg-success-soft text-success-ink'"
+            >{{ isWaiting(r.queue_status) ? 'รอเรียก' : 'กำลังนวด' }}</span>
             <!-- เมนูรอง: งานที่ไม่ได้ทำบ่อย -->
             <DropdownMenu v-if="hasMore(r)">
               <DropdownMenuTrigger as-child>
-                <Button variant="ghost" size="icon-sm" :aria-label="`ตัวเลือกเพิ่มเติม คิว ${formatQueueNumber(r.queue_number)}`"><EllipsisVertical /></Button>
+                <Button variant="ghost" size="icon-sm" class="-mr-1.5 shrink-0" :aria-label="`ตัวเลือกเพิ่มเติม คิว ${formatQueueNumber(r.queue_number)}`"><EllipsisVertical /></Button>
               </DropdownMenuTrigger>
               <DropdownMenuContent align="end" class="w-48">
                 <template v-if="r.queue_status === 'IN_SERVICE'">
@@ -444,6 +523,9 @@ async function submitClock(pin: string) {
                   <DropdownMenuItem v-if="withinUndo(r.started_at)" @select="openUndo(r)">ย้อนกลับ (ยังไม่เริ่ม)</DropdownMenuItem>
                 </template>
                 <DropdownMenuItem v-if="r.queue_status === 'COMPLETED' && withinUndo(r.completed_at)" @select="openUndo(r)">ย้อนกลับ (ยังไม่เสร็จ)</DropdownMenuItem>
+                <DropdownMenuItem v-if="canMerge(r) && r.queue_status !== 'COMPLETED'" @select="openMerge(r)">
+                  <Users /> รวมกับกลุ่มอื่น
+                </DropdownMenuItem>
                 <DropdownMenuItem
                   v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)"
                   class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink"
@@ -453,25 +535,47 @@ async function submitClock(pin: string) {
             </DropdownMenu>
           </div>
 
-          <p v-if="isOverdue(r)" class="m-0 text-sm font-medium text-danger-ink">เลยเวลาจบมา {{ -(minutesLeft(r) ?? 0) }} นาที</p>
-          <p v-else-if="minutesLeft(r) !== null" class="m-0 text-sm text-heading">เหลืออีก <span class="num font-semibold">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</p>
-          <p v-else-if="c.key === 'waiting'" class="m-0 text-sm text-muted-foreground">เวลา <span class="num">{{ bangkokTime(r.planned_starts_at) }}</span></p>
-          <p v-if="r.therapist" class="m-0 flex flex-wrap items-center gap-1.5 text-sm">
-            <UserRound class="size-4 text-muted-soft" aria-hidden="true" /><span class="text-heading">{{ r.therapist.nickname }}</span>
-            <Badge v-if="r.therapist.is_freelance" variant="outline">หมอวิ่ง</Badge>
-          </p>
-          <p v-if="r.follows_queue_id" class="m-0 text-sm text-muted-foreground">ต่อเวลาจากคิว <span class="num">{{ queueNo(r.follows_queue_id) }}</span></p>
-          <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 text-sm text-danger-ink">ยกเลิก: {{ r.cancel_reason }}</p>
-
-          <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" class="mt-2 w-full" :disabled="busy === r.queue_id" @click="openCall(r)">
+          <Button v-if="isWaiting(r.queue_status)" size="sm" class="w-full" :disabled="busy === r.queue_id" @click="openCall(r)">
             เริ่มนวด (เลือกหมอ)
           </Button>
-          <Button v-else-if="r.queue_status === 'IN_SERVICE'" class="mt-2 w-full" :disabled="busy === r.queue_id" @click="complete(r)">
+          <Button v-else-if="r.queue_status === 'IN_SERVICE'" size="sm" variant="secondary" class="w-full" :disabled="busy === r.queue_id" @click="complete(r)">
             นวดเสร็จแล้ว
           </Button>
         </article>
+        </div>
       </section>
     </div>
+
+    <!-- รวมกับกลุ่มอื่น -->
+    <Dialog v-model:open="mergeDialog">
+      <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>รวมกับกลุ่มอื่น</DialogTitle>
+          <DialogDescription v-if="mergeRow">
+            ย้าย{{ groupLabel(mergeRow.order) }} ไปอยู่กลุ่มเดียวกับ… (ตอนรับเงินจะรวมเป็นบิลเดียว · เลขคิวไม่เปลี่ยน)
+          </DialogDescription>
+        </DialogHeader>
+        <div v-if="mergeRow" class="-mx-6 grid content-start gap-2 overflow-y-auto px-6">
+          <button
+            v-for="o in mergeTargets(mergeRow)"
+            :key="o.order_id"
+            type="button"
+            class="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:border-primary hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:opacity-50"
+            :disabled="!!busy"
+            @click="merge(mergeRow, o)"
+          >
+            <span class="min-w-0">
+              <span class="block font-medium text-heading">{{ groupLabel(o) }}</span>
+              <span class="block truncate text-sm text-muted-foreground">
+                {{ o.customer_name ?? 'ลูกค้าทั่วไป' }} · {{ o.items.filter((i) => i.queue_status !== 'CANCELLED').map((i) => i.service_name).join(', ') }}
+              </span>
+            </span>
+            <Users class="size-5 shrink-0 text-brand-accent" />
+          </button>
+        </div>
+        <DialogFooter><Button variant="outline" @click="mergeDialog = false">ยกเลิก</Button></DialogFooter>
+      </DialogContent>
+    </Dialog>
 
     <!-- เลือกหมอ -->
     <Dialog v-model:open="callDialog">

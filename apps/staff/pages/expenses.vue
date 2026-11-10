@@ -2,7 +2,7 @@
 // รายจ่าย: จำนวนเงิน + หมายเหตุ + รูปหลักฐาน (บังคับ) — ไม่ผูกกับลิ้นชัก (migration 034)
 // ยกเลิก: เจ้าของร้านยกเลิกได้ทันที; พนักงานส่งคำขอให้เจ้าของร้าน
 // OWNER: รายจ่ายสำนักงานใหญ่, อนุมัติ/ปฏิเสธคำขอยกเลิก
-import { Camera, EllipsisVertical, Image as ImageIcon, Plus } from '@lucide/vue'
+import { Camera, EllipsisVertical, Fuel, Image as ImageIcon, Plus, ReceiptText } from '@lucide/vue'
 import { addDays, bangkokToday, formatBaht, type ExpenseRow } from '@ifeew/shared'
 
 
@@ -22,6 +22,28 @@ const fail = (e: unknown) => (message.value = { type: 'error', text: errorText(e
 
 const branchId = computed(() => (scope.value === 'HQ' ? null : activeBranch.value?.branch_id ?? null))
 const total = computed(() => rows.value.filter((r) => r.status === 'RECORDED').reduce((s, r) => s + Number(r.amount), 0))
+
+// จัดกลุ่มตามวันที่จ่าย (ล่าสุดก่อน) พร้อมยอดรวมของวัน (ไม่นับที่ยกเลิก)
+const byDay = computed(() => {
+  const today = bangkokToday()
+  const groups = new Map<string, ExpenseRow[]>()
+  for (const r of rows.value) {
+    if (!groups.has(r.occurred_on)) groups.set(r.occurred_on, [])
+    groups.get(r.occurred_on)!.push(r)
+  }
+  return [...groups.entries()]
+    .sort(([a], [b]) => b.localeCompare(a))
+    .map(([date, list]) => ({
+      date,
+      label: date === today
+        ? 'วันนี้'
+        : date === addDays(today, -1)
+          ? 'เมื่อวาน'
+          : new Date(`${date}T12:00:00+07:00`).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' }),
+      rows: list,
+      total: list.filter((r) => r.status === 'RECORDED').reduce((s, r) => s + Number(r.amount), 0),
+    }))
+})
 const threshold = ref(5000)
 
 async function load() {
@@ -161,39 +183,56 @@ async function rejectVoid(r: ExpenseRow) {
       ยังไม่มีรายจ่าย — กด “บันทึกรายจ่าย” เมื่อจ่ายเงินออกจากร้าน
     </p>
 
-    <ul v-if="rows.length" class="m-0 grid list-none gap-2 p-0">
-      <li v-for="r in rows" :key="r.expense_id" class="flex flex-wrap items-center gap-3 rounded-xl border border-border bg-card px-4 py-3" :class="{ 'opacity-60': r.status === 'VOID' }">
-        <div class="min-w-0 flex-1">
-          <p class="m-0 flex flex-wrap items-center gap-2 text-[15px] font-medium text-heading">
-            <span :class="{ 'line-through': r.status === 'VOID' }">{{ r.note }}</span>
-            <Badge v-if="r.category === 'FREELANCE_FUEL'" variant="outline">ค่าน้ำมันหมอวิ่ง</Badge>
-            <Badge v-if="r.status === 'VOID'" variant="neutral">ยกเลิกแล้ว</Badge>
-            <Badge v-else-if="r.void_requested_at" variant="pending">รอเจ้าของร้านอนุมัติยกเลิก</Badge>
-          </p>
-          <p class="m-0 text-sm text-muted-foreground"><span class="num">{{ r.occurred_on }}</span> · {{ r.recorded_by_name ?? '—' }}</p>
-          <p v-if="r.void_reason" class="m-0 text-sm text-danger-ink">ยกเลิก: {{ r.void_reason }}</p>
-          <p v-else-if="r.void_requested_at" class="m-0 text-sm text-pending-ink">เหตุผล: {{ r.void_request_reason }}</p>
-        </div>
-        <span class="num text-lg font-semibold text-heading" :class="{ 'line-through': r.status === 'VOID' }">{{ formatBaht(Number(r.amount)) }}</span>
-        <div class="flex items-center gap-1">
-          <Button v-if="r.photo_path" size="icon-sm" variant="ghost" aria-label="ดูรูปหลักฐาน" @click="viewPhoto(r)"><ImageIcon /></Button>
-          <template v-if="r.status === 'RECORDED' && isOwner && r.void_requested_at">
-            <Button size="sm" variant="outline" class="text-danger-ink" @click="voidExpense(r)">อนุมัติยกเลิก</Button>
-            <Button size="sm" variant="ghost" @click="rejectVoid(r)">ไม่อนุมัติ</Button>
-          </template>
-          <DropdownMenu v-else-if="r.status === 'RECORDED' && !r.void_requested_at">
-            <DropdownMenuTrigger as-child>
-              <Button variant="ghost" size="icon-sm" aria-label="ตัวเลือกเพิ่มเติม"><EllipsisVertical /></Button>
-            </DropdownMenuTrigger>
-            <DropdownMenuContent align="end">
-              <DropdownMenuItem class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink" @select="voidExpense(r)">
-                {{ isOwner || r.session_open ? 'ยกเลิกรายการนี้' : 'ขอยกเลิกรายการนี้' }}
-              </DropdownMenuItem>
-            </DropdownMenuContent>
-          </DropdownMenu>
-        </div>
-      </li>
-    </ul>
+    <!-- จัดตามวัน: หัววัน + ยอดรวมของวัน · แถวรายการ = ไอคอนประเภท | ชื่อ (+ผู้บันทึก/สถานะ) | ยอด | ปุ่ม -->
+    <div v-if="rows.length" class="grid gap-4">
+      <section v-for="d in byDay" :key="d.date" class="overflow-hidden rounded-xl border border-border bg-card" :aria-label="d.label">
+        <header class="flex items-baseline justify-between gap-3 border-b border-border bg-muted/40 px-4 py-2">
+          <h2 class="m-0 text-sm font-semibold text-heading">{{ d.label }}</h2>
+          <span class="text-sm text-muted-foreground">รวม <span class="num font-semibold text-heading">{{ formatBaht(d.total) }}</span></span>
+        </header>
+        <ul class="m-0 grid list-none p-0">
+          <li
+            v-for="r in d.rows"
+            :key="r.expense_id"
+            class="grid grid-cols-[2.25rem_minmax(0,1fr)_auto_auto] items-center gap-3 border-b border-border/70 px-4 py-2.5 last:border-0"
+            :class="{ 'opacity-55': r.status === 'VOID' }"
+          >
+            <span class="grid size-9 place-items-center rounded-full bg-muted text-brand-accent" :title="r.category === 'FREELANCE_FUEL' ? 'ค่าน้ำมันหมอวิ่ง' : 'รายจ่ายร้าน'">
+              <Fuel v-if="r.category === 'FREELANCE_FUEL'" class="size-4" /><ReceiptText v-else class="size-4" />
+            </span>
+            <div class="min-w-0">
+              <p class="m-0 truncate text-[15px] font-medium text-heading" :class="{ 'line-through': r.status === 'VOID' }">{{ r.note }}</p>
+              <p class="m-0 truncate text-[13px] text-muted-foreground">
+                {{ r.recorded_by_name ?? '—' }}
+                <span v-if="r.status === 'VOID'" class="text-danger-ink"> · ยกเลิกแล้ว{{ r.void_reason ? `: ${r.void_reason}` : '' }}</span>
+                <span v-else-if="r.void_requested_at" class="text-pending-ink"> · รออนุมัติยกเลิก: {{ r.void_request_reason }}</span>
+              </p>
+            </div>
+            <span class="num text-right text-[15px] font-semibold text-heading" :class="{ 'line-through': r.status === 'VOID' }">{{ formatBaht(Number(r.amount)) }}</span>
+            <div class="flex items-center justify-end">
+              <template v-if="r.status === 'RECORDED' && isOwner && r.void_requested_at">
+                <Button size="sm" variant="outline" class="text-danger-ink" @click="voidExpense(r)">อนุมัติ</Button>
+                <Button size="sm" variant="ghost" @click="rejectVoid(r)">ไม่อนุมัติ</Button>
+              </template>
+              <DropdownMenu v-else-if="r.photo_path || (r.status === 'RECORDED' && !r.void_requested_at)">
+                <DropdownMenuTrigger as-child>
+                  <Button variant="ghost" size="icon-sm" aria-label="ตัวเลือกเพิ่มเติม"><EllipsisVertical /></Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end">
+                  <DropdownMenuItem v-if="r.photo_path" @select="viewPhoto(r)"><ImageIcon /> ดูรูปหลักฐาน</DropdownMenuItem>
+                  <DropdownMenuItem
+                    v-if="r.status === 'RECORDED' && !r.void_requested_at"
+                    class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink"
+                    @select="voidExpense(r)"
+                  >{{ isOwner || r.session_open ? 'ยกเลิกรายการนี้' : 'ขอยกเลิกรายการนี้' }}</DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+              <span v-else class="size-9" aria-hidden="true" />
+            </div>
+          </li>
+        </ul>
+      </section>
+    </div>
 
     <Dialog v-model:open="dialog">
       <DialogContent class="max-h-[90dvh] overflow-y-auto sm:max-w-md">

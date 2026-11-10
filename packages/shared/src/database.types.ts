@@ -1190,6 +1190,7 @@ export type Database = {
       queue_complete: { Args: { p_queue_id: string }; Returns: Json }
       queue_cancel: { Args: { p_queue_id: string; p_reason: string }; Returns: Json }
       pos_board: { Args: { p_branch_id: string; p_date?: string | null }; Returns: Json }
+      pos_merge_orders: { Args: { p_source_order_id: string; p_target_order_id: string }; Returns: Json }
       queue_extend: { Args: { p_queue_id: string; p_option_id: string; p_idempotency_key: string }; Returns: Json }
       queue_handover: {
         Args: { p_queue_id: string; p_employee_id: string; p_reason: string; p_confirm_off_shift?: boolean }

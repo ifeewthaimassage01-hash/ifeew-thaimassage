@@ -109,6 +109,6 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
       </footer>
 
     </div>
-    <ClientOnly><Sonner position="top-center" :toast-options="{ classes: { toast: '!rounded-xl !border-border !bg-card !text-heading !shadow-sm', description: '!text-muted-foreground', success: '[&_[data-icon]]:!text-success-ink', error: '[&_[data-icon]]:!text-danger-ink' } }" /></ClientOnly>
+    <ClientOnly><Sonner /></ClientOnly>
   </TooltipProvider>
 </template>

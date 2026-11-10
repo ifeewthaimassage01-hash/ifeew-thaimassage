@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // ชำระเงิน: รวมลูกค้าที่ต้องเก็บเงินของสาขาไว้ที่เดียว (วันนี้ + ค้างชำระจากวันก่อน)
 // กดเพื่อไปหน้า /checkout/[orderId] (ออก Invoice / ส่วนลด / รับเงิน) — Realtime ผ่าน usePosBoard
-import { Banknote, Clock, ReceiptText, Wallet } from '@lucide/vue'
+import { Banknote, ChevronRight, CircleCheck, Clock, ReceiptText, Wallet } from '@lucide/vue'
 import {
   formatBaht,
   formatDuration,
@@ -83,19 +83,23 @@ const rows = computed<PayRow[]>(() => {
 })
 
 const isPending = (r: PayRow) => r.status !== 'PAID'
-const filter = ref<'pending' | 'paid'>('pending')
 const pendingCount = computed(() => rows.value.filter(isPending).length)
-const paidCount = computed(() => rows.value.filter((r) => r.status === 'PAID').length)
-const filterItems = computed(() => [
-  { value: 'pending', label: `ยังไม่จ่าย (${pendingCount.value})` },
-  { value: 'paid', label: `จ่ายแล้ว (${paidCount.value})` },
-])
-const order: Record<RowStatus, number> = { NOT_ISSUED: 0, DRAFT: 0, PARTIALLY_PAID: 1, ISSUED: 1, PAID: 2, VOID: 3 }
-const visible = computed(() =>
-  rows.value
-    .filter((r) => (filter.value === 'paid' ? r.status === 'PAID' : isPending(r)))
-    .sort((a, b) => order[a.status] - order[b.status] || Number(b.fromEarlierDay) - Number(a.fromEarlierDay)),
+// ยังไม่จ่าย: ค้างจากวันก่อนขึ้นก่อน แล้วตามลำดับลูกค้า · จ่ายแล้ว: ล่าสุดก่อน
+const pendingRows = computed(() =>
+  rows.value.filter(isPending).sort((a, b) => Number(b.fromEarlierDay) - Number(a.fromEarlierDay)),
 )
+const paidRows = computed(() => rows.value.filter((r) => r.status === 'PAID').reverse())
+
+type Item = PosOrder['items'][number]
+const liveItems = (r: PayRow) => (r.order?.items ?? []).filter((i) => i.queue_status !== 'CANCELLED')
+// ยอด: มีบิล = ยอดค้าง · ยังไม่ออกบิล = ราคารวมของคิว
+const dueOf = (r: PayRow) => (r.due ?? liveItems(r).reduce((s, i) => s + Number(i.unit_price), 0))
+const itemChip = (i: Item) =>
+  i.queue_status === 'IN_SERVICE'
+    ? { label: 'กำลังนวด', cls: 'bg-success-soft text-success-ink' }
+    : i.queue_status === 'COMPLETED'
+      ? { label: 'เสร็จแล้ว', cls: 'bg-secondary text-heading' }
+      : { label: 'รอคิว', cls: 'bg-pending-soft text-pending-ink' }
 
 </script>
 
@@ -115,44 +119,62 @@ const visible = computed(() =>
 
     <Alert v-if="error || financeError" variant="destructive" class="mb-4"><AlertDescription>{{ error ?? financeError }}</AlertDescription></Alert>
 
-    <div class="mb-4"><SegmentedControl v-model="filter" :items="filterItems" label="แสดง" /></div>
-
     <LoadingBar v-if="loading && !board" class="mb-3" />
-    <p v-else-if="!visible.length" class="m-0 rounded-xl border border-dashed border-input px-4 py-10 text-center text-[15px] text-muted-foreground">
-      {{ filter === 'paid' ? 'วันนี้ยังไม่มีใครจ่ายเงิน' : 'ไม่มีลูกค้ารอจ่ายเงิน — ลูกค้าจะขึ้นที่นี่เมื่อเริ่มนวดแล้ว' }}
-    </p>
+    <div v-else class="grid gap-3">
+      <h2 class="m-0 text-base font-semibold">ยังไม่จ่าย <span class="num font-normal text-muted-foreground">{{ pendingRows.length }} กลุ่ม</span></h2>
+      <p v-if="!pendingRows.length" class="m-0 rounded-xl border border-dashed border-input px-4 py-8 text-center text-[15px] text-muted-foreground">
+        ไม่มีลูกค้ารอจ่ายเงิน — ลูกค้าจะขึ้นที่นี่เมื่อเริ่มนวดแล้ว
+      </p>
 
-    <ul v-else class="m-0 grid list-none gap-2 p-0">
-      <li v-for="r in visible" :key="r.orderId">
-        <NuxtLink
-          :to="`/checkout/${r.orderId}`"
-          class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-foreground no-underline transition-colors hover:border-input hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-        >
-          <div class="min-w-0 flex-1">
-            <p class="m-0 flex flex-wrap items-center gap-2 text-[15px] font-semibold text-heading">
-              {{ r.customer }}
-              <Badge v-if="r.status === 'PARTIALLY_PAID'" variant="pending" dot>จ่ายแล้วบางส่วน</Badge>
-              <Badge v-if="r.fromEarlierDay" variant="outline">ค้างจาก <span class="num">{{ r.invoice?.business_date }}</span></Badge>
-            </p>
-            <template v-if="r.order">
-              <p v-for="i in r.order.items.filter((x) => x.queue_status !== 'CANCELLED')" :key="i.queue_id" class="m-0 text-sm text-muted-foreground">
-                <span class="num font-medium text-heading">คิว {{ formatQueueNumber(i.queue_number) }}</span>
-                · {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}<template v-if="i.therapist"> · {{ i.therapist.nickname }}</template>
-              </p>
-            </template>
-          </div>
-
-          <div class="flex items-center gap-3">
-            <span v-if="r.invoice" class="num text-lg font-semibold text-heading">{{ formatBaht(Number(r.status === 'PAID' ? r.invoice.total : r.due)) }}</span>
-            <span
-              class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-4 text-[15px] font-medium"
-              :class="r.status === 'PAID' ? 'border border-border text-heading' : 'bg-primary text-primary-foreground'"
-            >
-              <Banknote class="size-4" /> {{ r.status === 'PAID' ? 'ดูบิล' : 'รับเงิน' }}
+      <!-- ยังไม่จ่าย: การ์ดเต็ม (หัว = ชื่อ+ยอด · กลาง = ตารางคิว · ล่าง = ปุ่มรับเงินตำแหน่งเดิมเสมอ) -->
+      <article v-for="r in pendingRows" :key="r.orderId" class="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+        <header class="flex items-baseline justify-between gap-3 px-4 pt-3.5 pb-2">
+          <p class="m-0 min-w-0 truncate text-[15px] font-semibold text-heading">
+            {{ r.customer }}
+            <span v-if="liveItems(r).length" class="font-normal text-muted-foreground">· {{ liveItems(r).length }} คน</span>
+          </p>
+          <p class="num m-0 shrink-0 text-[15px] font-semibold text-heading">{{ formatBaht(dueOf(r)) }}</p>
+        </header>
+        <p v-if="r.fromEarlierDay || r.status === 'PARTIALLY_PAID'" class="m-0 flex flex-wrap gap-1.5 px-4 pb-2">
+          <Badge v-if="r.fromEarlierDay" variant="outline">ค้างจาก <span class="num">{{ r.invoice?.business_date }}</span></Badge>
+          <Badge v-if="r.status === 'PARTIALLY_PAID'" variant="pending" dot>
+            จ่ายแล้วบางส่วน <span class="num">{{ formatBaht(Number(r.invoice?.paid_amount ?? 0)) }}</span>
+          </Badge>
+        </p>
+        <ul v-if="liveItems(r).length" class="m-0 grid list-none px-4 pb-2">
+          <li v-for="i in liveItems(r)" :key="i.queue_id" class="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-2 border-t border-border/60 py-2 text-sm">
+            <span class="num font-semibold text-heading">{{ formatQueueNumber(i.queue_number) }}</span>
+            <span class="min-w-0 truncate text-foreground">
+              {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}<span v-if="i.therapist" class="text-muted-foreground"> · {{ i.therapist.nickname }}</span>
             </span>
-          </div>
+            <span class="rounded-full px-2 py-0.5 text-[12px] font-medium" :class="itemChip(i).cls">{{ itemChip(i).label }}</span>
+          </li>
+        </ul>
+        <footer class="flex items-center justify-end border-t border-border bg-muted/40 px-3 py-2">
+          <Button as-child size="sm">
+            <NuxtLink :to="`/checkout/${r.orderId}`"><Banknote /> รับเงิน</NuxtLink>
+          </Button>
+        </footer>
+      </article>
+
+      <!-- จ่ายแล้ว: แถวสั้น -->
+      <div v-if="paidRows.length" class="mt-2 overflow-hidden rounded-xl border border-border bg-card">
+        <p class="m-0 border-b border-border bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">จ่ายแล้ววันนี้ · <span class="num">{{ paidRows.length }}</span> กลุ่ม</p>
+        <NuxtLink
+          v-for="r in paidRows"
+          :key="r.orderId"
+          :to="`/checkout/${r.orderId}`"
+          class="flex items-center gap-3 border-b border-border px-4 py-2.5 text-sm text-foreground no-underline last:border-0 hover:bg-muted"
+        >
+          <CircleCheck class="size-4 shrink-0 text-success-ink" />
+          <span class="min-w-0 flex-1 truncate">
+            <span class="font-medium text-heading">{{ r.customer }}</span>
+            <span v-if="liveItems(r).length" class="num text-muted-foreground"> · คิว {{ liveItems(r).map((i) => formatQueueNumber(i.queue_number)).join(', ') }}</span>
+          </span>
+          <span class="num shrink-0 font-medium text-heading">{{ formatBaht(Number(r.invoice?.total ?? 0)) }}</span>
+          <ChevronRight class="size-4 shrink-0 text-muted-soft" />
         </NuxtLink>
-      </li>
-    </ul>
+      </div>
+    </div>
   </div>
 </template>

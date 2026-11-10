@@ -6,8 +6,8 @@ const route = useRoute()
 
 const items = [
   { to: '/pos', label: 'หน้าร้าน', icon: Store },
-  { to: '/payments', label: 'ชำระเงิน', icon: Wallet, also: ['/checkout'] },
   { to: '/queue', label: 'คิว', icon: ListOrdered },
+  { to: '/payments', label: 'ชำระเงิน', icon: Wallet, also: ['/checkout'] },
   { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
   { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText },
 ]

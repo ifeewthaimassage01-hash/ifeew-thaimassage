@@ -152,7 +152,9 @@ async function pay() {
       p_tip_employee_id: null,
       p_idempotency_key: payKey,
     }))) as unknown as InvoiceView
-    ok(invoice.value.status === 'PAID' ? `ชำระครบแล้ว · ใบเสร็จ ${invoice.value.receipt_number}` : 'บันทึกการรับเงินแล้ว')
+    // จ่ายครบ: กล่องเขียว "จ่ายครบแล้ว" บอกอยู่แล้ว → ค้างไว้ 3 วินาทีแล้วกลับหน้าร้าน (POS)
+    if (invoice.value.status === 'PAID') startBackCountdown()
+    else ok('บันทึกการรับเงินแล้ว')
     resetPayment()
   } catch (e) {
     fail(e)
@@ -160,6 +162,27 @@ async function pay() {
     saving.value = false
   }
 }
+
+// หลังรับเงินครบ: นับถอยหลัง 3 วินาทีแล้วกลับหน้าร้าน (เฉพาะตอนเพิ่งจ่าย ไม่ใช่ตอนเปิดดูบิลที่จ่ายแล้ว)
+const backCountdown = ref(0)
+let backTimer: ReturnType<typeof setInterval> | null = null
+function stopBackCountdown() {
+  if (backTimer) clearInterval(backTimer)
+  backTimer = null
+  backCountdown.value = 0
+}
+function startBackCountdown() {
+  stopBackCountdown()
+  backCountdown.value = 3
+  backTimer = setInterval(() => {
+    backCountdown.value--
+    if (backCountdown.value <= 0) {
+      stopBackCountdown()
+      navigateTo('/pos')
+    }
+  }, 1000)
+}
+onBeforeUnmount(stopBackCountdown)
 
 // สลิปอยู่บน Cloudinary (private) หรือ bucket เดิม — ขอ URL ที่เซ็นแล้วจาก Edge Function (ตรวจสิทธิ์สาขา)
 async function viewSlip(path: string) {
@@ -252,6 +275,10 @@ async function submitRefund() {
         <div>
           <p class="m-0 text-lg font-semibold">จ่ายครบแล้ว <span class="num">{{ formatBaht(Number(invoice.total)) }}</span></p>
           <p v-if="invoice.receipt_number" class="m-0 text-sm">ใบเสร็จ <span class="num">{{ invoice.receipt_number }}</span></p>
+          <p v-if="backCountdown > 0" class="m-0 mt-1 text-sm">
+            กลับหน้าร้านใน <span class="num font-semibold">{{ backCountdown }}</span> วินาที…
+            <button type="button" class="ml-1 font-medium underline underline-offset-2" @click="stopBackCountdown">อยู่หน้านี้ต่อ</button>
+          </p>
         </div>
       </div>
       <div v-else-if="invoice.status === 'VOID'" class="grid gap-3 rounded-xl bg-danger-soft px-5 py-4 text-danger-ink">
