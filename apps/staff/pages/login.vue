@@ -1,5 +1,7 @@
 <script setup lang="ts">
 import { RefreshCw } from '@lucide/vue'
+import { toast } from 'vue-sonner'
+import { bangkokTime } from '@ifeew/shared'
 import type { DeviceStaff, LoginBranch } from '~/composables/useStaffDevice'
 
 definePageMeta({ layout: 'blank' })
@@ -87,9 +89,25 @@ function choose(s: DeviceStaff) {
 }
 
 // เข้าใช้งาน = ลงเวลาเข้างานของวันนั้น (ครั้งแรกของวัน) — ลงไปแล้ว/ไม่ใช่พนักงานสาขาก็ข้ามไป ไม่ขวางการ login
-async function clockInToday(branchId: string) {
-  const { error } = await supabase.rpc('attendance_clock', { p_branch_id: branchId, p_action: 'CLOCK_IN' })
-  if (error && error.code !== '23514' && error.code !== '42501') console.warn('clock-in', error.message)
+// คืนข้อมูลการเข้างานเมื่อเป็นการเข้าใช้ครั้งแรกของวัน (ลงเวลาสำเร็จ) · ลงไปแล้ว/ไม่ใช่พนักงานสาขา = null
+async function clockInToday(branchId: string): Promise<{ nickname: string; clock_in_at: string } | null> {
+  const { data, error } = await supabase.rpc('attendance_clock', { p_branch_id: branchId, p_action: 'CLOCK_IN' })
+  if (error) {
+    if (error.code !== '23514' && error.code !== '42501') console.warn('clock-in', error.message)
+    return null
+  }
+  return data as unknown as { nickname: string; clock_in_at: string }
+}
+
+// แจ้งหลังเปลี่ยนหน้า (ตัวแสดงข้อความอยู่ใน layout หลัก ไม่ใช่หน้า login)
+function notifyCheckedIn(att: { nickname: string; clock_in_at: string } | null) {
+  if (!att) return
+  setTimeout(() => {
+    toast.success('เช็คชื่อเข้างานสำเร็จ', {
+      description: `${att.nickname} · เข้างานเวลา ${bangkokTime(att.clock_in_at)} น.`,
+      duration: 6000,
+    })
+  }, 300)
 }
 
 async function submitPin(pin: string) {
@@ -100,8 +118,9 @@ async function submitPin(pin: string) {
     clearAccess()
     const res = await branchPinLogin(branchId.value, selected.value.user_id, pin)
     markLogin()
-    await clockInToday(res.branch_id)
+    const attendance = await clockInToday(res.branch_id)
     await navigateTo('/')
+    notifyCheckedIn(attendance)
   } catch (e) {
     const err = errorMessage(e)
     pinError.value =

@@ -105,7 +105,7 @@ watch([from, to], loadEarnings, { immediate: true })
               </p>
               <div v-if="r.handover || r.off_shift" class="mt-1 flex gap-1.5">
                 <Badge v-if="r.handover" variant="neutral">ส่งต่อ/รับต่อ</Badge>
-                <Badge v-if="r.off_shift" variant="pending">นอกกะ</Badge>
+                <Badge v-if="r.off_shift" variant="pending">ก่อนเช็คชื่อ</Badge>
               </div>
             </div>
             <p class="num m-0 text-lg font-semibold text-heading">{{ r.fee_estimate != null ? formatBaht(Number(r.fee_estimate)) : '—' }}</p>

@@ -15,7 +15,7 @@ interface MoneySummary {
   customers: { total: number; REGULAR: number; FREELANCE: number; WALK_IN: number }
 }
 
-const props = defineProps<{ branchId: string }>()
+const props = defineProps<{ branchId: string; tick?: number }>()
 const supabase = useSupabaseClient()
 
 const period = ref<'today' | '7d' | 'month'>('today')
@@ -47,6 +47,7 @@ async function load() {
   }
 }
 watch([() => props.branchId, period], load, { immediate: true })
+watch(() => props.tick, load) // realtime จากแดชบอร์ด (คิว/บิลเปลี่ยน)
 useIntervalFn(load, 60_000)
 
 const n = (v: unknown) => Number(v) || 0

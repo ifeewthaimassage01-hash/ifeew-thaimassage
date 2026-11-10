@@ -2,7 +2,7 @@
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
 // มือถือ: แท็บ รอเรียก / กำลังให้บริการ / เสร็จ-ยกเลิก · จอใหญ่แสดงครบทุกคอลัมน์
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
-import { Clock, KeyRound, RefreshCw, UserRound } from '@lucide/vue'
+import { Clock, EllipsisVertical, KeyRound, RefreshCw, UserRound } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -11,8 +11,6 @@ import {
   newIdempotencyKey,
   formatDuration,
   formatQueueNumber,
-  orderChannelLabels,
-  queueStatusLabels,
   reasonSchema,
   type PosOrder,
   type PosOrderItem,
@@ -60,9 +58,11 @@ const byColumn = (statuses: QueueStatus[]) =>
       statuses.includes('COMPLETED') ? b.queue_number - a.queue_number : a.queue_number - b.queue_number,
     )
 
-// สีของสถานะคิว (Badge variant ตาม DESIGN.md)
-const statusVariant = (s: QueueStatus) =>
-  (({ WAITING: 'pending', CALLED: 'default', ACCEPTED: 'default', IN_SERVICE: 'success', COMPLETED: 'neutral', CANCELLED: 'danger' }) as const)[s]
+// มีเมนูรอง (⋯) ไหม — ซ่อนปุ่มเมื่อไม่มีอะไรให้ทำ
+const hasMore = (r: Row) =>
+  r.queue_status === 'IN_SERVICE' ||
+  ['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status) ||
+  (r.queue_status === 'COMPLETED' && withinUndo(r.completed_at))
 
 function minutesLeft(r: Row): number | null {
   if (r.queue_status !== 'IN_SERVICE' || !r.started_at) return null
@@ -388,7 +388,7 @@ async function submitClock(pin: string) {
 
 <template>
   <div>
-    <PageHeader title="คิววันนี้" :description="`${activeBranch?.name ?? ''} · เรียกคิว มอบหมายหมอ เริ่มและจบบริการ`">
+    <PageHeader title="คิววันนี้" description="กด “เริ่มนวด” เพื่อเลือกหมอ · นวดจบแล้วกด “นวดเสร็จแล้ว”">
       <template #actions>
         <Button v-if="device.token.value" variant="outline" @click="openClock"><Clock /> ลงเวลา</Button>
         <Button variant="ghost" size="icon" aria-label="โหลดคิวใหม่" @click="load"><RefreshCw :class="loading ? 'animate-spin' : ''" /></Button>
@@ -426,48 +426,49 @@ async function submitClock(pin: string) {
           :class="[isOverdue(r) ? 'border-danger ring-1 ring-danger/40' : newIds.has(r.queue_id) ? 'border-primary ring-2 ring-primary/30' : 'border-border', c.key === 'done' ? 'opacity-70' : '']"
         >
           <div class="flex items-start justify-between gap-2">
-            <p class="num m-0 text-3xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
-            <Badge :variant="statusVariant(r.queue_status)" dot>{{ queueStatusLabels[r.queue_status] }}</Badge>
+            <div class="min-w-0">
+              <p class="num m-0 text-3xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
+              <p class="m-0 mt-1.5 text-[15px] font-medium text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
+              <p class="m-0 text-sm text-muted-foreground">{{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
+            </div>
+            <!-- เมนูรอง: งานที่ไม่ได้ทำบ่อย -->
+            <DropdownMenu v-if="hasMore(r)">
+              <DropdownMenuTrigger as-child>
+                <Button variant="ghost" size="icon-sm" :aria-label="`ตัวเลือกเพิ่มเติม คิว ${formatQueueNumber(r.queue_number)}`"><EllipsisVertical /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-48">
+                <template v-if="r.queue_status === 'IN_SERVICE'">
+                  <DropdownMenuItem @select="openExtend(r)">ต่อเวลา</DropdownMenuItem>
+                  <DropdownMenuItem @select="openCall(r)">เปลี่ยนหมอ</DropdownMenuItem>
+                  <DropdownMenuItem v-if="device.token.value && r.therapist?.user_id" @select="openPin(r)"><KeyRound /> หมอกด PIN</DropdownMenuItem>
+                  <DropdownMenuItem v-if="withinUndo(r.started_at)" @select="openUndo(r)">ย้อนกลับ (ยังไม่เริ่ม)</DropdownMenuItem>
+                </template>
+                <DropdownMenuItem v-if="r.queue_status === 'COMPLETED' && withinUndo(r.completed_at)" @select="openUndo(r)">ย้อนกลับ (ยังไม่เสร็จ)</DropdownMenuItem>
+                <DropdownMenuItem
+                  v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)"
+                  class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink"
+                  @select="openCancel(r)"
+                >ยกเลิกคิว</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
-          <p class="m-0 mt-1 font-medium text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
-          <p v-if="r.follows_queue_id" class="m-0 text-sm text-muted-foreground">ต่อเวลาจากคิว <span class="num">{{ queueNo(r.follows_queue_id) }}</span></p>
-          <p v-if="isOverdue(r)" class="m-0 text-sm font-medium text-danger-ink">เลยเวลาจบ {{ -(minutesLeft(r) ?? 0) }} นาที</p>
-          <p class="m-0 text-sm text-muted-foreground">
-            {{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }} · {{ orderChannelLabels[r.order.channel] }}
-            <span v-if="r.order.booking_code"> · <span class="num">{{ r.order.booking_code }}</span></span>
-          </p>
-          <p class="m-0 text-sm">
-            <template v-if="r.started_at">เริ่ม <span class="num">{{ bangkokTime(r.started_at) }}</span></template>
-            <template v-else>นัด <span class="num">{{ bangkokTime(r.planned_starts_at) }}</span></template>
-            <template v-if="minutesLeft(r) !== null"> · เหลือ <span class="num font-medium text-heading">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</template>
-          </p>
+
+          <p v-if="isOverdue(r)" class="m-0 text-sm font-medium text-danger-ink">เลยเวลาจบมา {{ -(minutesLeft(r) ?? 0) }} นาที</p>
+          <p v-else-if="minutesLeft(r) !== null" class="m-0 text-sm text-heading">เหลืออีก <span class="num font-semibold">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</p>
+          <p v-else-if="c.key === 'waiting'" class="m-0 text-sm text-muted-foreground">เวลา <span class="num">{{ bangkokTime(r.planned_starts_at) }}</span></p>
           <p v-if="r.therapist" class="m-0 flex flex-wrap items-center gap-1.5 text-sm">
             <UserRound class="size-4 text-muted-soft" aria-hidden="true" /><span class="text-heading">{{ r.therapist.nickname }}</span>
             <Badge v-if="r.therapist.is_freelance" variant="outline">หมอวิ่ง</Badge>
-            <span v-if="r.therapist.fuel_amount" class="text-muted-foreground">· ค่าน้ำมัน <span class="num">{{ formatBaht(Number(r.therapist.fuel_amount)) }}</span></span>
-            <Badge v-if="r.therapist.off_shift_confirmed" variant="outline">นอกกะ</Badge>
-            <span v-if="r.handovers.length" class="text-muted-foreground">(ต่อจาก {{ r.handovers.map((h) => h.nickname).join(', ') }})</span>
           </p>
-          <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 text-sm text-danger-ink">{{ r.cancel_reason }}</p>
+          <p v-if="r.follows_queue_id" class="m-0 text-sm text-muted-foreground">ต่อเวลาจากคิว <span class="num">{{ queueNo(r.follows_queue_id) }}</span></p>
+          <p v-if="r.cancel_reason && r.queue_status === 'CANCELLED'" class="m-0 text-sm text-danger-ink">ยกเลิก: {{ r.cancel_reason }}</p>
 
-          <div v-if="c.key !== 'done'" class="mt-2 grid gap-2">
-            <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" size="sm" :disabled="busy === r.queue_id" @click="openCall(r)">เรียกคิว</Button>
-            <Button v-if="r.queue_status === 'IN_SERVICE'" size="sm" :disabled="busy === r.queue_id" @click="complete(r)">จบบริการ</Button>
-            <div class="flex flex-wrap gap-1">
-              <template v-if="r.queue_status === 'IN_SERVICE'">
-                <Button size="xs" variant="ghost" @click="openExtend(r)">ต่อเวลา</Button>
-                <Button size="xs" variant="ghost" @click="openCall(r)">เปลี่ยนหมอ</Button>
-                <Button v-if="withinUndo(r.started_at)" size="xs" variant="ghost" @click="openUndo(r)">ย้อนเริ่ม</Button>
-              </template>
-              <Button v-if="device.token.value && r.therapist?.user_id && r.queue_status === 'IN_SERVICE'" size="xs" variant="outline" @click="openPin(r)">
-                <KeyRound /> หมอกด PIN
-              </Button>
-              <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" size="xs" variant="ghost" class="text-danger-ink" @click="openCancel(r)">ยกเลิก</Button>
-            </div>
-          </div>
-          <div v-else-if="r.queue_status === 'COMPLETED' && withinUndo(r.completed_at)" class="mt-1">
-            <Button size="xs" variant="ghost" @click="openUndo(r)">ย้อนจบบริการ</Button>
-          </div>
+          <Button v-if="['WAITING', 'CALLED', 'ACCEPTED'].includes(r.queue_status)" class="mt-2 w-full" :disabled="busy === r.queue_id" @click="openCall(r)">
+            เริ่มนวด (เลือกหมอ)
+          </Button>
+          <Button v-else-if="r.queue_status === 'IN_SERVICE'" class="mt-2 w-full" :disabled="busy === r.queue_id" @click="complete(r)">
+            นวดเสร็จแล้ว
+          </Button>
         </article>
       </section>
     </div>
@@ -477,13 +478,13 @@ async function submitClock(pin: string) {
       <DialogContent class="max-h-[90dvh] grid-rows-[auto_minmax(0,1fr)_auto] sm:max-w-lg">
         <DialogHeader>
           <DialogTitle>
-            {{ isHandover ? 'เปลี่ยนหมอระหว่างบริการ' : 'เรียกคิว' }}
+            {{ isHandover ? 'เปลี่ยนหมอ คิว' : 'เริ่มนวด คิว' }}
             <span class="num">{{ callRow ? formatQueueNumber(callRow.queue_number) : '' }}</span>
           </DialogTitle>
           <DialogDescription>
             {{ callRow?.service_name }} {{ callRow ? formatDuration(callRow.duration_minutes) : '' }}
             <template v-if="isHandover"> · ค่ามือแบ่งตามเวลาที่หมอแต่ละคนทำจริง</template>
-            <template v-else> · เลือกหมอแล้วเริ่มบริการทันที</template>
+            <template v-else> · เลือกหมอ แล้วกดเริ่ม</template>
           </DialogDescription>
         </DialogHeader>
         <div v-if="callRow" class="-mx-6 grid content-start gap-3 overflow-y-auto px-6">
@@ -532,7 +533,7 @@ async function submitClock(pin: string) {
               <span class="size-2.5 shrink-0 rounded-full" :class="t.busy_queue_number ? 'bg-brand-accent' : t.on_shift ? 'bg-success' : 'border border-muted-soft'" aria-hidden="true" />
               <span>
                 <span class="block font-medium text-heading">{{ t.nickname }}</span>
-                <span class="block text-sm text-muted-foreground">{{ t.busy_queue_number ? `มีคิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง · มีกะ' : 'ว่าง · ไม่มีกะ' }}</span>
+                <span class="block text-sm text-muted-foreground">{{ t.busy_queue_number ? `มีคิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง · เข้างานแล้ว' : 'ว่าง · ยังไม่เช็คชื่อ' }}</span>
               </span>
             </button>
           </div>

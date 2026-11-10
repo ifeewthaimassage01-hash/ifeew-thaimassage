@@ -122,7 +122,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
 
 <template>
   <div>
-    <PageHeader title="ประกันมือและการลงเวลา" description="หมอประจำที่ลงเวลาเข้า-ออกครบกะ ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวัน (ไม่นับทิป) ระบบเติมส่วนต่างอัตโนมัติ · หมอวิ่งได้ค่ามือตามงานจริง" />
+    <PageHeader title="ประกันมือและการลงเวลา" description="หมอประจำที่เช็คชื่อเข้างาน (เข้าระบบครั้งแรกของวัน) ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวันทันที (ไม่นับทิป) · ระหว่างวันยอดเติมลดลงตามค่ามือที่ทำได้ · หมอวิ่งได้ค่ามือตามงานจริง" />
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
     <div class="grid gap-6">
@@ -176,7 +176,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
           <Table>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
-                <TableHead>วันที่</TableHead><TableHead>หมอ</TableHead><TableHead>กะ</TableHead><TableHead>ลงเวลา</TableHead>
+                <TableHead>วันที่</TableHead><TableHead>หมอ</TableHead><TableHead>เข้างาน</TableHead>
                 <TableHead class="text-right">ค่ามือ</TableHead><TableHead class="text-right">ประกัน</TableHead><TableHead>ผล</TableHead>
                 <TableHead class="text-right">เติม</TableHead><TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
               </TableRow>
@@ -185,13 +185,12 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
               <TableRow v-for="r in rows" :key="r.employee_id + r.business_date">
                 <TableCell class="num">{{ r.business_date }}</TableCell>
                 <TableCell class="text-heading">{{ r.nickname }}</TableCell>
-                <TableCell class="num">{{ r.shift_start ? `${time(r.shift_start)}–${time(r.shift_end)}` : 'ไม่มีกะ' }}</TableCell>
-                <TableCell class="num">{{ time(r.clock_in_at) }}–{{ time(r.clock_out_at) }}</TableCell>
+                <TableCell class="num">{{ r.clock_in_at ? time(r.clock_in_at) : 'ไม่ได้เช็คชื่อ' }}</TableCell>
                 <TableCell class="num text-right">{{ formatBaht(Number(r.earned)) }}</TableCell>
                 <TableCell class="num text-right">{{ Number(r.rate) ? formatBaht(Number(r.rate)) : '—' }}</TableCell>
                 <TableCell>
                   <Badge v-if="Number(r.rate)" :variant="r.qualified ? 'success' : 'neutral'" dot>
-                    {{ r.override_grant !== null ? (r.override_grant ? 'เจ้าของให้' : 'เจ้าของไม่ให้') : r.attended ? 'ครบกะ' : 'ไม่ครบกะ' }}
+                    {{ r.override_grant !== null ? (r.override_grant ? 'เจ้าของให้' : 'เจ้าของไม่ให้') : r.attended ? 'เข้างานแล้ว' : 'ไม่ได้เช็คชื่อ' }}
                   </Badge>
                   <span v-if="r.override_reason" class="block max-w-48 truncate text-sm text-muted-foreground" :title="r.override_reason">{{ r.override_reason }}</span>
                 </TableCell>
@@ -204,7 +203,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
                 </TableCell>
               </TableRow>
               <TableRow v-if="!loading && !rows.length" class="hover:bg-transparent">
-                <TableCell colspan="9" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
+                <TableCell colspan="8" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
               </TableRow>
             </TableBody>
           </Table>

@@ -10,6 +10,8 @@ defineProps<{
   isOwner: boolean
   branchName?: string
   branchId?: string
+  /** เพิ่มขึ้นเมื่อมีการเปลี่ยนแปลงแบบ realtime → การ์ดสรุปการเงินโหลดใหม่ */
+  moneyTick?: number
 }>()
 </script>
 
@@ -37,7 +39,7 @@ defineProps<{
     </SectionCard>
 
     <!-- สรุปการเงิน (เจ้าของร้าน) -->
-    <DashboardMoneySummary v-if="isOwner && branchId" :branch-id="branchId" />
+    <DashboardMoneySummary v-if="isOwner && branchId" :branch-id="branchId" :tick="moneyTick" />
 
     <!-- เตียงและอุปกรณ์ -->
     <Skeleton v-if="!dash && !error" class="h-40 rounded-xl" />

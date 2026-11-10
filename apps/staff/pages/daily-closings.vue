@@ -78,7 +78,7 @@ const statusLabels = { SUBMITTED: 'รอตรวจ', APPROVED: 'อนุม�
 const lines = (f: DailyClosingFigures): Array<[string, number]> => [
   ['เงินสด', f.cash_sales], ['โอน', f.transfer_sales], ['QR', f.qr_sales], ['มัดจำที่หัก', f.deposit_applied],
   ['มัดจำที่ริบ', f.forfeited_deposits], ['คืนเงิน', -f.refunds], ['รายรับสุทธิ', f.net_revenue], ['รายจ่าย', f.expenses],
-  ['ผลต่างเงินสดของกะ', f.cash_difference], ['ทิป (ไม่ใช่รายได้)', f.tips], ['ค่ามือของวัน', f.service_commission], ['ค้างชำระ', f.outstanding],
+  ['เงินสดเกิน/ขาด', f.cash_difference], ['ทิป (ไม่ใช่รายได้)', f.tips], ['ค่ามือของวัน', f.service_commission], ['ค้างชำระ', f.outstanding],
 ]
 </script>
 
@@ -113,7 +113,7 @@ const lines = (f: DailyClosingFigures): Array<[string, number]> => [
             <ul class="m-0 grid list-none gap-1 p-0 text-[15px]">
               <li v-for="g in preview.guarantee_topups" :key="g.employee_id" class="flex flex-wrap justify-between gap-2">
                 <span>{{ g.nickname }} · ค่ามือ <span class="num">{{ formatBaht(Number(g.earned)) }}</span> / ประกัน <span class="num">{{ formatBaht(Number(g.rate)) }}</span></span>
-                <span :class="g.qualified ? 'font-medium text-heading' : 'text-muted-foreground'">{{ g.qualified ? `เติม ${formatBaht(Number(g.topup))}` : 'ไม่ครบกะ ไม่ได้ประกัน' }}</span>
+                <span :class="g.qualified ? 'font-medium text-heading' : 'text-muted-foreground'">{{ g.qualified ? `เติม ${formatBaht(Number(g.topup))}` : 'ไม่ได้เช็คชื่อ ไม่ได้ประกัน' }}</span>
               </li>
             </ul>
           </div>

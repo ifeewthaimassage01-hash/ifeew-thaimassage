@@ -41,7 +41,7 @@ watch([branchId, from, to, () => company.value?.company_id], load, { immediate: 
 
 <template>
   <div>
-    <PageHeader title="สรุปงานหมอ" description="จำนวนบริการ เวลาทำงาน งานนอกกะ การส่งต่อ และค่ามือประมาณการของหมอแต่ละคน" />
+    <PageHeader title="สรุปงานหมอ" description="จำนวนบริการ เวลาทำงาน งานก่อนเช็คชื่อ การส่งต่อ และค่ามือประมาณการของหมอแต่ละคน" />
 
     <div class="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[220px_180px_180px_auto] lg:items-end">
       <SelectField v-model="branchId" :items="branchItems" label="สาขา" />
@@ -61,7 +61,7 @@ watch([branchId, from, to, () => company.value?.company_id], load, { immediate: 
               <TableHead>หมอ</TableHead>
               <TableHead class="text-right">บริการ</TableHead>
               <TableHead class="text-right">เวลาทำงาน</TableHead>
-              <TableHead class="text-right">นอกกะ</TableHead>
+              <TableHead class="text-right">ก่อนเช็คชื่อ</TableHead>
               <TableHead class="text-right">ส่งต่อ</TableHead>
               <TableHead class="text-right">ค่ามือ (ประมาณการ)</TableHead>
             </TableRow>

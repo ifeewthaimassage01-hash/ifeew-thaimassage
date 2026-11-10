@@ -1,13 +1,11 @@
 <script setup lang="ts">
 // ชำระเงิน: รวมลูกค้าที่ต้องเก็บเงินของสาขาไว้ที่เดียว (วันนี้ + ค้างชำระจากวันก่อน)
 // กดเพื่อไปหน้า /checkout/[orderId] (ออก Invoice / ส่วนลด / รับเงิน) — Realtime ผ่าน usePosBoard
-import { Banknote, Clock, ReceiptText, RefreshCw, Wallet } from '@lucide/vue'
+import { Banknote, Clock, ReceiptText, Wallet } from '@lucide/vue'
 import {
   formatBaht,
   formatDuration,
   formatQueueNumber,
-  invoiceStatusLabels,
-  queueStatusLabels,
   type FinanceBoard,
   type InvoiceStatus,
   type PosOrder,
@@ -85,36 +83,25 @@ const rows = computed<PayRow[]>(() => {
 })
 
 const isPending = (r: PayRow) => r.status !== 'PAID'
-const filter = ref<'pending' | 'paid' | 'all'>('pending')
+const filter = ref<'pending' | 'paid'>('pending')
 const pendingCount = computed(() => rows.value.filter(isPending).length)
 const paidCount = computed(() => rows.value.filter((r) => r.status === 'PAID').length)
 const filterItems = computed(() => [
-  { value: 'pending', label: `รอชำระ (${pendingCount.value})` },
-  { value: 'paid', label: `ชำระแล้ว (${paidCount.value})` },
-  { value: 'all', label: 'ทั้งหมด' },
+  { value: 'pending', label: `ยังไม่จ่าย (${pendingCount.value})` },
+  { value: 'paid', label: `จ่ายแล้ว (${paidCount.value})` },
 ])
 const order: Record<RowStatus, number> = { NOT_ISSUED: 0, DRAFT: 0, PARTIALLY_PAID: 1, ISSUED: 1, PAID: 2, VOID: 3 }
 const visible = computed(() =>
   rows.value
-    .filter((r) => (filter.value === 'all' ? true : filter.value === 'paid' ? r.status === 'PAID' : isPending(r)))
+    .filter((r) => (filter.value === 'paid' ? r.status === 'PAID' : isPending(r)))
     .sort((a, b) => order[a.status] - order[b.status] || Number(b.fromEarlierDay) - Number(a.fromEarlierDay)),
 )
 
-const statusLabel = (s: RowStatus) => (s === 'NOT_ISSUED' ? 'ยังไม่ออกบิล' : invoiceStatusLabels[s])
-const statusVariant = (s: RowStatus) => (s === 'PAID' ? 'success' : s === 'NOT_ISSUED' || s === 'DRAFT' ? 'neutral' : 'pending')
-
-async function refresh() {
-  await Promise.all([load(), loadFinance()])
-}
 </script>
 
 <template>
-  <div class="max-w-5xl">
-    <PageHeader title="ชำระเงิน" :description="`${activeBranch?.name ?? ''} · ลูกค้าที่ต้องเก็บเงิน กดที่รายการเพื่อออกบิลและรับเงิน`">
-      <template #actions>
-        <Button variant="outline" size="sm" :disabled="loading" @click="refresh"><RefreshCw :class="loading ? 'animate-spin' : ''" /> โหลดใหม่</Button>
-      </template>
-    </PageHeader>
+  <div class="mx-auto max-w-4xl">
+    <PageHeader title="ชำระเงิน" description="ลูกค้าที่ใช้บริการแล้ว กด “รับเงิน” ที่ชื่อลูกค้า" />
 
     <!-- สรุปยอด: เห็นเฉพาะเจ้าของร้าน -->
     <div v-if="isOwner" class="mb-6 grid grid-cols-3 gap-2 sm:gap-4">
@@ -131,53 +118,41 @@ async function refresh() {
     <div class="mb-4"><SegmentedControl v-model="filter" :items="filterItems" label="แสดง" /></div>
 
     <LoadingBar v-if="loading && !board" class="mb-3" />
-    <EmptyState
-      v-else-if="!visible.length"
-      :title="filter === 'paid' ? 'ยังไม่มีรายการที่ชำระแล้ววันนี้' : 'ไม่มีลูกค้ารอชำระ'"
-      description="ลูกค้าจะขึ้นที่นี่เมื่อเริ่มบริการแล้ว"
-    />
+    <p v-else-if="!visible.length" class="m-0 rounded-xl border border-dashed border-input px-4 py-10 text-center text-[15px] text-muted-foreground">
+      {{ filter === 'paid' ? 'วันนี้ยังไม่มีใครจ่ายเงิน' : 'ไม่มีลูกค้ารอจ่ายเงิน — ลูกค้าจะขึ้นที่นี่เมื่อเริ่มนวดแล้ว' }}
+    </p>
 
-    <Card v-else class="gap-0 py-0">
-      <ul class="m-0 grid list-none p-0">
-        <li v-for="r in visible" :key="r.orderId" class="border-b border-border last:border-0">
-          <NuxtLink
-            :to="`/checkout/${r.orderId}`"
-            class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 text-foreground no-underline transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
-          >
-            <div class="min-w-0 flex-1">
-              <p class="m-0 flex flex-wrap items-center gap-2 font-medium text-heading">
-                {{ r.customer }}
-                <Badge :variant="statusVariant(r.status)">{{ statusLabel(r.status) }}</Badge>
-                <Badge v-if="r.fromEarlierDay" variant="outline">ค้างจาก <span class="num">{{ r.invoice?.business_date }}</span></Badge>
+    <ul v-else class="m-0 grid list-none gap-2 p-0">
+      <li v-for="r in visible" :key="r.orderId">
+        <NuxtLink
+          :to="`/checkout/${r.orderId}`"
+          class="flex flex-wrap items-center justify-between gap-3 rounded-xl border border-border bg-card px-4 py-3.5 text-foreground no-underline transition-colors hover:border-input hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        >
+          <div class="min-w-0 flex-1">
+            <p class="m-0 flex flex-wrap items-center gap-2 text-[15px] font-semibold text-heading">
+              {{ r.customer }}
+              <Badge v-if="r.status === 'PARTIALLY_PAID'" variant="pending" dot>จ่ายแล้วบางส่วน</Badge>
+              <Badge v-if="r.fromEarlierDay" variant="outline">ค้างจาก <span class="num">{{ r.invoice?.business_date }}</span></Badge>
+            </p>
+            <template v-if="r.order">
+              <p v-for="i in r.order.items.filter((x) => x.queue_status !== 'CANCELLED')" :key="i.queue_id" class="m-0 text-sm text-muted-foreground">
+                <span class="num font-medium text-heading">คิว {{ formatQueueNumber(i.queue_number) }}</span>
+                · {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}<template v-if="i.therapist"> · {{ i.therapist.nickname }}</template>
               </p>
-              <template v-if="r.order">
-                <p v-for="i in r.order.items.filter((x) => x.queue_status !== 'CANCELLED')" :key="i.queue_id" class="m-0 mt-0.5 text-sm text-muted-foreground">
-                  คิว <span class="num">{{ formatQueueNumber(i.queue_number) }}</span> · {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}
-                  · {{ queueStatusLabels[i.queue_status] }}<span v-if="i.therapist"> · {{ i.therapist.nickname }}</span>
-                </p>
-              </template>
-              <p v-if="r.invoice?.invoice_number" class="num m-0 mt-0.5 text-sm text-muted-foreground">{{ r.invoice.invoice_number }}</p>
-            </div>
+            </template>
+          </div>
 
-            <div class="flex items-center gap-4">
-              <div v-if="r.invoice" class="text-right">
-                <p class="num m-0 text-lg font-semibold text-heading">{{ formatBaht(Number(r.status === 'PAID' ? r.invoice.total : r.due)) }}</p>
-                <p class="m-0 text-[13px] text-muted-foreground">
-                  <template v-if="r.status === 'PAID'">ชำระครบ</template>
-                  <template v-else-if="r.status === 'PARTIALLY_PAID'">คงเหลือ · จ่ายแล้ว <span class="num">{{ formatBaht(Number(r.invoice.paid_amount)) }}</span></template>
-                  <template v-else>ยอดที่ต้องชำระ</template>
-                </p>
-              </div>
-              <span
-                class="inline-flex h-9 shrink-0 items-center gap-1.5 rounded-lg px-3 text-sm font-medium"
-                :class="r.status === 'PAID' ? 'border border-border text-heading' : 'bg-primary text-primary-foreground'"
-              >
-                <Banknote class="size-4" /> {{ r.status === 'PAID' ? 'ดูการชำระ' : 'ชำระเงิน' }}
-              </span>
-            </div>
-          </NuxtLink>
-        </li>
-      </ul>
-    </Card>
+          <div class="flex items-center gap-3">
+            <span v-if="r.invoice" class="num text-lg font-semibold text-heading">{{ formatBaht(Number(r.status === 'PAID' ? r.invoice.total : r.due)) }}</span>
+            <span
+              class="inline-flex h-10 shrink-0 items-center gap-1.5 rounded-lg px-4 text-[15px] font-medium"
+              :class="r.status === 'PAID' ? 'border border-border text-heading' : 'bg-primary text-primary-foreground'"
+            >
+              <Banknote class="size-4" /> {{ r.status === 'PAID' ? 'ดูบิล' : 'รับเงิน' }}
+            </span>
+          </div>
+        </NuxtLink>
+      </li>
+    </ul>
   </div>
 </template>
