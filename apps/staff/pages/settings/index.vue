@@ -91,6 +91,34 @@ async function save() {
   }
 }
 
+// ล้างข้อมูลการใช้งาน (ถาวร): พิมพ์คำยืนยัน → กล่องยืนยัน → ยืนยันตัวตนซ้ำ (step-up)
+const CLEAR_WORD = 'ล้างข้อมูล'
+const { confirm } = useDialog()
+const { run } = useStepUp()
+const clearConfirm = ref('')
+const clearing = ref(false)
+async function clearTransactions() {
+  if (!company.value || clearConfirm.value.trim() !== CLEAR_WORD) return
+  const ok = await confirm({
+    title: 'ล้างข้อมูลการใช้งานทั้งหมด?',
+    description: 'การจอง คิว ออเดอร์ บิล การรับเงิน รายจ่าย ค่ามือ การลงเวลา และประวัติทั้งหมดจะถูกลบถาวร กู้คืนไม่ได้ (บัญชี ร้าน สาขา บริการ พนักงาน และลูกค้ายังอยู่)',
+    confirmText: 'ล้างข้อมูล',
+    destructive: true,
+  })
+  if (!ok) return
+  clearing.value = true
+  try {
+    const id = company.value.company_id
+    await run(() => must(supabase.rpc('owner_clear_transactions', { p_company_id: id, p_confirm: clearConfirm.value.trim() })))
+    clearConfirm.value = ''
+    message.value = { type: 'success', text: 'ล้างข้อมูลการใช้งานแล้ว · เปิดกะใหม่ก่อนเริ่มรับเงิน' }
+  } catch (e) {
+    if ((e as Error)?.message !== 'STEP_UP_CANCELLED') message.value = { type: 'error', text: errorText(e, 'ล้างข้อมูลไม่สำเร็จ') }
+  } finally {
+    clearing.value = false
+  }
+}
+
 onMounted(load)
 </script>
 
@@ -171,5 +199,25 @@ onMounted(load)
         <Button type="submit" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า' }}</Button>
       </div>
     </form>
+
+    <!-- โซนอันตราย: แยกจากฟอร์มตั้งค่า (ไม่ส่งไปกับปุ่มบันทึก) -->
+    <section class="mt-10 grid gap-4 border-t border-border pt-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10" aria-labelledby="s-danger">
+      <div>
+        <h2 id="s-danger" class="m-0 text-base font-semibold text-danger-ink">ล้างข้อมูลการใช้งาน</h2>
+        <p class="m-0 mt-1 text-sm text-muted-foreground">ใช้ก่อนเริ่มเปิดร้านจริง หลังทดลองระบบ</p>
+      </div>
+      <Card class="grid gap-4 border-danger/40 p-5">
+        <div class="grid gap-2 text-[15px]">
+          <p class="m-0"><span class="font-medium text-heading">ลบถาวร:</span> การจอง มัดจำ คิว ออเดอร์ บิล การรับเงิน/คืนเงิน สลิป ทิป กะ รายจ่าย ปิดยอดรายวัน ค่ามือ การลงเวลา งวดบัญชี เลขเอกสาร และประวัติการใช้งาน</p>
+          <p class="m-0"><span class="font-medium text-heading">เก็บไว้:</span> บัญชีและรหัสผ่าน/PIN ร้าน สาขา บริการและราคา เตียง/อุปกรณ์ พนักงาน และลูกค้า</p>
+        </div>
+        <form class="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end" @submit.prevent="clearTransactions">
+          <TextField v-model="clearConfirm" :label="`พิมพ์ “${CLEAR_WORD}” เพื่อยืนยัน`" autocomplete="off" />
+          <Button type="submit" variant="destructive" :disabled="clearing || clearConfirm.trim() !== CLEAR_WORD">
+            {{ clearing ? 'กำลังล้าง…' : 'ล้างข้อมูลทั้งหมด' }}
+          </Button>
+        </form>
+      </Card>
+    </section>
   </div>
 </template>
