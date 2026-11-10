@@ -1277,6 +1277,7 @@ export type Database = {
         Returns: undefined
       }
       daily_closings_list: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
+      branch_money_summary: { Args: { p_branch_id: string; p_from: string; p_to: string }; Returns: Json }
       delete_branch: { Args: { p_branch_id: string }; Returns: undefined }
       delete_employee: { Args: { p_employee_id: string }; Returns: string }
       purge_staff_profile: { Args: { p_user_id: string }; Returns: boolean }

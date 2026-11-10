@@ -44,7 +44,21 @@ export function useStaffNav() {
   const { isOwner } = useAccess()
   const route = useRoute()
 
-  const groups = computed<StaffNavGroup[]>(() => [
+  // พนักงาน (ไม่ใช่เจ้าของร้าน): เมนูเฉพาะงานหน้าร้าน
+  const staffGroups: StaffNavGroup[] = [
+    {
+      label: 'งานประจำวัน',
+      items: [
+        { to: '/pos', label: 'หน้าร้าน (POS)', icon: Store },
+        { to: '/payments', label: 'ชำระเงิน', icon: Wallet },
+        { to: '/queue', label: 'คิว', icon: ListOrdered },
+        { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
+      ],
+    },
+    { label: 'เงินของสาขา', items: [{ to: '/expenses', label: 'รายจ่าย', icon: ReceiptText }] },
+  ]
+
+  const ownerGroups: StaffNavGroup[] = [
     {
       label: 'งานประจำวัน',
       items: [
@@ -65,33 +79,31 @@ export function useStaffNav() {
         { to: '/daily-closings', label: 'ปิดยอดรายวัน', icon: ClipboardCheck },
       ],
     },
-    ...(isOwner.value
-      ? [
-          {
-            label: 'รายงานและบัญชี',
-            items: [
-              { to: '/owner', label: 'ภาพรวมทุกสาขา', icon: ChartColumn },
-              { to: '/reports/finance', label: 'รายงานการเงิน', icon: FileChartColumn },
-              { to: '/reports/therapists', label: 'สรุปงานหมอ', icon: ChartBar },
-              { to: '/commissions', label: 'ค่ามือหมอ', icon: HandCoins },
-              { to: '/guarantees', label: 'ประกันมือ/ลงเวลา', icon: ShieldCheck },
-              { to: '/periods', label: 'งวดบัญชี', icon: LockKeyhole },
-            ],
-          },
-          {
-            label: 'จัดการร้าน',
-            items: [
-              { to: '/services', label: 'บริการและราคา', icon: Sparkles },
-              { to: '/resources', label: 'เตียงและอุปกรณ์', icon: BedDouble },
-              { to: '/employees', label: 'พนักงาน', icon: UserCog },
-              { to: '/branches', label: 'สาขา', icon: Building2 },
-              { to: '/settings', label: 'ตั้งค่าบริษัท', icon: Settings, exact: true },
-              { to: '/settings/devices', label: 'ตั้งค่าเครื่อง', icon: MonitorSmartphone },
-            ],
-          },
-        ]
-      : []),
-  ])
+    {
+      label: 'รายงานและบัญชี',
+      items: [
+        { to: '/owner', label: 'ภาพรวมทุกสาขา', icon: ChartColumn },
+        { to: '/reports/finance', label: 'รายงานการเงิน', icon: FileChartColumn },
+        { to: '/reports/therapists', label: 'สรุปงานหมอ', icon: ChartBar },
+        { to: '/commissions', label: 'ค่ามือหมอ', icon: HandCoins },
+        { to: '/guarantees', label: 'ประกันมือ/ลงเวลา', icon: ShieldCheck },
+        { to: '/periods', label: 'งวดบัญชี', icon: LockKeyhole },
+      ],
+    },
+    {
+      label: 'จัดการร้าน',
+      items: [
+        { to: '/services', label: 'บริการและราคา', icon: Sparkles },
+        { to: '/resources', label: 'เตียงและอุปกรณ์', icon: BedDouble },
+        { to: '/employees', label: 'พนักงาน', icon: UserCog },
+        { to: '/branches', label: 'สาขา', icon: Building2 },
+        { to: '/settings', label: 'ตั้งค่าบริษัท', icon: Settings, exact: true },
+        { to: '/settings/devices', label: 'ตั้งค่าเครื่อง', icon: MonitorSmartphone },
+      ],
+    },
+  ]
+
+  const groups = computed<StaffNavGroup[]>(() => (isOwner.value ? ownerGroups : staffGroups))
 
   const isActive = (i: StaffNavItem) => (i.exact ? route.path === i.to : route.path === i.to || route.path.startsWith(`${i.to}/`))
 
