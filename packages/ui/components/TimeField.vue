@@ -45,7 +45,7 @@ const groupLabel = computed(() => props.label ?? props.ariaLabel)
 </script>
 
 <template>
-  <div :class="cn('grid gap-1.5', props.class)">
+  <div :class="cn('grid content-start gap-1.5', props.class)">
     <Label v-if="label" :id="`${id}-l`" :for="`${id}-h`">{{ label }}</Label>
     <div class="num flex items-center gap-1.5" role="group" :aria-label="label ? undefined : ariaLabel" :aria-labelledby="label ? `${id}-l` : undefined">
       <Select :model-value="parts.h" :disabled="disabled" @update:model-value="setHour">

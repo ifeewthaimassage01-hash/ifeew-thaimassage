@@ -40,8 +40,8 @@ async function submit() {
 <template>
   <AuthShell title="เข้าสู่ระบบ" subtitle="ดูการจอง ประวัติการนวด และจองครั้งต่อไปได้เร็วขึ้น">
     <form class="grid gap-4" novalidate @submit.prevent="submit">
-      <div class="grid gap-1.5"><Label for="email">อีเมล</Label><Input id="email" v-model="email" type="email" autocomplete="email" required /></div>
-      <div class="grid gap-1.5"><Label for="password">รหัสผ่าน</Label><Input id="password" v-model="password" type="password" autocomplete="current-password" required /></div>
+      <div class="grid content-start gap-1.5"><Label for="email">อีเมล</Label><Input id="email" v-model="email" type="email" autocomplete="email" required /></div>
+      <div class="grid content-start gap-1.5"><Label for="password">รหัสผ่าน</Label><Input id="password" v-model="password" type="password" autocomplete="current-password" required /></div>
       <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
       <Button type="submit" size="lg" class="w-full" :disabled="loading">{{ loading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ' }}</Button>
     </form>

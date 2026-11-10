@@ -10,7 +10,7 @@ const id = useId()
 </script>
 
 <template>
-  <div :class="cn('grid gap-1.5', props.class)">
+  <div :class="cn('grid content-start gap-1.5', props.class)">
     <Label v-if="label" :for="id">{{ label }}</Label>
     <Textarea
       :id="id"

@@ -332,12 +332,12 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
                 <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }">เข้าสู่ระบบ</NuxtLink>
               </p>
               <div class="grid grid-cols-2 gap-3">
-                <div class="grid gap-1.5"><Label for="g-first">ชื่อ</Label><Input id="g-first" v-model="guest.firstName" autocomplete="given-name" required /></div>
-                <div class="grid gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>
+                <div class="grid content-start gap-1.5"><Label for="g-first">ชื่อ</Label><Input id="g-first" v-model="guest.firstName" autocomplete="given-name" required /></div>
+                <div class="grid content-start gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>
               </div>
               <div class="grid gap-3 sm:grid-cols-2">
-                <div class="grid gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
-                <div class="grid gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
+                <div class="grid content-start gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+                <div class="grid content-start gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
               </div>
               <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
               <ClientOnly><TurnstileWidget ref="turnstile" @token="(t: string) => (turnstileToken = t)" /></ClientOnly>

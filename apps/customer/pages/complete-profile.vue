@@ -62,10 +62,10 @@ async function submit() {
   <AuthShell title="ข้อมูลของคุณ" subtitle="กรอกชื่อและเบอร์โทรเพื่อเริ่มจองคิว ร้านใช้เบอร์นี้ติดต่อเรื่องนัดเท่านั้น">
     <form class="grid gap-4" novalidate @submit.prevent="submit">
       <div class="grid grid-cols-2 gap-3">
-        <div class="grid gap-1.5"><Label for="c-first">ชื่อ</Label><Input id="c-first" v-model="form.firstName" autocomplete="given-name" required /></div>
-        <div class="grid gap-1.5"><Label for="c-last">นามสกุล</Label><Input id="c-last" v-model="form.lastName" autocomplete="family-name" /></div>
+        <div class="grid content-start gap-1.5"><Label for="c-first">ชื่อ</Label><Input id="c-first" v-model="form.firstName" autocomplete="given-name" required /></div>
+        <div class="grid content-start gap-1.5"><Label for="c-last">นามสกุล</Label><Input id="c-last" v-model="form.lastName" autocomplete="family-name" /></div>
       </div>
-      <div class="grid gap-1.5"><Label for="c-phone">เบอร์โทร</Label><Input id="c-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+      <div class="grid content-start gap-1.5"><Label for="c-phone">เบอร์โทร</Label><Input id="c-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
       <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
       <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
       <Button type="submit" size="lg" class="w-full" :disabled="loading">{{ loading ? 'กำลังบันทึก…' : 'บันทึกและเริ่มใช้งาน' }}</Button>

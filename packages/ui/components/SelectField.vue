@@ -40,7 +40,7 @@ function onSelect(key: unknown) {
 </script>
 
 <template>
-  <div :class="cn('grid min-w-0 grid-cols-1 gap-1.5', props.class)">
+  <div :class="cn('grid min-w-0 grid-cols-1 content-start gap-1.5', props.class)">
     <Label v-if="label" :for="id">{{ label }}</Label>
     <Select :model-value="selectedKey" :disabled="disabled" @update:model-value="onSelect">
       <SelectTrigger :id="id" class="w-full min-w-0 [&>span]:truncate" :aria-label="label ? undefined : ariaLabel" :aria-describedby="hint ? `${id}-d` : undefined">

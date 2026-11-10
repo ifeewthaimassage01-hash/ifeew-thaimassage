@@ -88,17 +88,17 @@ async function submit() {
 
     <form v-else class="grid gap-4" novalidate @submit.prevent="submit">
       <div class="grid grid-cols-2 gap-3">
-        <div class="grid gap-1.5"><Label for="r-first">ชื่อ</Label><Input id="r-first" v-model="form.firstName" autocomplete="given-name" required /></div>
-        <div class="grid gap-1.5"><Label for="r-last">นามสกุล</Label><Input id="r-last" v-model="form.lastName" autocomplete="family-name" /></div>
+        <div class="grid content-start gap-1.5"><Label for="r-first">ชื่อ</Label><Input id="r-first" v-model="form.firstName" autocomplete="given-name" required /></div>
+        <div class="grid content-start gap-1.5"><Label for="r-last">นามสกุล</Label><Input id="r-last" v-model="form.lastName" autocomplete="family-name" /></div>
       </div>
-      <div class="grid gap-1.5"><Label for="r-phone">เบอร์โทร</Label><Input id="r-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
-      <div class="grid gap-1.5"><Label for="r-email">อีเมล</Label><Input id="r-email" v-model="form.email" type="email" autocomplete="email" required /></div>
+      <div class="grid content-start gap-1.5"><Label for="r-phone">เบอร์โทร</Label><Input id="r-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+      <div class="grid content-start gap-1.5"><Label for="r-email">อีเมล</Label><Input id="r-email" v-model="form.email" type="email" autocomplete="email" required /></div>
       <div class="grid gap-1.5">
         <Label for="r-pass">รหัสผ่าน</Label>
         <Input id="r-pass" v-model="form.password" type="password" autocomplete="new-password" required aria-describedby="r-pass-hint" />
         <p id="r-pass-hint" class="m-0 text-sm text-muted-foreground">อย่างน้อย 10 ตัว มีตัวพิมพ์เล็ก พิมพ์ใหญ่ และตัวเลข</p>
       </div>
-      <div class="grid gap-1.5"><Label for="r-confirm">ยืนยันรหัสผ่าน</Label><Input id="r-confirm" v-model="form.confirm" type="password" autocomplete="new-password" required /></div>
+      <div class="grid content-start gap-1.5"><Label for="r-confirm">ยืนยันรหัสผ่าน</Label><Input id="r-confirm" v-model="form.confirm" type="password" autocomplete="new-password" required /></div>
       <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
       <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
       <Button type="submit" size="lg" class="w-full" :disabled="loading">{{ loading ? 'กำลังสมัคร…' : 'สมัครสมาชิก' }}</Button>

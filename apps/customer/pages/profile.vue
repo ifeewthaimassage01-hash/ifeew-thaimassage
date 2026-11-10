@@ -103,10 +103,10 @@ async function requestDeletion() {
         </div>
         <form class="grid gap-4 rounded-xl bg-card p-5 border border-border" novalidate @submit.prevent="saveProfile">
           <div class="grid grid-cols-2 gap-3">
-            <div class="grid gap-1.5"><Label for="p-first">ชื่อ</Label><Input id="p-first" v-model="form.firstName" autocomplete="given-name" /></div>
-            <div class="grid gap-1.5"><Label for="p-last">นามสกุล</Label><Input id="p-last" v-model="form.lastName" autocomplete="family-name" /></div>
+            <div class="grid content-start gap-1.5"><Label for="p-first">ชื่อ</Label><Input id="p-first" v-model="form.firstName" autocomplete="given-name" /></div>
+            <div class="grid content-start gap-1.5"><Label for="p-last">นามสกุล</Label><Input id="p-last" v-model="form.lastName" autocomplete="family-name" /></div>
           </div>
-          <div class="grid gap-1.5 sm:w-1/2"><Label for="p-phone">เบอร์โทร</Label><Input id="p-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" class="num" /></div>
+          <div class="grid content-start gap-1.5 sm:w-1/2"><Label for="p-phone">เบอร์โทร</Label><Input id="p-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" class="num" /></div>
           <div class="flex items-center justify-end gap-3">
             <Button type="submit" :disabled="saving === 'profile'">{{ saving === 'profile' ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
           </div>

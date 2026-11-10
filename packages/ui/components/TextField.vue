@@ -19,7 +19,7 @@ const describedBy = computed(() => (props.error || props.hint ? `${id}-d` : unde
 </script>
 
 <template>
-  <div :class="cn('grid gap-1.5', props.class)">
+  <div :class="cn('grid content-start gap-1.5', props.class)">
     <Label v-if="label" :for="id">{{ label }}</Label>
     <div class="relative">
       <Input

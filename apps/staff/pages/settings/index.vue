@@ -151,7 +151,7 @@ onMounted(load)
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-2">
           <TextField v-model="settings.cancellation_cutoff_hours" numeric="integer" label="ยกเลิกการจองได้ก่อนนัด" hint="0-168" suffix="ชั่วโมง" />
-          <TextField v-model="settings.large_expense_threshold" type="number" label="รายจ่ายที่ต้องแนบหลักฐาน" suffix="บาท" />
+          <TextField v-model="settings.large_expense_threshold" type="number" label="รายจ่ายที่ต้องแนบหลักฐาน" hint="ตั้งแต่ยอดนี้ขึ้นไป" suffix="บาท" class="num" />
           <TextField
             v-model="settings.freelance_fuel_amount"
             type="number"
@@ -159,7 +159,7 @@ onMounted(load)
             label="ค่าน้ำมันหมอวิ่ง (ต่อครั้ง)"
             hint="ใช้ตอนเรียกคิวให้หมอวิ่งแล้วติ๊ก “มีค่าน้ำมัน” · บันทึกเป็นรายจ่ายของร้าน · 0 = ไม่ใช้"
             suffix="บาท"
-            class="num"
+            class="num sm:col-span-2"
           />
         </Card>
       </section>
