@@ -214,7 +214,7 @@ async function saveAccount() {
           <span class="col-span-2 self-center font-medium text-heading sm:col-span-1">
             {{ t.name }} <Badge v-if="!t.is_active" variant="neutral" class="ml-1">ปิดประเภท</Badge>
           </span>
-          <TextField v-model="qty[t.id]!.total_quantity" type="number" min="0" :aria-label="`จำนวน ${t.name}`" class="num" />
+          <TextField v-model="qty[t.id]!.total_quantity" numeric="integer" min="0" :aria-label="`จำนวน ${t.name}`" class="num" />
           <SelectField v-model="qty[t.id]!.status" :aria-label="`สถานะ ${t.name}`"
             :items="[{ value: 'ACTIVE', title: 'ใช้งาน' }, { value: 'MAINTENANCE', title: 'ซ่อมบำรุง' }, { value: 'DISABLED', title: 'ปิด' }]" />
           <Button variant="ghost" size="sm" @click="toggleType(t)">{{ t.is_active ? 'ปิดประเภท' : 'เปิดประเภท' }}</Button>
@@ -240,7 +240,7 @@ async function saveAccount() {
       <SectionCard title="บัญชีรับมัดจำของสาขา" description="ลูกค้าจะเห็น QR PromptPay ของบัญชีนี้ · SlipOK Branch ID ต้องผูกกับบัญชีเดียวกันในระบบ SlipOK">
         <form class="grid gap-4" @submit.prevent="saveAccount">
           <div class="grid gap-4 md:grid-cols-2">
-            <TextField v-model="accountForm.promptpay_id" label="PromptPay" hint="เบอร์มือถือ 10 หลัก / เลขประจำตัว 13 หลัก / e-Wallet 15 หลัก" inputmode="numeric" class="num" />
+            <TextField v-model="accountForm.promptpay_id" numeric="digits" label="PromptPay" hint="เบอร์มือถือ 10 หลัก / เลขประจำตัว 13 หลัก / e-Wallet 15 หลัก" inputmode="numeric" class="num" />
             <TextField v-model="accountForm.account_name" label="ชื่อบัญชี" />
             <TextField v-model="accountForm.bank_name" label="ธนาคาร" />
             <TextField v-model="accountForm.slipok_branch_id" label="SlipOK Branch ID" hint="เว้นว่าง = พนักงานตรวจสลิปเอง" />
@@ -260,7 +260,7 @@ async function saveAccount() {
         <div class="grid gap-3">
           <div v-for="(i, idx) in svcItems" :key="idx" class="grid grid-cols-[minmax(0,1fr)_90px_auto] items-end gap-2">
             <SelectField v-model="i.resource_type_id" :items="types.filter((t) => t.is_active)" item-title="name" item-value="id" :label="idx === 0 ? 'ประเภท' : undefined" :aria-label="`ประเภทที่ ${idx + 1}`" />
-            <TextField v-model="i.quantity" type="number" min="1" max="10" :label="idx === 0 ? 'จำนวน' : undefined" :aria-label="`จำนวนที่ ${idx + 1}`" class="num" />
+            <TextField v-model="i.quantity" numeric="integer" min="1" max="10" :label="idx === 0 ? 'จำนวน' : undefined" :aria-label="`จำนวนที่ ${idx + 1}`" class="num" />
             <Button v-if="svcItems.length > 1" variant="ghost" size="icon" :aria-label="`ลบรายการที่ ${idx + 1}`" @click="svcItems.splice(idx, 1)"><X /></Button>
             <span v-else class="size-10" />
           </div>

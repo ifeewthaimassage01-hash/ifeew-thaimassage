@@ -91,7 +91,7 @@ async function submit() {
         <div class="grid gap-1.5"><Label for="r-first">ชื่อ</Label><Input id="r-first" v-model="form.firstName" autocomplete="given-name" required /></div>
         <div class="grid gap-1.5"><Label for="r-last">นามสกุล</Label><Input id="r-last" v-model="form.lastName" autocomplete="family-name" /></div>
       </div>
-      <div class="grid gap-1.5"><Label for="r-phone">เบอร์โทร</Label><Input id="r-phone" v-model="form.phone" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+      <div class="grid gap-1.5"><Label for="r-phone">เบอร์โทร</Label><Input id="r-phone" v-model="form.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
       <div class="grid gap-1.5"><Label for="r-email">อีเมล</Label><Input id="r-email" v-model="form.email" type="email" autocomplete="email" required /></div>
       <div class="grid gap-1.5">
         <Label for="r-pass">รหัสผ่าน</Label>

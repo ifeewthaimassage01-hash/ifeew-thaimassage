@@ -1,0 +1,11 @@
+{
+  "eval_name": "predeploy-functions-rpc",
+  "prompt": "ก่อนขึ้น production ช่วยเช็ก edge functions กับ RPC ที่แอปเรียกหน่อย ว่ามีตัวไหนที่เรียกแล้วจะพังเงียบๆ หรือไม่ได้ใช้แล้วบ้าง",
+  "assertions": [
+    "report.md cross-checks edge function folders against the app code that calls them (covering e.g. pos-payment-slip and queue-pin-action as used)",
+    "report.md discusses config.toml verify_jwt for functions without an entry (e.g. customer-erasure, staff-create) and judges whether requiring login is intended",
+    "report.md does not claim that any rpc() called by the apps is missing from migrations (they all exist)",
+    "report.md explains that an undeployed function or a verify_jwt mismatch fails at the gateway and appears in the browser as a CORS/401 error",
+    "The run did not deploy, push, or modify repository files"
+  ]
+}

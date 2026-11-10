@@ -1,8 +1,8 @@
 <script setup lang="ts">
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
-// แท็บ "คิวของฉัน" สำหรับหมอที่ login ด้วย PIN บนเครื่องสาขา
+// มือถือ: แท็บ รอเรียก / กำลังให้บริการ / เสร็จ-ยกเลิก · จอใหญ่แสดงครบทุกคอลัมน์
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
-import { Clock, KeyRound, RefreshCw, UserRound, X } from '@lucide/vue'
+import { Clock, KeyRound, RefreshCw, UserRound } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -28,11 +28,10 @@ type CatalogRow = Database['public']['Views']['v_public_branch_services']['Row']
 type Row = PosOrderItem & { order: PosOrder }
 
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const { activeBranch, company } = useAccess()
 const { board, loading, error, load } = usePosBoard()
 
-const tab = ref<'all' | 'mine'>('all')
+const mobileColumn = ref('waiting')
 const message = ref<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 const busy = ref<string | null>(null)
 const ok = (text: string) => (message.value = { type: 'success', text })
@@ -46,14 +45,8 @@ const rows = computed<Row[]>(() =>
 )
 // คิวที่เพิ่งสร้างจากหน้าร้าน (?new=id,id) — แสดงเลขคิวให้แจ้งลูกค้า และไฮไลต์การ์ด
 const route = useRoute()
-const router = useRouter()
 const newIds = computed(() => new Set(String(route.query.new ?? '').split(',').filter(Boolean)))
-const newRows = computed(() => rows.value.filter((r) => newIds.value.has(r.queue_id)).sort((a, b) => a.queue_number - b.queue_number))
-const dismissNew = () => router.replace({ query: { ...route.query, new: undefined } })
 
-const mine = computed(() =>
-  rows.value.filter((r) => r.therapist?.user_id === user.value?.sub && !['COMPLETED', 'CANCELLED'].includes(r.queue_status)),
-)
 const columns: Array<{ key: string; title: string; statuses: QueueStatus[] }> = [
   // CALLED/ACCEPTED = คิวที่เรียกแบบเดิม (ก่อน migration 033) แสดงรวมกับรอเรียก
   { key: 'waiting', title: 'รอเรียก', statuses: ['WAITING', 'CALLED', 'ACCEPTED'] },
@@ -402,57 +395,26 @@ async function submitClock(pin: string) {
       </template>
     </PageHeader>
 
-    <section v-if="newRows.length" class="mb-6 rounded-xl border-2 border-primary/40 bg-card p-5" aria-live="polite" aria-labelledby="new-queue-h">
-      <div class="mb-3 flex items-start justify-between gap-3">
-        <div>
-          <h2 id="new-queue-h" class="m-0 text-lg font-semibold">สร้างคิวแล้ว · แจ้งเลขคิวให้ลูกค้า</h2>
-          <p class="m-0 text-sm text-muted-foreground">{{ newRows[0]!.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
-        </div>
-        <Button variant="ghost" size="icon" aria-label="ปิดเลขคิว" @click="dismissNew"><X /></Button>
-      </div>
-      <div class="flex flex-wrap gap-3">
-        <div v-for="r in newRows" :key="r.queue_id" class="min-w-40 rounded-xl bg-secondary/60 px-5 py-4 text-center">
-          <p class="num m-0 text-4xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
-          <p class="m-0 mt-2 text-sm text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
-        </div>
-      </div>
-    </section>
-
-    <SegmentedControl
-      v-model="tab"
-      :items="[{ value: 'all', label: 'คิวทั้งหมด' }, { value: 'mine', label: mine.length ? `คิวของฉัน (${mine.length})` : 'คิวของฉัน' }]"
-      label="มุมมองคิว"
-      class="mb-4"
-    />
-
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-3" />
 
-    <!-- คิวของฉัน (หมอ) -->
-    <template v-if="tab === 'mine'">
-      <EmptyState v-if="!mine.length" title="ยังไม่มีคิวที่เรียกให้คุณ" description="เมื่อพนักงานเรียกคิวให้คุณ คิวจะขึ้นที่นี่" />
-      <div class="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-        <Card v-for="r in mine" :key="r.queue_id" class="gap-0 py-0">
-          <div class="flex items-start justify-between gap-3 p-6">
-            <div>
-              <p class="num m-0 text-5xl leading-none font-semibold text-heading">{{ formatQueueNumber(r.queue_number) }}</p>
-              <p class="m-0 mt-3 text-xl text-heading">{{ r.service_name }} {{ formatDuration(r.duration_minutes) }}</p>
-              <p class="m-0 text-muted-foreground">{{ r.order.customer_name ?? 'ลูกค้าทั่วไป' }}</p>
-            </div>
-            <Badge :variant="statusVariant(r.queue_status)" dot>{{ queueStatusLabels[r.queue_status] }}</Badge>
-          </div>
-          <p v-if="minutesLeft(r) !== null" class="m-0 px-6 pb-4 text-lg">เหลือประมาณ <span class="num font-semibold text-heading">{{ Math.max(0, minutesLeft(r)!) }}</span> นาที</p>
-          <div class="border-t border-border p-4">
-            <Button v-if="r.queue_status === 'IN_SERVICE'" size="lg" class="h-14 w-full text-lg" :disabled="busy === r.queue_id" @click="complete(r)">จบบริการ</Button>
-          </div>
-        </Card>
-      </div>
-    </template>
+    <!-- มือถือ/แท็บเล็ต: แสดงทีละคอลัมน์เป็นแท็บ (จอใหญ่แสดงครบทุกคอลัมน์) -->
+    <SegmentedControl
+      v-model="mobileColumn"
+      :items="columns.map((c) => ({ value: c.key, label: `${c.title} (${byColumn(c.statuses).length})` }))"
+      label="สถานะคิว"
+      class="mx-auto mb-4 flex w-fit justify-center lg:hidden"
+    />
 
-    <!-- คิวทั้งหมด -->
-    <div v-else class="grid items-start gap-4 lg:grid-cols-2 2xl:grid-cols-[repeat(3,minmax(0,1fr))_240px]">
-      <section v-for="c in columns" :key="c.key" class="grid gap-3 rounded-xl bg-secondary/35 p-3" :aria-labelledby="`col-${c.key}`">
+    <div class="grid items-start gap-4 lg:grid-cols-3">
+      <section
+        v-for="c in columns"
+        :key="c.key"
+        class="grid gap-3 rounded-xl bg-secondary p-3"
+        :class="c.key === mobileColumn ? '' : 'max-lg:hidden'"
+        :aria-labelledby="`col-${c.key}`"
+      >
         <h2 :id="`col-${c.key}`" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
           {{ c.title }} <span class="num rounded-md bg-card px-2 text-sm font-medium text-muted-foreground">{{ byColumn(c.statuses).length }}</span>
         </h2>
@@ -507,22 +469,6 @@ async function submitClock(pin: string) {
             <Button size="xs" variant="ghost" @click="openUndo(r)">ย้อนจบบริการ</Button>
           </div>
         </article>
-      </section>
-
-      <section class="grid gap-3 rounded-xl border border-border bg-card p-3 lg:col-span-2 2xl:col-span-1" aria-labelledby="col-therapists">
-        <h2 id="col-therapists" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
-          หมอ <span class="num rounded-md bg-muted px-2 text-sm font-medium text-muted-foreground">{{ therapists.length }}</span>
-        </h2>
-        <ul class="m-0 grid list-none gap-0.5 p-0 lg:grid-cols-2 2xl:grid-cols-1">
-          <li v-for="t in therapists" :key="t.employee_id" class="flex items-center gap-2.5 rounded-md px-2 py-1.5">
-            <span class="size-2.5 shrink-0 rounded-full" :class="t.busy_queue_number ? 'bg-brand-accent' : t.on_shift ? 'bg-success' : 'border border-muted-soft'" aria-hidden="true" />
-            <span class="min-w-0">
-              <span class="block truncate text-[15px] text-heading">{{ t.nickname }}</span>
-              <span class="block text-[13px] text-muted-foreground">{{ t.busy_queue_number ? `คิว ${formatQueueNumber(t.busy_queue_number)}` : t.on_shift ? 'ว่าง' : 'ไม่มีกะ' }}</span>
-            </span>
-          </li>
-          <li v-if="!therapists.length" class="px-2 py-2 text-sm text-muted-foreground">ไม่มีพนักงานในสาขานี้</li>
-        </ul>
       </section>
     </div>
 
@@ -580,7 +526,7 @@ async function submitClock(pin: string) {
               :key="t.employee_id"
               type="button"
               :disabled="!!t.busy_queue_number || t.employee_id === callRow.therapist?.employee_id || busy === callRow.queue_id"
-              class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary hover:bg-secondary/40 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card"
+              class="flex items-center gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:border-primary hover:bg-secondary focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50 disabled:hover:border-border disabled:hover:bg-card"
               @click="pick(t)"
             >
               <span class="size-2.5 shrink-0 rounded-full" :class="t.busy_queue_number ? 'bg-brand-accent' : t.on_shift ? 'bg-success' : 'border border-muted-soft'" aria-hidden="true" />
@@ -646,7 +592,7 @@ async function submitClock(pin: string) {
               :key="a.employee_id"
               type="button"
               :disabled="!!a.clock_out_at"
-              class="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
+              class="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-3 text-left transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-50"
               @click="clockWho = a; clockError = null"
             >
               <span class="font-medium text-heading">{{ a.nickname }}</span>

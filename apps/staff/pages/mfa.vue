@@ -103,7 +103,7 @@ onMounted(setup)
             <p class="m-0 text-sm break-all text-muted-foreground">หรือกรอกรหัสด้วยตนเอง: <span class="num text-heading">{{ secret }}</span></p>
           </figure>
           <form class="grid gap-4" @submit.prevent="verify">
-            <TextField v-model="code" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus class="num" />
+            <TextField v-model="code" numeric="digits" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus class="num" />
             <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
             <Button type="submit" size="lg" class="w-full" :disabled="verifying">{{ verifying ? 'กำลังตรวจสอบ…' : 'ยืนยัน' }}</Button>
           </form>

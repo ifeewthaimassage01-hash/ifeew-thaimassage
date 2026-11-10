@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // บัญชีใน topbar: ยังไม่ login = ปุ่มเข้าสู่ระบบ/สมัคร · login แล้ว = avatar + dropdown
-import { CalendarCheck, ChevronDown, History, LogOut, UserRound } from '@lucide/vue'
+import { CalendarCheck, CalendarSearch, ChevronDown, History, LogIn, LogOut, UserPlus, UserRound } from '@lucide/vue'
 
 const user = useSupabaseUser()
 const supabase = useSupabaseClient()
@@ -24,18 +24,31 @@ async function logout() {
 </script>
 
 <template>
-  <div v-if="!user" class="flex items-center gap-1">
-    <Button as-child variant="ghost" size="sm" class="hidden sm:inline-flex"><NuxtLink to="/register">สมัครสมาชิก</NuxtLink></Button>
-    <Button as-child variant="outline" size="sm"><NuxtLink to="/login">เข้าสู่ระบบ</NuxtLink></Button>
-  </div>
+  <DropdownMenu v-if="!user">
+    <DropdownMenuTrigger as-child>
+      <button
+        type="button"
+        class="grid size-11 place-items-center rounded-full border border-border bg-card text-heading shadow-soft transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        aria-label="บัญชีผู้ใช้"
+      >
+        <UserRound class="size-5" :stroke-width="1.6" />
+      </button>
+    </DropdownMenuTrigger>
+    <DropdownMenuContent align="end" class="w-52">
+      <DropdownMenuItem as-child><NuxtLink to="/login" class="text-foreground no-underline"><LogIn /> เข้าสู่ระบบ</NuxtLink></DropdownMenuItem>
+      <DropdownMenuItem as-child><NuxtLink to="/register" class="text-foreground no-underline"><UserPlus /> สมัครสมาชิก</NuxtLink></DropdownMenuItem>
+      <DropdownMenuSeparator />
+      <DropdownMenuItem as-child><NuxtLink to="/check-booking" class="text-foreground no-underline"><CalendarSearch /> ตรวจสอบการจอง</NuxtLink></DropdownMenuItem>
+    </DropdownMenuContent>
+  </DropdownMenu>
   <DropdownMenu v-else>
     <DropdownMenuTrigger as-child>
       <button
         type="button"
-        class="flex h-10 items-center gap-2 rounded-lg pr-2 pl-1 text-heading transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+        class="flex h-11 items-center gap-2 rounded-full border border-border bg-card pr-3 pl-1 text-heading shadow-soft transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none max-lg:pr-1"
         aria-label="เมนูบัญชี"
       >
-        <span class="grid size-8 place-items-center rounded-full bg-secondary text-sm font-semibold text-heading">{{ initials }}</span>
+        <span class="grid size-9 place-items-center rounded-full bg-secondary text-sm font-semibold text-heading">{{ initials }}</span>
         <span class="hidden max-w-36 truncate text-[15px] font-medium lg:block">{{ name }}</span>
         <ChevronDown class="hidden size-4 text-muted-foreground lg:block" />
       </button>

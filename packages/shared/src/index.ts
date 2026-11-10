@@ -849,3 +849,25 @@ export function toCsv(headers: Array<[key: string, label: string]>, rows: Array<
   for (const r of rows) lines.push(headers.map(([k]) => esc(r[k])).join(','))
   return '\uFEFF' + lines.join('\r\n')
 }
+
+// -----------------------------------------------------------------------------
+// รูปสาธารณะ (รูปบริการ/รูปสาขา): Cloudinary หรือ Supabase Storage เดิม
+//   ค่าในคอลัมน์ image_path:
+//     "cloudinary:<public_id>"  → Cloudinary (f_auto,q_auto + ย่อตามความกว้าง)
+//     อื่น ๆ                    → path ใน bucket ของ Supabase Storage (รูปก่อนย้าย)
+// -----------------------------------------------------------------------------
+export const CLOUDINARY_PREFIX = 'cloudinary:'
+
+export function publicImageUrl(
+  path: string | null | undefined,
+  opts: { supabaseUrl: string; bucket: string; cloudName?: string | null; width?: number },
+): string | null {
+  if (!path) return null
+  if (path.startsWith(CLOUDINARY_PREFIX)) {
+    if (!opts.cloudName) return null
+    const id = path.slice(CLOUDINARY_PREFIX.length)
+    const t = ['f_auto', 'q_auto', ...(opts.width ? ['c_limit', `w_${opts.width}`] : [])].join(',')
+    return `https://res.cloudinary.com/${opts.cloudName}/image/upload/${t}/${id}`
+  }
+  return `${opts.supabaseUrl.replace(/\/$/, '')}/storage/v1/object/public/${opts.bucket}/${path}`
+}

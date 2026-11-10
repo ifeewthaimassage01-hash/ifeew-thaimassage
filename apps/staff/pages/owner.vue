@@ -66,7 +66,7 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
             ]"
             :key="a.label"
             :to="a.to"
-            class="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5 text-foreground no-underline transition-colors hover:bg-muted/40 sm:border-r"
+            class="flex items-center justify-between gap-3 border-b border-border px-5 py-3.5 text-foreground no-underline transition-colors hover:bg-muted sm:border-r"
           >
             <span class="flex items-center gap-2">
               <span class="size-2 rounded-full" :class="a.alert ? 'bg-brand-accent' : 'bg-secondary'" aria-hidden="true" />{{ a.label }}

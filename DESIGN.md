@@ -22,54 +22,50 @@ Use the provided reference image as a layout and visual inspiration, not as some
 
 ## 2. Color Design System
 
-Use a warm cream and earthy neutral color palette as the primary visual identity.
-
-The overall interface must be cream-dominant, with soft beige, natural sand, and muted brown tones used to create visual hierarchy.
+Use a warm cream and ivory palette with muted brown accents (Warm Cream Minimal Dashboard). The canvas is cream, content floats on warm-white cards with subtle beige borders and soft diffused shadows.
 
 | Token | Color | Usage |
 |---|---|---|
-| Primary | #8A6A50 | Primary buttons, active states |
-| Primary Hover | #72543E | Button hover, interactive states |
-| Accent | #B38B67 | Highlights, secondary emphasis |
-| Background | #F7F3EB | Main application background |
-| Surface | #FFFEFC | Cards, panels, content areas |
-| Secondary Surface | #EAE0D1 | Secondary sections, subtle backgrounds |
-| Border | #E8DFD4 | Borders, dividers, separators |
-| Heading | #514337 | Page titles, important headings |
-| Text | #66594D | Primary body text |
-| Muted | #A39789 | Secondary text, placeholders |
-| Success | #6F9277 | Success states, completed bookings |
-| Danger | #C87870 | Errors, warnings, destructive actions |
+| Background | #F8F3ED | Page canvas, sidebar, topbar (one continuous cream surface, no dividers) |
+| Surface | #FFFCF8 | Cards, panels, dialogs, form fields |
+| Muted Fill (Surface Secondary) | #F4EBE1 | Icon circles, inset boxes, hover states |
+| Accent Fill | #F0E5D9 | Stronger hover |
+| Secondary | #EDE0D2 | Active navigation item, badges, secondary buttons |
+| Border | #EDE4DA | Card outlines, dividers |
+| Input Border | #E3D6C7 | Form field outlines |
+| Primary | #93704F | Primary buttons, active states (white text passes 4.5:1) |
+| Primary Dark | #886342 | Button hover, pressed states |
+| Brand Accent | #A9825E | Icons, highlights, appointment blocks, chart lines (not for text) |
+| Heading | #514337 | Page titles, important headings, numbers |
+| Text | #66594D | Body text |
+| Secondary Text | #7A6E61 | Descriptions, metadata (4.5:1 on cream) |
+| Muted Icon | #B6A797 | Decorative icons only |
+| Success / Danger | #6F9277 / #C87870 | Status dots and pills only, always with a label |
+
+Shadow: `0 4px 20px rgba(111, 83, 57, 0.055)` (`shadow-soft`). Radius: cards 16px, inset boxes 12px, buttons and fields 8px, chips 6px.
+
+Typography: DM Sans for Latin and numbers, Noto Sans Thai for Thai. Display headings and the wordmark on the customer site use Cormorant Garamond (`font-display`). Large numbers use 30px regular.
 
 ### Color Rules
 
-- Use Background (#F7F3EB) as the dominant background color throughout the application.
-- Use Surface (#FFFEFC) for cards, panels, tables, forms, and content containers.
-- Use Primary (#8A6A50) for important buttons, active navigation items, and primary actions.
-- Use Primary Hover (#72543E) for hover and pressed states.
-- Use Accent (#B38B67) sparingly for highlights, icons, and secondary emphasis.
-- Use Secondary Surface (#EAE0D1) for subtle section backgrounds and secondary UI elements.
-- Use Heading (#514337) for headings and important labels.
-- Use Text (#66594D) for primary body text.
-- Use Muted (#A39789) for descriptions, metadata, and secondary information.
-- Use Border (#E8DFD4) for subtle separators and component outlines.
-- Use Success and Danger only for meaningful status indicators.
+- Keep the canvas cream (#F8F3ED) everywhere; do not add borders between sidebar, topbar and content.
+- Put content on Surface cards (#FFFCF8) with Border (#EDE4DA) and the soft shadow, never heavy shadows.
+- Use small circular icon containers in Muted Fill (#F5EDE4) with Brand Accent icons.
+- Use Secondary (#EDE0D2) for the active navigation item and selected states.
+- Use Primary (#93704F) only for primary actions; Brand Accent (#A9825E) is for graphics, never text.
+- Use Success and Danger only for meaningful status indicators, with a text label.
 
-### Visual Color Balance
+### Visual Color Balance (60-30-10)
 
-- 60% Warm Cream and Background
-- 25% White and Surface
-- 10% Brown and Primary
-- 5% Accent and Status Colors
+- **60% — Dominant:** Cream canvas (#F8F3ED) and warm-white cards (#FFFCF8).
+- **30% — Secondary (Structure):** Muted Fill, Secondary beige, borders, and text colors.
+- **10% — Accent:** Primary/Brand Accent brown and status colors, only where attention is needed.
 
 ### Important Restrictions
 
-- Cream must remain the dominant color.
 - Do not use dark brown as a large background color.
-- Avoid pure black backgrounds.
-- Avoid cold gray, neon colors, and overly saturated colors.
-- Avoid excessive gradients and colorful decorations.
-- Do not make every card use a different background color.
+- Avoid pure black backgrounds, cold gray, neon, purple/blue gradients and saturated colors.
+- Avoid heavy shadows, excessive borders and glassmorphism.
 - Maintain sufficient contrast and accessibility.
 - Keep the overall interface warm, calm, natural, and visually consistent.
 
@@ -109,6 +105,8 @@ The overall interface must be cream-dominant, with soft beige, natural sand, and
 - Empty states with simple illustrations and clear actions.
 
 ## 4. Customer Interface
+
+Layout: horizontal top navigation (logo · menu · จองคิว · account), full-bleed hero with photo and quick booking panel on the home page, content max width 1200px, footer. Mobile uses a menu drawer and a sticky booking button.
 
 Create a dedicated customer experience.
 
@@ -208,7 +206,7 @@ All components must follow the same design tokens and visual rules.
 
 ## 10. Final Design Goal
 
-The final result should look like a premium, minimal SaaS dashboard similar in layout quality to the reference image, but with a warm cream and earthy neutral visual identity.
+The final result should look like a premium, minimal SaaS dashboard similar in layout quality to the reference image, with a warm cream and earthy neutral visual identity.
 
 The interface must feel:
 
@@ -219,7 +217,7 @@ The interface must feel:
 - Simple, not generic.
 - Consistent across Customer and Staff/Owner interfaces.
 
-Use cream as the dominant visual foundation, white as the primary content surface, and muted brown as the main interactive color.
+Follow the 60-30-10 rule: cream canvas and warm-white cards as the dominant foundation (60%), beige fills, borders, and text as the structural layer (30%), and muted brown as the accent and main interactive color (10%).
 
 Prioritize visual hierarchy, whitespace, usability, consistency, and accessibility over decorative effects.
 

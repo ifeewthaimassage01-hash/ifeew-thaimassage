@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { CalendarCheck, CalendarPlus, HandHeart, History, House, MapPin, UserRound } from '@lucide/vue'
+import { CalendarCheck, CalendarPlus, CalendarSearch, HandHeart, History, House, MapPin, UserRound } from '@lucide/vue'
 
 export interface NavItem {
   to: string
@@ -18,6 +18,8 @@ export function useAppNav() {
       { to: '/services', label: 'บริการ', icon: HandHeart },
       { to: '/branches', label: 'สาขา', icon: MapPin },
       { to: '/book', label: 'จองคิว', icon: CalendarPlus },
+      // Guest ตรวจสอบการจองด้วยเบอร์โทร (สมาชิกใช้ "การจองของฉัน")
+      ...(user.value ? [] : [{ to: '/check-booking', label: 'ตรวจสอบการจอง', icon: CalendarSearch }]),
     ]
     const mine: NavItem[] = [
       { to: '/bookings', label: 'การจองของฉัน', icon: CalendarCheck },
@@ -40,6 +42,7 @@ export function useAppNav() {
       '/login': 'เข้าสู่ระบบ',
       '/register': 'สมัครสมาชิก',
       '/complete-profile': 'ข้อมูลของคุณ',
+      '/check-booking': 'ตรวจสอบการจอง',
     }
     if (route.path.startsWith('/t/')) return [{ label: 'สถานะการจอง' }]
     if (extra[route.path]) return [{ label: extra[route.path]! }]

@@ -108,7 +108,7 @@ const lines = (f: DailyClosingFigures): Array<[string, number]> => [
             </div>
           </dl>
 
-          <div v-if="preview.guarantee_topups.length" class="rounded-lg bg-background/70 p-4">
+          <div v-if="preview.guarantee_topups.length" class="rounded-lg bg-muted p-4">
             <h3 class="m-0 mb-2 text-[15px] font-semibold">ประกันมือ (คำนวณอัตโนมัติ)</h3>
             <ul class="m-0 grid list-none gap-1 p-0 text-[15px]">
               <li v-for="g in preview.guarantee_topups" :key="g.employee_id" class="flex flex-wrap justify-between gap-2">
@@ -157,7 +157,7 @@ const lines = (f: DailyClosingFigures): Array<[string, number]> => [
           <DialogDescription v-if="reviewRow">{{ reviewRow.business_date }} · {{ reviewRow.branch_name }} · รายรับสุทธิ {{ formatBaht(Number(reviewRow.figures.net_revenue)) }}</DialogDescription>
         </DialogHeader>
         <div class="grid gap-4">
-          <TextField v-model="reviewForm.adjustment" type="number" label="ยอดปรับปรุง (ถ้ามี)" hint="เช่น เงินขาดให้ใส่ค่าลบ" suffix="บาท" />
+          <TextField v-model="reviewForm.adjustment" numeric="signed" label="ยอดปรับปรุง (ถ้ามี)" hint="เช่น เงินขาดให้ใส่ค่าลบ" suffix="บาท" />
           <TextField v-if="Number(reviewForm.adjustment)" v-model="reviewForm.adjustmentNote" label="เหตุผลของยอดปรับปรุง" />
           <TextareaField v-model="reviewForm.note" label="หมายเหตุ" hint="บังคับเมื่อปฏิเสธ" rows="2" />
         </div>

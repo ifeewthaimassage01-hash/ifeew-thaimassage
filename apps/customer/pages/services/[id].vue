@@ -19,7 +19,7 @@ const { data: item } = await useAsyncData(`service-${id.value}`, async () => {
 
 const { data: branches } = await useBranches()
 const branch = computed(() => branches.value?.find((b) => b.id === item.value?.branch_id) ?? null)
-const image = computed(() => serviceImageUrl(item.value?.image_path ?? null))
+const image = computed(() => (item.value ? serviceImageUrl(item.value.image_path) ?? fallbackServiceImage(item.value.name) : null))
 
 useHead({ title: () => `${item.value?.name ?? 'บริการ'} — Ifeew's Thaimassage` })
 </script>
@@ -27,7 +27,7 @@ useHead({ title: () => `${item.value?.name ?? 'บริการ'} — Ifeew's 
 <template>
   <div v-if="item" class="grid items-start gap-8 lg:grid-cols-[minmax(0,1fr)_360px]">
     <div class="grid gap-6">
-      <div class="aspect-[16/9] overflow-hidden rounded-xl border border-border bg-secondary/60">
+      <div class="aspect-[16/9] overflow-hidden rounded-xl border border-border bg-secondary">
         <img v-if="image" :src="image" :alt="item.name" class="size-full object-cover">
         <div v-else class="grid size-full place-items-center"><HandHeart class="size-16 text-brand-accent" :stroke-width="1.25" aria-hidden="true" /></div>
       </div>
@@ -50,7 +50,7 @@ useHead({ title: () => `${item.value?.name ?? 'บริการ'} — Ifeew's 
           <span class="num text-lg font-semibold text-heading">{{ formatBaht(o.price) }}</span>
         </li>
       </ul>
-      <div class="grid gap-3 border-t border-border bg-background/60 p-5">
+      <div class="grid gap-3 border-t border-border bg-muted p-5">
         <p v-if="branch" class="m-0 flex items-center gap-1.5 text-[15px]">
           <MapPin class="size-4 text-muted-soft" :stroke-width="1.75" aria-hidden="true" />
           <NuxtLink :to="`/branches/${branch.id}`">{{ branch.name }}</NuxtLink>

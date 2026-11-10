@@ -49,7 +49,7 @@ async function verify() {
         <DialogDescription>การทำรายการนี้ต้องใช้รหัสจากแอป Authenticator</DialogDescription>
       </DialogHeader>
       <form class="grid gap-4" @submit.prevent="verify">
-        <TextField v-model="code" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus class="num" />
+        <TextField v-model="code" numeric="digits" label="รหัส 6 หลัก" inputmode="numeric" autocomplete="one-time-code" maxlength="6" autofocus class="num" />
         <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
         <DialogFooter class="gap-2">
           <Button type="button" variant="outline" :disabled="loading" @click="finish(false)">ยกเลิก</Button>

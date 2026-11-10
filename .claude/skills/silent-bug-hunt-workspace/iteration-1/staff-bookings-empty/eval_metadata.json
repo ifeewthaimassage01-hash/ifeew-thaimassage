@@ -1,0 +1,10 @@
+{
+  "eval_name": "staff-bookings-empty",
+  "prompt": "หน้าการจองฝั่งพนักงาน (apps/staff/pages/bookings.vue) บางทีรายการไม่ขึ้นเลย แต่ก็ไม่มี error อะไรโชว์ ช่วยหาสาเหตุที่เป็นไปได้หน่อย",
+  "assertions": [
+    "report.md traces the code path that actually loads the bookings list (load() / staff_bookings) instead of only blaming unrelated supabase calls",
+    "report.md names at least one plausible cause inside the list path, such as the default status filter hiding rows, the work-day/midnight date mismatch, stale responses overwriting rows, or a silent return when no branch is selected",
+    "If report.md mentions the unchecked calls at bookings.vue around lines 86 (slip signed URL) or 230 (service catalog), it frames them as separate issues rather than as the cause of the empty list",
+    "report.md asks the user before changing code, and no source file in the repository was modified"
+  ]
+}

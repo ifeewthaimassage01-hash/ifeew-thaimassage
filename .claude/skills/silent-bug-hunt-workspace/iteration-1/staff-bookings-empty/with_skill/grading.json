@@ -1,0 +1,30 @@
+{
+  "expectations": [
+    {
+      "text": "report.md traces the code path that actually loads the bookings list (load() / staff_bookings) instead of only blaming unrelated supabase calls",
+      "passed": true,
+      "evidence": "Notes load() uses must()+fail(); traces staff_bookings"
+    },
+    {
+      "text": "report.md names at least one plausible cause inside the list path, such as the default status filter hiding rows, the work-day/midnight date mismatch, stale responses overwriting rows, or a silent return when no branch is selected",
+      "passed": true,
+      "evidence": "Default ACTIVE filter, race in load(), no activeBranch"
+    },
+    {
+      "text": "If report.md mentions the unchecked calls at bookings.vue around lines 86 (slip signed URL) or 230 (service catalog), it frames them as separate issues rather than as the cause of the empty list",
+      "passed": true,
+      "evidence": "Lines 86/230 listed under \"บัคเงียบอื่นในหน้าเดียวกัน\""
+    },
+    {
+      "text": "report.md asks the user before changing code, and no source file in the repository was modified",
+      "passed": true,
+      "evidence": "Ends with checklist question; git unchanged"
+    }
+  ],
+  "summary": {
+    "passed": 4,
+    "failed": 0,
+    "total": 4,
+    "pass_rate": 1
+  }
+}

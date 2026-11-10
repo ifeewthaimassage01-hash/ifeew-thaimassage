@@ -1,0 +1,12 @@
+{
+  "eval_name": "full-project-audit",
+  "prompt": "ช่วยตรวจทั้งโปรเจกต์หน่อยว่ามีบัคที่พังเงียบๆ ไม่ขึ้น error หรือไฟล์ที่ไม่ได้ใช้งานอยู่บ้างไหม",
+  "assertions": [
+    "report.md is written in Thai",
+    "report.md flags at least one supabase call whose error is ignored, citing a concrete file and line (e.g. apps/customer/pages/index.vue:35 or apps/staff/pages/bookings.vue:86)",
+    "report.md identifies the ifeew.guest_bookings localStorage key as saved but never actually used or displayed",
+    "report.md has a separate section or table for unused files/code, distinct from the silent-bug findings",
+    "report.md does not claim that pos_record_payment, submit_daily_closing, lock_financial_period, create_guest_booking or queue_call_start are missing from the database",
+    "report.md ends by asking the user which items to fix, and no source file in the repository was modified"
+  ]
+}

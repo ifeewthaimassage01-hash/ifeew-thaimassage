@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: full-project-audit
+expected_outcome: |
+  A Thai report that lists confirmed silent bugs with file:line evidence (e.g. supabase results without error checks, the write-only guest_bookings localStorage key), separates unused files/code, notes intentional cases, and ends by asking which items to fix without editing code.

@@ -47,6 +47,18 @@ async function search() {
   }
 }
 
+// ค้นหาจากช่องค้นหาบน topbar (/customers?phone=...)
+const route = useRoute()
+watch(
+  [() => route.query.phone, () => company.value?.company_id],
+  ([q, cid]) => {
+    if (typeof q !== 'string' || !q || !cid) return
+    phone.value = q
+    search()
+  },
+  { immediate: true },
+)
+
 // ---------------------------------------------------------------------------
 // รายละเอียด + แก้ไข
 // ---------------------------------------------------------------------------
@@ -252,7 +264,7 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
 
     <template v-if="tab === 'search'">
       <form class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" @submit.prevent="search">
-        <TextField v-model="phone" label="เบอร์โทรเต็ม" type="tel" inputmode="tel" class="num min-w-[240px] flex-1" autofocus />
+        <TextField v-model="phone" numeric="digits" label="เบอร์โทรเต็ม" type="tel" inputmode="tel" class="num min-w-[240px] flex-1" autofocus />
         <Button type="submit" :disabled="searching"><Search /> {{ searching ? 'กำลังค้นหา…' : 'ค้นหา' }}</Button>
       </form>
 
@@ -264,10 +276,10 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
           </EmptyState>
           <ul v-else class="m-0 grid list-none p-0">
             <li v-for="r in results" :key="r.customer_id" class="border-b border-border last:border-0">
-              <div class="flex items-center gap-3 px-3 py-2" :class="selected?.customer_id === r.customer_id ? 'bg-secondary/60' : ''">
+              <div class="flex items-center gap-3 px-3 py-2" :class="selected?.customer_id === r.customer_id ? 'bg-secondary' : ''">
                 <button
                   type="button"
-                  class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted/60 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                  class="flex min-w-0 flex-1 items-center gap-3 rounded-lg px-2 py-1.5 text-left transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                   :aria-pressed="selected?.customer_id === r.customer_id"
                   @click="open(r)"
                 >
@@ -291,7 +303,7 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
             <div class="grid gap-4 sm:grid-cols-2">
               <TextField v-model="editForm.first_name" label="ชื่อ" :disabled="selected.is_member" />
               <TextField v-model="editForm.last_name" label="นามสกุล" :disabled="selected.is_member" />
-              <TextField v-model="editForm.phone" label="เบอร์โทร" :disabled="selected.is_member" class="num" />
+              <TextField v-model="editForm.phone" numeric="digits" label="เบอร์โทร" :disabled="selected.is_member" class="num" />
               <TextField v-model="editForm.email" label="อีเมล" :disabled="selected.is_member" />
             </div>
             <TextareaField v-model="editForm.staff_note" label="หมายเหตุของร้าน" hint="ลูกค้าไม่เห็น" rows="2" />
@@ -351,7 +363,7 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
           <div class="grid gap-4 sm:grid-cols-2">
             <TextField v-model="createForm.first_name" label="ชื่อ" />
             <TextField v-model="createForm.last_name" label="นามสกุล (ไม่บังคับ)" />
-            <TextField v-model="createForm.phone" label="เบอร์โทร" type="tel" class="num" />
+            <TextField v-model="createForm.phone" numeric="digits" label="เบอร์โทร" type="tel" class="num" />
             <TextField v-model="createForm.email" label="อีเมล (ไม่บังคับ)" type="email" />
           </div>
           <TextareaField v-model="createForm.staff_note" label="หมายเหตุของร้าน" rows="2" />

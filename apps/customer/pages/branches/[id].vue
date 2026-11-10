@@ -11,7 +11,8 @@ type Hours = Pick<Tables<'branch_opening_hours'>, 'iso_dow' | 'is_closed' | 'ope
 type Holiday = Pick<Tables<'branch_holidays'>, 'holiday_date' | 'name' | 'is_closed' | 'opens_at' | 'closes_at'>
 
 const { data: detail } = await useAsyncData(`branch-${branchId.value}`, async () => {
-  const [b, h, hol] = await Promise.all([
+  const [b, h, hol, img] = await Promise.all([
+    // anon อ่านได้เฉพาะบางคอลัมน์ — ห้ามใช้ select('*')
     supabase.from('branches').select('id, name, address, phone, map_url').eq('id', branchId.value).maybeSingle(),
     supabase.from('branch_opening_hours').select('iso_dow, is_closed, opens_at, closes_at').eq('branch_id', branchId.value).order('iso_dow'),
     supabase
@@ -22,8 +23,9 @@ const { data: detail } = await useAsyncData(`branch-${branchId.value}`, async ()
       .gte('holiday_date', bangkokToday())
       .order('holiday_date')
       .limit(10),
+    loadBranchImages(supabase, [branchId.value]),
   ])
-  return { branch: b.data, hours: (h.data ?? []) as Hours[], holidays: (hol.data ?? []) as Holiday[] }
+  return { branch: b.data ? { ...b.data, image_path: img[branchId.value] ?? null } : null, hours: (h.data ?? []) as Hours[], holidays: (hol.data ?? []) as Holiday[] }
 })
 
 const ids = computed(() => [branchId.value])
@@ -35,6 +37,8 @@ const hhmm = (t: string | null) => (t ? t.slice(0, 5) : '')
 const timeText = (r: { is_closed: boolean; opens_at: string | null; closes_at: string | null }) =>
   r.is_closed ? 'ปิด' : `${hhmm(r.opens_at)}–${hhmm(r.closes_at)}${(r.closes_at ?? '') < (r.opens_at ?? '') ? ' (ถึงวันถัดไป)' : ''}`
 const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
+
+const image = computed(() => branchImageUrl(detail.value?.branch?.image_path))
 
 useHead({ title: () => `${detail.value?.branch?.name ?? 'สาขา'} — Ifeew's Thaimassage` })
 </script>
@@ -52,6 +56,10 @@ useHead({ title: () => `${detail.value?.branch?.name ?? 'สาขา'} — Ifee
         <Button as-child><NuxtLink :to="{ path: '/book', query: { branch: detail.branch.id } }">จองสาขานี้</NuxtLink></Button>
       </template>
     </PageHeader>
+
+    <div v-if="image" class="mb-8 aspect-[16/6] overflow-hidden rounded-2xl bg-secondary shadow-soft">
+      <img :src="image" :alt="`หน้าร้าน ${detail.branch.name}`" class="size-full object-cover">
+    </div>
 
     <div class="grid items-start gap-8 lg:grid-cols-[320px_minmax(0,1fr)]">
       <Card class="gap-0 py-0">

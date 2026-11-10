@@ -427,7 +427,7 @@ onMounted(load)
             <TextField v-model="createForm.nickname" label="ชื่อเล่น" maxlength="60" />
             <SelectField v-model="createForm.branch_id" :items="branches" item-title="name" item-value="branch_id" label="สาขา" placeholder="เลือกสาขา" />
             <TextField v-model="createForm.start_date" type="date" label="วันเริ่มงาน" />
-            <TextField v-model="createForm.pin" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
+            <TextField v-model="createForm.pin" numeric="digits" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
           </div>
           <DialogFooter class="gap-2">
             <Button type="button" variant="outline" @click="createDialog = false">ยกเลิก</Button>
@@ -478,7 +478,7 @@ onMounted(load)
           <DialogDescription>ตัวเลข 6 หลัก แจ้งพนักงานด้วยตัวเอง</DialogDescription>
         </DialogHeader>
         <form class="grid gap-4" @submit.prevent="submitPin">
-          <TextField v-model="newPin" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
+          <TextField v-model="newPin" numeric="digits" label="PIN 6 หลัก" inputmode="numeric" maxlength="6" type="password" autocomplete="new-password" />
           <DialogFooter class="gap-2">
             <Button type="button" variant="outline" @click="pinDialog = false">ยกเลิก</Button>
             <Button type="submit" :disabled="saving">บันทึก</Button>

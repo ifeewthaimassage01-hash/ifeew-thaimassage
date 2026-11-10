@@ -79,6 +79,7 @@ const form = ref({
 })
 const newMinutes = ref<number | string>('')
 const image = ref<File | File[] | null>(null)
+const { upload: uploadImage } = useImageUpload()
 
 const hasExistingPrice = computed(() => !!editing.value && activeOptions(editing.value.id).length > 0)
 const scheduledOptions = computed<PricingOption[]>(() =>
@@ -170,12 +171,8 @@ async function save() {
 
     const file = Array.isArray(image.value) ? image.value[0] : image.value
     if (file) {
-      if (!['image/jpeg', 'image/png', 'image/webp'].includes(file.type) || file.size > 2 * 1024 * 1024) {
-        throw new Error('รูปต้องเป็น JPG/PNG/WebP ขนาดไม่เกิน 2 MB')
-      }
-      const ext = file.type === 'image/png' ? 'png' : file.type === 'image/webp' ? 'webp' : 'jpg'
-      const path = `${company.value.company_id}/${id}/${Date.now()}.${ext}`
-      await must(supabase.storage.from('service-images').upload(path, file, { contentType: file.type }))
+      // อัปโหลดขึ้น Cloudinary (ลายเซ็นจาก Edge Function cloudinary-sign) แล้วเก็บ "cloudinary:<public_id>"
+      const path = await uploadImage('service', id, file)
       await must(supabase.from('services').update({ image_path: path }).eq('id', id))
     }
 
@@ -383,10 +380,10 @@ async function toggleCategory(c: Category) {
           <fieldset class="m-0 grid gap-3 rounded-lg border border-border p-4">
             <legend class="px-1 text-sm font-medium text-heading">ช่วงเวลาที่ขาย ราคา และค่าแรง</legend>
             <div class="flex items-end gap-2">
-              <TextField v-model="newMinutes" label="เพิ่มช่วงเวลา (นาที)" hint="เช่น 3 ชม. = 180" type="number" min="5" max="600" class="flex-1" @keydown.enter.prevent="addDuration" />
+              <TextField v-model="newMinutes" label="เพิ่มช่วงเวลา (นาที)" hint="เช่น 3 ชม. = 180" numeric="integer" min="5" max="600" class="flex-1" @keydown.enter.prevent="addDuration" />
               <Button type="button" variant="outline" class="mb-6" @click="addDuration"><Plus /> เพิ่ม</Button>
             </div>
-            <div v-for="(o, i) in form.options" :key="o.duration_minutes" class="grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 rounded-lg bg-background/70 p-3">
+            <div v-for="(o, i) in form.options" :key="o.duration_minutes" class="grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 rounded-lg bg-muted p-3">
               <span class="pb-2.5 text-[15px] font-medium text-heading">{{ formatDuration(o.duration_minutes) }}</span>
               <TextField v-model="o.price" label="ราคา" type="number" min="0" suffix="฿" class="num" />
               <TextField v-model="o.therapist_fee" label="ค่าแรง" type="number" min="0" suffix="฿" class="num" />
@@ -426,7 +423,7 @@ async function toggleCategory(c: Category) {
               class="block w-full cursor-pointer rounded-lg border border-input bg-card text-[15px] file:mr-3 file:h-10 file:cursor-pointer file:border-0 file:bg-secondary file:px-4 file:font-medium file:text-heading"
               @change="(e) => (image = (e.target as HTMLInputElement).files?.[0] ?? null)"
             >
-            <p id="svc-image-hint" class="m-0 text-sm text-muted-foreground">JPG, PNG หรือ WebP ไม่เกิน 2 MB</p>
+            <p id="svc-image-hint" class="m-0 text-sm text-muted-foreground">JPG, PNG หรือ WebP ไม่เกิน 5 MB</p>
           </div>
           <SwitchField v-if="editing" v-model="form.is_active" label="เปิดใช้งานบริการ" />
         </div>
@@ -485,7 +482,7 @@ async function toggleCategory(c: Category) {
         <form class="grid gap-4" @submit.prevent="saveCategory">
           <TextField v-model="catForm.name" label="ชื่อหมวดหมู่" maxlength="100" />
           <TextField v-model="catForm.description" label="รายละเอียด" maxlength="500" />
-          <TextField v-model="catForm.sort_order" label="ลำดับ" type="number" class="num" />
+          <TextField v-model="catForm.sort_order" label="ลำดับ" numeric="integer" class="num" />
           <DialogFooter class="gap-2">
             <Button type="button" variant="outline" @click="catDialog = false">ยกเลิก</Button>
             <Button type="submit" :disabled="saving">บันทึก</Button>

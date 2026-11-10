@@ -3,12 +3,17 @@ import { ArrowRight, MapPin, Phone } from '@lucide/vue'
 import type { PublicBranch } from '~/composables/useBranches'
 import type { TodayHours } from '~/composables/useOpenToday'
 
-defineProps<{ branch: PublicBranch; hours?: TodayHours | null }>()
+const props = defineProps<{ branch: PublicBranch; hours?: TodayHours | null }>()
+const image = computed(() => branchImageUrl(props.branch.image_path))
 const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
 </script>
 
 <template>
-  <Card class="gap-0 py-0">
+  <Card class="gap-0 overflow-hidden py-0">
+    <NuxtLink :to="`/branches/${branch.id}`" class="block aspect-[16/7] overflow-hidden bg-secondary" tabindex="-1" aria-hidden="true">
+      <img v-if="image" :src="image" alt="" class="size-full object-cover transition-transform duration-300 hover:scale-[1.02]" loading="lazy">
+      <span v-else class="grid size-full place-items-center"><MapPin class="size-9 text-brand-accent" :stroke-width="1.5" /></span>
+    </NuxtLink>
     <div class="grid gap-4 p-5">
       <div class="flex items-start justify-between gap-3">
         <div class="min-w-0">

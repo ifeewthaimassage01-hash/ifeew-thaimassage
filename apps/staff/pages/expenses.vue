@@ -205,7 +205,7 @@ async function rejectVoid(r: ExpenseRow) {
           <TextareaField v-model="form.note" label="หมายเหตุ" rows="2" placeholder="ซื้ออะไร ให้ใคร" />
           <div class="grid gap-2">
             <span class="text-sm font-medium text-heading">รูปหลักฐาน</span>
-            <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-background/60 px-4 py-4 text-[15px] text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50">
+            <label class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-muted px-4 py-4 text-[15px] text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50">
               <input type="file" accept="image/*" capture="environment" class="sr-only" @change="onPhoto">
               <Camera class="size-5 text-brand-accent" /> {{ photo ? 'เปลี่ยนรูป' : 'ถ่าย/เลือกรูปหลักฐาน' }}
             </label>

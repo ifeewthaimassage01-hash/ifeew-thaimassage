@@ -1,0 +1,4 @@
+schema_version: "1.1"
+name: predeploy-functions-rpc
+expected_outcome: |
+  Cross-checks edge function folders against app callers and config.toml (verify_jwt), and rpc() calls against migrations, reports mismatches or unused ones with evidence, explains the 401-looks-like-CORS failure mode where relevant, and does not deploy anything.

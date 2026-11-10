@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { RefreshCw } from '@lucide/vue'
-import { emailSchema } from '@ifeew/shared'
 import type { DeviceStaff, LoginBranch } from '~/composables/useStaffDevice'
 
 definePageMeta({ layout: 'blank' })
@@ -24,8 +23,6 @@ const pinLoading = ref(false)
 const pinError = ref<string | null>(null)
 const pinPad = ref<{ reset: () => void } | null>(null)
 
-const email = ref('')
-const password = ref('')
 const ownerLoading = ref(false)
 const ownerError = ref<string | null>(null)
 
@@ -118,49 +115,7 @@ async function submitPin(pin: string) {
   }
 }
 
-async function ownerLogin() {
-  ownerError.value = null
-  const parsed = emailSchema.safeParse(email.value)
-  if (!parsed.success || !password.value) {
-    ownerError.value = 'กรุณากรอกอีเมลและรหัสผ่านให้ถูกต้อง'
-    return
-  }
-  ownerLoading.value = true
-  try {
-    clearAccess()
-    const { error } = await supabase.auth.signInWithPassword({ email: parsed.data, password: password.value })
-    if (error) {
-      ownerError.value = 'อีเมลหรือรหัสผ่านไม่ถูกต้อง'
-      return
-    }
-    password.value = ''
-    markLogin()
-    await navigateTo('/')
-  } finally {
-    ownerLoading.value = false
-  }
-}
-
-// ลืมรหัสผ่าน (เจ้าของร้าน): ส่งลิงก์ไปหน้า /set-password — ไม่บอกว่ามีอีเมลนี้ในระบบหรือไม่
-const resetSent = ref(false)
-async function forgotPassword() {
-  ownerError.value = null
-  const parsed = emailSchema.safeParse(email.value)
-  if (!parsed.success) {
-    ownerError.value = 'กรอกอีเมลก่อน แล้วกด “ลืมรหัสผ่าน”'
-    return
-  }
-  ownerLoading.value = true
-  try {
-    await supabase.auth.resetPasswordForEmail(parsed.data, { redirectTo: `${window.location.origin}/set-password` })
-    resetSent.value = true
-  } finally {
-    ownerLoading.value = false
-  }
-}
-
-// เจ้าของร้าน: PIN อย่างเดียว (ไม่ต้องใช้เครื่องที่ผูก)
-const useEmail = ref(false)
+// เจ้าของร้าน: PIN อย่างเดียว (ไม่ต้องใช้เครื่องที่ผูก · ไม่มีทางเข้าด้วยอีเมลในหน้านี้)
 const ownerPad = ref<{ reset: () => void } | null>(null)
 async function submitOwnerPin(pin: string) {
   ownerLoading.value = true
@@ -238,7 +193,7 @@ onMounted(reload)
               type="button"
               :disabled="s.locked"
               class="flex flex-col items-center gap-2 rounded-xl border bg-card p-5 text-center transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-60"
-              :class="selected?.user_id === s.user_id ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-input hover:bg-muted/40'"
+              :class="selected?.user_id === s.user_id ? 'border-primary ring-2 ring-primary/30' : 'border-border hover:border-input hover:bg-muted'"
               @click="choose(s)"
             >
               <span class="grid size-14 place-items-center overflow-hidden rounded-full bg-secondary text-xl font-semibold text-heading">
@@ -253,31 +208,11 @@ onMounted(reload)
         </div>
       </Card>
 
-      <!-- เจ้าของร้าน: PIN อย่างเดียว (สำรอง: อีเมล + รหัสผ่าน สำหรับครั้งแรก/ลืม PIN) -->
+      <!-- เจ้าของร้าน: PIN อย่างเดียว -->
       <Card v-else class="mx-auto max-w-md gap-0 py-6">
         <CardContent class="px-6">
-          <template v-if="!useEmail">
-            <h2 class="m-0 mb-5 text-center text-lg font-semibold">กรอก PIN เจ้าของร้าน</h2>
-            <PinPad ref="ownerPad" :loading="ownerLoading" :error="ownerError" @submit="submitOwnerPin" />
-            <Button variant="link" class="mt-4 w-full" @click="useEmail = true; ownerError = null">
-              เข้าด้วยอีเมล (ครั้งแรก / ลืม PIN)
-            </Button>
-          </template>
-          <form v-else class="grid gap-4" novalidate @submit.prevent="ownerLogin">
-            <h2 class="m-0 text-lg font-semibold">เข้าด้วยอีเมล</h2>
-            <TextField v-model="email" label="อีเมล" type="email" autocomplete="username" />
-            <TextField v-model="password" label="รหัสผ่าน" type="password" autocomplete="current-password" />
-            <Alert v-if="ownerError" variant="destructive"><AlertDescription>{{ ownerError }}</AlertDescription></Alert>
-            <Button type="submit" size="lg" class="w-full" :disabled="ownerLoading">{{ ownerLoading ? 'กำลังเข้าสู่ระบบ…' : 'เข้าสู่ระบบ' }}</Button>
-            <Alert v-if="resetSent" variant="info">
-              <AlertDescription>ถ้ามีบัญชีนี้ในระบบ จะได้รับอีเมลลิงก์ตั้งรหัสผ่านใหม่ (ตรวจกล่องจดหมายขยะด้วย)</AlertDescription>
-            </Alert>
-            <div class="flex flex-wrap justify-between gap-2">
-              <Button type="button" variant="ghost" size="sm" :disabled="ownerLoading" @click="forgotPassword">ลืมรหัสผ่าน</Button>
-              <Button type="button" variant="ghost" size="sm" @click="useEmail = false; ownerError = null">กลับไปใช้ PIN</Button>
-            </div>
-            <p class="m-0 text-center text-sm text-muted-foreground">เข้าแล้วตั้ง PIN ที่เมนู “ตั้งค่าเครื่อง” → “PIN เจ้าของร้าน”</p>
-          </form>
+          <h2 class="m-0 mb-5 text-center text-lg font-semibold">กรอก PIN เจ้าของร้าน</h2>
+          <PinPad ref="ownerPad" :loading="ownerLoading" :error="ownerError" @submit="submitOwnerPin" />
         </CardContent>
       </Card>
     </div>

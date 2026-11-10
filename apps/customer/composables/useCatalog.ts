@@ -1,4 +1,4 @@
-import type { Database } from '@ifeew/shared'
+import { publicImageUrl, type Database } from '@ifeew/shared'
 
 /** 1 แถว = 1 ช่วงเวลาที่ขาย */
 export type CatalogRow = Database['public']['Views']['v_public_branch_services']['Row']
@@ -61,7 +61,21 @@ export function useCatalog(branchId?: Ref<string | null | undefined>) {
   )
 }
 
-export function serviceImageUrl(path: string | null): string | null {
-  if (!path) return null
-  return useSupabaseClient().storage.from('service-images').getPublicUrl(path).data.publicUrl
+/** URL รูปบริการ — Cloudinary ("cloudinary:<id>") หรือรูปเก่าใน Supabase Storage */
+export function serviceImageUrl(path: string | null, width = 800): string | null {
+  const config = useRuntimeConfig()
+  return publicImageUrl(path, {
+    supabaseUrl: config.public.supabase.url as string,
+    bucket: 'service-images',
+    cloudName: (config.public.cloudinaryCloudName as string) || null,
+    width,
+  })
+}
+
+/** รูปประกอบสำรอง (public/images) ตามชื่อบริการ — ใช้เมื่อร้านยังไม่ได้อัปโหลดรูปบริการ */
+export function fallbackServiceImage(name: string): string {
+  if (/น้ำมัน|อโรม่า|oil|aroma/i.test(name)) return '/images/oil-massage.png'
+  if (/ประคบ|สมุนไพร|herb|compress/i.test(name)) return '/images/herbal-compress.png'
+  if (/หิน|stone/i.test(name)) return '/images/hot-stones.png'
+  return '/images/thai-massage.png'
 }

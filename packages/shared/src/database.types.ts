@@ -129,6 +129,7 @@ export type Database = {
           address: string | null
           phone: string | null
           map_url: string | null
+          image_path: string | null
           is_active: boolean
           sort_order: number
         }
@@ -139,6 +140,7 @@ export type Database = {
           address?: string | null
           phone?: string | null
           map_url?: string | null
+          image_path?: string | null
           is_active?: boolean
           sort_order?: number
         }
@@ -148,6 +150,7 @@ export type Database = {
           address?: string | null
           phone?: string | null
           map_url?: string | null
+          image_path?: string | null
           is_active?: boolean
           sort_order?: number
         }
@@ -1274,6 +1277,8 @@ export type Database = {
         Returns: undefined
       }
       daily_closings_list: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
+      delete_branch: { Args: { p_branch_id: string }; Returns: undefined }
+      image_upload_target: { Args: { p_kind: string; p_target_id: string }; Returns: string }
       lock_financial_period: { Args: { p_company_id: string; p_month: string }; Returns: undefined }
       reopen_financial_period: { Args: { p_company_id: string; p_month: string; p_reason: string }; Returns: undefined }
       financial_periods_list: { Args: { p_company_id: string }; Returns: Json }

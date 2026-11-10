@@ -1,12 +1,12 @@
 // POST /functions/v1/pos-payment-slip   (multipart/form-data, ต้องมี JWT ของพนักงาน)
-// fields: file (รูปสลิปที่พนักงานถ่าย), invoice_id, amount (ยอดที่ลูกค้าโอน = ยอดรับ + ทิป)
-// ขั้นตอน: ตรวจสิทธิ์สาขา (pos_invoice_slip_context) → เก็บสลิป (private bucket) → SlipOK
-//          → record_payment_slip_check (DB ตรวจสลิปซ้ำอีกชั้น) → คืน slip_check_id ให้ใช้ตอนบันทึกรับเงิน
-// ถ้ายังไม่ตั้งค่า SlipOK หรือตรวจไม่ได้ ผล = REVIEW (พนักงานยืนยันเองพร้อมเหตุผลได้)
+// fields: file (รูปสลิปที่พนักงานถ่าย), invoice_id, amount (ยอดที่ลูกค้าโอน)
+// ขั้นตอน: ตรวจสิทธิ์สาขา (pos_invoice_slip_context) → เก็บสลิปบน Cloudinary (private/authenticated)
+//          → record_payment_slip_check (แนบสลิปเป็นหลักฐาน — ไม่ตรวจสลิปอัตโนมัติ) → คืน slip_check_id
+// (เดิมเก็บที่ bucket payment-slips + ตรวจด้วย SlipOK — สลิปเก่ายังเปิดดูได้ผ่าน payment-slip-url)
 import { adminClient, clientIp, dbErrorResponse, json, preflight, rateLimit, userClient, UUID_RE } from '../_shared/http.ts'
-import { checkSlipWithSlipOk, type SlipCheckResult } from '../_shared/slipok.ts'
+import { CLOUDINARY_PREFIX, cloudinaryEnv, uploadPrivate } from '../_shared/cloudinary.ts'
 
-const TYPES: Record<string, string> = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }
+const TYPES = new Set(['image/jpeg', 'image/png', 'image/webp'])
 const MAX_BYTES = 5 * 1024 * 1024
 
 interface SlipContext {
@@ -15,7 +15,6 @@ interface SlipContext {
   branch_id: string
   balance: number
   user_id: string
-  slipok_branch_id: string | null
 }
 
 Deno.serve(async (req) => {
@@ -32,11 +31,17 @@ Deno.serve(async (req) => {
   const file = form.get('file')
   const invoiceId = String(form.get('invoice_id') ?? '')
   const amount = Number(form.get('amount'))
-  if (!(file instanceof File) || !TYPES[file.type] || file.size === 0 || file.size > MAX_BYTES) {
+  if (!(file instanceof File) || !TYPES.has(file.type) || file.size === 0 || file.size > MAX_BYTES) {
     return json(req, 400, { error_code: 'INVALID_FILE', message: 'รองรับ JPG/PNG/WebP ไม่เกิน 5 MB' })
   }
   if (!UUID_RE.test(invoiceId) || !Number.isFinite(amount) || amount <= 0 || amount > 10_000_000) {
     return json(req, 400, { error_code: 'INVALID_BODY' })
+  }
+
+  const env = cloudinaryEnv()
+  if (!env) {
+    console.error('pos-payment-slip: missing CLOUDINARY_* secrets')
+    return json(req, 500, { error_code: 'INTERNAL_ERROR', message: 'ยังไม่ได้ตั้งค่า Cloudinary' })
   }
 
   const admin = adminClient()
@@ -51,37 +56,25 @@ Deno.serve(async (req) => {
     const ctx = data as SlipContext | null
     if (!ctx?.invoice_id || !ctx.user_id) return json(req, 404, { error_code: 'NOT_FOUND' })
 
-    // 2) เก็บสลิป
-    const path = `${ctx.company_id}/${ctx.branch_id}/${ctx.invoice_id}/${crypto.randomUUID()}.${TYPES[file.type]}`
-    const { error: upErr } = await admin.storage.from('payment-slips').upload(path, file, { contentType: file.type })
-    if (upErr) throw upErr
+    // 2) เก็บสลิปบน Cloudinary (authenticated — เปิดได้เฉพาะ URL ที่เซ็นแล้ว)
+    const publicId = await uploadPrivate(
+      env,
+      file,
+      `ifeew/${ctx.company_id}/${ctx.branch_id}/payment-slips/${ctx.invoice_id}`,
+      crypto.randomUUID(),
+    )
+    const path = `${CLOUDINARY_PREFIX}${publicId}`
 
-    // 3) SlipOK
-    const apiKey = Deno.env.get('SLIPOK_API_KEY')
-    let result: SlipCheckResult
-    if (!apiKey || !ctx.slipok_branch_id) {
-      result = { outcome: 'REVIEW', code: null, message: 'ระบบตรวจสลิปอัตโนมัติยังไม่ได้ตั้งค่า', slip: {} }
-    } else {
-      result = await checkSlipWithSlipOk({
-        apiKey,
-        branchId: ctx.slipok_branch_id,
-        file,
-        fileName: `slip.${TYPES[file.type]}`,
-        amount: Math.round(amount * 100) / 100,
-      })
-      if (result.code === 1013) result.message = 'ยอดเงินในสลิปไม่ตรงกับยอดที่ต้องรับ'
-    }
-
-    // 4) บันทึกผลตรวจ (service role) — ข้อมูลที่ pos_record_payment เชื่อถือ
+    // 3) บันทึกการแนบสลิป (service role) — ไม่ตรวจสลิป: outcome = REVIEW, ยืนยันโดยพนักงานตอนบันทึกรับเงิน
     const { data: check, error: recErr } = await admin.rpc('record_payment_slip_check', {
       p_user_id: ctx.user_id,
       p_invoice_id: ctx.invoice_id,
       p_slip_path: path,
       p_requested_amount: Math.round(amount * 100) / 100,
-      p_outcome: result.outcome,
-      p_provider_code: result.code,
-      p_provider_message: result.message,
-      p_slip: result.slip,
+      p_outcome: 'REVIEW',
+      p_provider_code: null,
+      p_provider_message: null,
+      p_slip: {},
     })
     if (recErr) return dbErrorResponse(req, recErr)
     return json(req, 200, check)

@@ -15,7 +15,7 @@ const props = defineProps<{
 </script>
 
 <template>
-  <section :class="cn('overflow-hidden rounded-xl border border-border bg-card', props.class)">
+  <section :class="cn('overflow-hidden rounded-xl border border-border bg-card shadow-soft', props.class)">
     <div v-if="title || $slots.header || $slots.actions" class="flex flex-wrap items-center justify-between gap-3 border-b border-border px-5 py-4">
       <slot name="header">
         <div class="min-w-0">
@@ -26,6 +26,6 @@ const props = defineProps<{
       <div v-if="$slots.actions" class="flex flex-wrap items-center gap-2"><slot name="actions" /></div>
     </div>
     <div :class="cn(flush ? '' : 'p-5', props.bodyClass)"><slot /></div>
-    <div v-if="$slots.footer" class="border-t border-border bg-background/50 px-5 py-3 text-sm text-muted-foreground"><slot name="footer" /></div>
+    <div v-if="$slots.footer" class="border-t border-border bg-muted px-5 py-3 text-sm text-muted-foreground"><slot name="footer" /></div>
   </section>
 </template>

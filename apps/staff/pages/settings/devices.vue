@@ -133,8 +133,8 @@ onMounted(() => {
             ตัวเลข 6 หลัก ห้ามเลขซ้ำหรือเรียง ใช้เข้าระบบบนทุกเครื่องที่ผูกกับสาขา อย่าให้ใครเห็นตอนกด เพราะ PIN นี้เข้าถึงข้อมูลการเงินทั้งหมด
           </p>
           <form class="grid items-end gap-3 sm:grid-cols-[1fr_1fr_auto]" @submit.prevent="saveOwnerPin">
-            <TextField v-model="pinForm.pin" label="PIN ใหม่" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
-            <TextField v-model="pinForm.confirm" label="ยืนยัน PIN" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+            <TextField v-model="pinForm.pin" numeric="digits" label="PIN ใหม่" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
+            <TextField v-model="pinForm.confirm" numeric="digits" label="ยืนยัน PIN" type="password" inputmode="numeric" maxlength="6" autocomplete="new-password" />
             <Button type="submit" :disabled="pinSaving">{{ ownerPin.has_pin ? 'เปลี่ยน PIN' : 'ตั้ง PIN' }}</Button>
           </form>
         </SectionCard>

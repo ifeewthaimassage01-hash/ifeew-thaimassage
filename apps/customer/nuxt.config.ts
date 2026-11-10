@@ -17,6 +17,10 @@ export default defineNuxtConfig({
         { name: 'viewport', content: 'width=device-width, initial-scale=1' },
         { name: 'description', content: 'จองบริการนวดไทย Ifeew\'s Thaimassage ทุกสาขา' },
       ],
+      link: [
+        { rel: 'icon', type: 'image/png', sizes: '64x64', href: '/favicon.png' },
+        { rel: 'apple-touch-icon', href: '/favicon.png' },
+      ],
     },
   },
 
@@ -41,6 +45,12 @@ export default defineNuxtConfig({
       functionsUrl: '',
       // Cloudflare Turnstile site key (ค่าเริ่มต้นคือ test key ของ Cloudflare ที่ผ่านเสมอ)
       turnstileSiteKey: '1x00000000000000000000AA',
+      // รูปหน้าแรก (URL หรือ path ใน public/ เช่น /images/hero.jpg) — ว่าง = ใช้รูปบริการจากระบบแทน
+      heroImage: '/images/hero-massage.png',
+      // รูปหน้าร้านในส่วน "สาขาของเรา" — ว่าง = ใช้รูปบริการจากระบบแทน
+      branchImage: '',
+      // Cloudinary cloud name (NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME) สำหรับรูปบริการ/รูปสาขา
+      cloudinaryCloudName: '',
     },
   },
 

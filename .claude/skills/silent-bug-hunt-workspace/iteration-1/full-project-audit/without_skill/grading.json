@@ -1,0 +1,40 @@
+{
+  "expectations": [
+    {
+      "text": "report.md is written in Thai",
+      "passed": true,
+      "evidence": "Thai throughout"
+    },
+    {
+      "text": "report.md flags at least one supabase call whose error is ignored, citing a concrete file and line (e.g. apps/customer/pages/index.vue:35 or apps/staff/pages/bookings.vue:86)",
+      "passed": true,
+      "evidence": "Table in item 6 cites bookings/[id].vue:21, pos.vue:37 ..."
+    },
+    {
+      "text": "report.md identifies the ifeew.guest_bookings localStorage key as saved but never actually used or displayed",
+      "passed": true,
+      "evidence": "Item 9: guest_bookings written, never read"
+    },
+    {
+      "text": "report.md has a separate section or table for unused files/code, distinct from the silent-bug findings",
+      "passed": true,
+      "evidence": "Section \"โค้ดและไฟล์ที่ไม่ได้ใช้งาน\""
+    },
+    {
+      "text": "report.md does not claim that pos_record_payment, submit_daily_closing, lock_financial_period, create_guest_booking or queue_call_start are missing from the database",
+      "passed": true,
+      "evidence": "\"ชื่อ RPC ทุกตัว...มีอยู่ใน migrations ทั้งหมด\""
+    },
+    {
+      "text": "report.md ends by asking the user which items to fix, and no source file in the repository was modified",
+      "passed": true,
+      "evidence": "Ends with questions incl. \"ให้ผมลงมือแก้ข้อ 1–4 และข้อ 6 เลยไหม\"; git unchanged"
+    }
+  ],
+  "summary": {
+    "passed": 6,
+    "failed": 0,
+    "total": 6,
+    "pass_rate": 1
+  }
+}

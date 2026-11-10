@@ -249,7 +249,7 @@ watch(() => company.value?.company_id, async (id) => {
         </DialogHeader>
         <form class="grid gap-4" @submit.prevent="saveAdjustment">
           <SelectField v-model="adjForm.employee_id" :items="employeeItems" label="หมอ" placeholder="เลือกหมอ" />
-          <TextField v-model="adjForm.amount" type="number" label="จำนวนเงิน" hint="ใส่ค่าลบเพื่อหัก" suffix="บาท" />
+          <TextField v-model="adjForm.amount" numeric="signed" label="จำนวนเงิน" hint="ใส่ค่าลบเพื่อหัก" suffix="บาท" />
           <TextField v-model="adjForm.reason" label="เหตุผล" hint="บังคับ อย่างน้อย 3 ตัวอักษร" />
           <DialogFooter class="gap-2">
             <Button type="button" variant="outline" @click="adjDialog = false">ปิด</Button>

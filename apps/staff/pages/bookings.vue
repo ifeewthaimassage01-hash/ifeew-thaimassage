@@ -434,7 +434,7 @@ async function submitCreate() {
         <div class="-mx-6 grid content-start gap-4 overflow-y-auto px-6">
           <template v-if="step === 1">
             <form class="flex items-end gap-2" @submit.prevent="searchCustomer">
-              <TextField v-model="phone" label="เบอร์โทรเต็ม" type="tel" class="num flex-1" />
+              <TextField v-model="phone" numeric="digits" label="เบอร์โทรเต็ม" type="tel" class="num flex-1" />
               <Button type="submit"><Search /> ค้นหา</Button>
             </form>
             <div v-if="found?.length" class="grid gap-2" role="radiogroup" aria-label="เลือกลูกค้า">
@@ -445,7 +445,7 @@ async function submitCreate() {
                 role="radio"
                 :aria-checked="customerId === c.customer_id"
                 class="flex items-center justify-between gap-3 rounded-lg border px-4 py-3 text-left transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-                :class="customerId === c.customer_id ? 'border-primary bg-secondary/50' : 'border-border hover:bg-muted/50'"
+                :class="customerId === c.customer_id ? 'border-primary bg-secondary' : 'border-border hover:bg-muted'"
                 @click="customerId = c.customer_id"
               >
                 <span>

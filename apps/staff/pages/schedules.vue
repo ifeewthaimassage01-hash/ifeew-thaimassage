@@ -217,7 +217,7 @@ async function copyPreviousWeek() {
               :key="d"
               scope="col"
               class="border-l border-border px-2 py-3 text-left text-[13px] font-medium"
-              :class="[d === bangkokToday() ? 'text-heading' : 'text-muted-foreground', i >= 5 ? 'bg-background/60' : '']"
+              :class="[d === bangkokToday() ? 'text-heading' : 'text-muted-foreground', i >= 5 ? 'bg-muted' : '']"
             >
               {{ dayLabel(d, i) }}
               <span v-if="d === bangkokToday()" class="ml-1 inline-block size-1.5 rounded-full bg-primary align-middle" aria-label="วันนี้" />
@@ -230,7 +230,7 @@ async function copyPreviousWeek() {
               <span class="block font-medium text-heading">{{ e.nickname }}</span>
               <span class="num block text-[13px] text-muted-foreground">{{ e.employee_code }}</span>
             </th>
-            <td v-for="(d, i) in days" :key="d" class="border-l border-border p-1.5 align-top" :class="[d === bangkokToday() ? 'bg-secondary/25' : i >= 5 ? 'bg-background/60' : '']">
+            <td v-for="(d, i) in days" :key="d" class="border-l border-border p-1.5 align-top" :class="[d === bangkokToday() ? 'bg-secondary' : i >= 5 ? 'bg-muted' : '']">
               <div class="flex min-h-11 flex-col gap-1">
                 <button
                   v-for="s in cellShifts(e.id, d)"

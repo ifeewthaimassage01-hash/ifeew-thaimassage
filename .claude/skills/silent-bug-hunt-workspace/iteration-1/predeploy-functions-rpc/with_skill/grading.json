@@ -1,0 +1,35 @@
+{
+  "expectations": [
+    {
+      "text": "report.md cross-checks edge function folders against the app code that calls them (covering e.g. pos-payment-slip and queue-pin-action as used)",
+      "passed": true,
+      "evidence": "\"every edge function is called somewhere\"; scanner+manual cross-check"
+    },
+    {
+      "text": "report.md discusses config.toml verify_jwt for functions without an entry (e.g. customer-erasure, staff-create) and judges whether requiring login is intended",
+      "passed": true,
+      "evidence": "Line 40: lists the 5 functions without config entries, judges login intended"
+    },
+    {
+      "text": "report.md does not claim that any rpc() called by the apps is missing from migrations (they all exist)",
+      "passed": true,
+      "evidence": "All rpc() exist per report (false claim is about remote DB, not migrations)"
+    },
+    {
+      "text": "report.md explains that an undeployed function or a verify_jwt mismatch fails at the gateway and appears in the browser as a CORS/401 error",
+      "passed": true,
+      "evidence": "Line 40: gateway 401 shown by browser as CORS error"
+    },
+    {
+      "text": "The run did not deploy, push, or modify repository files",
+      "passed": true,
+      "evidence": "Read-only CLI only; git unchanged"
+    }
+  ],
+  "summary": {
+    "passed": 5,
+    "failed": 0,
+    "total": 5,
+    "pass_rate": 1
+  }
+}

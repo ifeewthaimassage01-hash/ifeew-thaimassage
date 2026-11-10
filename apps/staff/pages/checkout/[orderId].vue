@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // ชำระเงินของ Order: ออก Invoice ให้อัตโนมัติ (ข้ามขั้นร่าง · หักมัดจำอัตโนมัติ) → รับเงิน (เงินสด / โอน+สลิป — QR รวมกับโอน) + ทิป
 // ยกเลิกบิล (Void ต้องมีเหตุผล) / คืนเงิน (OWNER) — ใบเสร็จเก็บในระบบเท่านั้น
-import { Camera } from '@lucide/vue'
+import { Camera, CircleCheck } from '@lucide/vue'
 import {
   formatBaht,
   formatDuration,
@@ -11,19 +11,17 @@ import {
   reasonSchema,
   bangkokTime,
   type InvoiceView,
-  type PosBoard,
   type SlipCheck,
 } from '@ifeew/shared'
 
 const route = useRoute()
 const supabase = useSupabaseClient()
-const { activeBranch, isOwner } = useAccess()
+const { isOwner } = useAccess()
 const { run } = useStepUp()
-const { callForm } = useEdgeFunction()
+const { call, callForm } = useEdgeFunction()
 
 const orderId = computed(() => String(route.params.orderId))
 const invoice = ref<InvoiceView | null>(null)
-const therapists = ref<PosBoard['therapists']>([])
 const loading = ref(true)
 const saving = ref(false)
 const message = ref<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
@@ -42,10 +40,6 @@ async function load() {
     fail(e, 'สร้าง Invoice ไม่สำเร็จ')
   } finally {
     loading.value = false
-  }
-  if (activeBranch.value) {
-    const { data } = await supabase.rpc('pos_board', { p_branch_id: activeBranch.value.branch_id })
-    therapists.value = ((data ?? null) as unknown as PosBoard | null)?.therapists ?? []
   }
 }
 onMounted(load)
@@ -103,29 +97,18 @@ async function issue() {
 // ---------------------------------------------------------------------------
 // โอน = รวม QR หน้าร้าน + โอนเข้าบัญชี (บันทึกเป็น BANK_TRANSFER)
 const method = ref<'CASH' | 'BANK_TRANSFER'>('CASH')
-const amount = ref<number | string>('')
-const tendered = ref<number | string>('')
-const tipAmount = ref<number | string>('')
-const tipEmployee = ref<string | null>(null)
+// รับเต็มยอดค้างเสมอ (ไม่มีช่องกรอกยอด/ทิป/เงินทอน)
+const amount = computed(() => (invoice.value ? Number(invoice.value.balance) : 0))
 const slip = ref<SlipCheck | null>(null)
 const slipUploading = ref(false)
-const manualReason = ref('')
 let payKey = newIdempotencyKey()
 
-const tip = computed(() => Math.max(0, Number(tipAmount.value) || 0))
-const change = computed(() => Math.max(0, (Number(tendered.value) || 0) - (Number(amount.value) || 0) - tip.value))
-
 function resetPayment() {
-  amount.value = invoice.value ? Number(invoice.value.balance) : ''
-  tendered.value = ''
-  tipAmount.value = ''
-  tipEmployee.value = null
   slip.value = null
-  manualReason.value = ''
   payKey = newIdempotencyKey()
 }
 watch(() => invoice.value?.invoice_id, resetPayment)
-watch([method, amount, tipAmount], () => {
+watch([method, amount], () => {
   slip.value = null
   payKey = newIdempotencyKey()
 })
@@ -140,7 +123,7 @@ async function onSlipSelected(e: Event) {
     const form = new FormData()
     form.append('file', file)
     form.append('invoice_id', invoice.value.invoice_id)
-    form.append('amount', String((Number(amount.value) || 0) + tip.value))
+    form.append('amount', String(amount.value))
     slip.value = await callForm<SlipCheck>('pos-payment-slip', form)
   } catch (err) {
     message.value = { type: 'error', text: edgeErrorText(err, 'อัปโหลดสลิปไม่สำเร็จ') }
@@ -150,11 +133,10 @@ async function onSlipSelected(e: Event) {
 }
 
 const canPay = computed(() => {
-  if (!payable.value || !(Number(amount.value) > 0)) return false
-  if (tip.value > 0 && !tipEmployee.value) return false
+  if (!payable.value || !(amount.value > 0)) return false
   if (method.value === 'CASH') return true
-  if (!slip.value || slip.value.outcome === 'REJECTED') return false
-  return slip.value.outcome === 'VERIFIED' || manualReason.value.trim().length >= 3
+  // โอน/QR: ต้องแนบสลิปก่อน (ไม่ตรวจสลิปอัตโนมัติ)
+  return !!slip.value && slip.value.outcome !== 'REJECTED'
 })
 
 async function pay() {
@@ -164,11 +146,11 @@ async function pay() {
     invoice.value = (await must(supabase.rpc('pos_record_payment', {
       p_invoice_id: invoice.value.invoice_id,
       p_method: method.value,
-      p_amount: Number(amount.value),
+      p_amount: amount.value,
       p_slip_check_id: method.value === 'CASH' ? null : slip.value!.slip_check_id,
-      p_manual_reason: slip.value?.outcome === 'REVIEW' ? manualReason.value.trim() : null,
-      p_tip_amount: tip.value,
-      p_tip_employee_id: tip.value > 0 ? tipEmployee.value : null,
+      p_manual_reason: null,
+      p_tip_amount: 0,
+      p_tip_employee_id: null,
       p_idempotency_key: payKey,
     }))) as unknown as InvoiceView
     ok(invoice.value.status === 'PAID' ? `ชำระครบแล้ว · ใบเสร็จ ${invoice.value.receipt_number}` : 'บันทึกการรับเงินแล้ว')
@@ -180,9 +162,18 @@ async function pay() {
   }
 }
 
+// สลิปอยู่บน Cloudinary (private) หรือ bucket เดิม — ขอ URL ที่เซ็นแล้วจาก Edge Function (ตรวจสิทธิ์สาขา)
 async function viewSlip(path: string) {
-  const { data } = await supabase.storage.from('payment-slips').createSignedUrl(path, 300)
-  if (data?.signedUrl) window.open(data.signedUrl, '_blank', 'noopener')
+  // เปิดแท็บก่อน await เพื่อไม่ให้เบราว์เซอร์มือถือบล็อก popup
+  const tab = window.open('', '_blank')
+  try {
+    const { url } = await call<{ url: string }>('payment-slip-url', { slip_path: path })
+    if (tab) tab.location.href = url
+    else window.location.href = url
+  } catch (err) {
+    tab?.close()
+    message.value = { type: 'error', text: edgeErrorText(err, 'เปิดสลิปไม่สำเร็จ') }
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -338,29 +329,23 @@ async function submitRefund() {
         <SectionCard v-if="payable" title="รับเงิน" class="xl:sticky xl:top-24">
           <form class="grid gap-4" @submit.prevent="pay">
             <SegmentedControl v-model="method" :items="[{ value: 'CASH', label: 'เงินสด' }, { value: 'BANK_TRANSFER', label: 'โอน / QR' }]" label="วิธีรับเงิน" class="w-full [&>button]:flex-1" />
-            <TextField v-model="amount" type="number" label="ยอดรับ" :hint="`ค้าง ${formatBaht(Number(invoice.balance))}`" suffix="บาท" class="num" />
-            <TextField v-if="method === 'CASH'" v-model="tendered" type="number" label="รับเงินมา" :hint="`ทอน ${formatBaht(change)}`" suffix="บาท" class="num" />
-            <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-1 2xl:grid-cols-2">
-              <TextField v-model="tipAmount" type="number" label="ทิป (ถ้ามี)" suffix="บาท" class="num" />
-              <SelectField v-if="tip > 0" v-model="tipEmployee" :items="therapists.map((t) => ({ value: t.employee_id, title: t.nickname }))" label="ทิปให้หมอ" placeholder="เลือกหมอ" />
-            </div>
 
-            <div v-if="method !== 'CASH'" class="grid gap-3 rounded-lg bg-background/70 p-4">
-              <p class="m-0 text-[15px]">ลูกค้าสแกน QR หรือโอนเข้าบัญชีร้าน ยอด <span class="num font-semibold text-heading">{{ formatBaht((Number(amount) || 0) + tip) }}</span> แล้วถ่ายรูปสลิป</p>
+            <div v-if="method !== 'CASH'" class="grid gap-3 rounded-lg bg-muted p-4">
+              <p class="m-0 text-[15px]">ลูกค้าสแกน QR หรือโอนเข้าบัญชีร้าน ยอด <span class="num font-semibold text-heading">{{ formatBaht(amount) }}</span> แล้วถ่ายรูปสลิป</p>
               <label
                 class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border border-dashed border-input bg-card px-4 py-3 text-[15px] text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50"
-                :class="slipUploading || !(Number(amount) > 0) ? 'pointer-events-none opacity-50' : ''"
+                :class="slipUploading || !(amount > 0) ? 'pointer-events-none opacity-50' : ''"
               >
-                <input type="file" accept="image/*" capture="environment" class="sr-only" :disabled="slipUploading || !(Number(amount) > 0)" @change="onSlipSelected">
-                <Camera class="size-5 text-brand-accent" /> {{ slipUploading ? 'กำลังตรวจสลิป…' : 'ถ่ายรูปสลิป' }}
+                <input type="file" accept="image/*" capture="environment" class="sr-only" :disabled="slipUploading || !(amount > 0)" @change="onSlipSelected">
+                <Camera class="size-5 text-brand-accent" /> {{ slipUploading ? 'กำลังอัปโหลดสลิป…' : slip ? 'ถ่ายใหม่' : 'ถ่ายรูปสลิป' }}
               </label>
-              <Alert v-if="slip" :variant="slip.outcome === 'VERIFIED' ? 'success' : slip.outcome === 'REJECTED' ? 'destructive' : 'warning'">
-                <AlertDescription>{{ slip.outcome === 'VERIFIED' ? `สลิปถูกต้อง ${formatBaht(Number(slip.slip_amount))}` : slip.message ?? '' }}</AlertDescription>
-              </Alert>
-              <TextField v-if="slip?.outcome === 'REVIEW'" v-model="manualReason" label="ยืนยันเอง: ระบุเหตุผล" hint="ตรวจยอดเข้าบัญชีแล้ว" />
+              <div v-if="slip" class="flex items-center justify-between gap-3 rounded-lg bg-success-soft px-3 py-2 text-[15px] text-success-ink">
+                <span class="flex items-center gap-2"><CircleCheck class="size-4" /> แนบสลิปแล้ว</span>
+                <Button type="button" size="sm" variant="ghost" @click="viewSlip(slip.slip_path)">ดูสลิป</Button>
+              </div>
             </div>
 
-            <Button type="submit" size="lg" class="w-full" :disabled="!canPay || saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึกรับเงิน' }}</Button>
+            <Button type="submit" size="lg" class="w-full" :disabled="!canPay || saving">{{ saving ? 'กำลังบันทึก…' : `บันทึกรับเงิน ${formatBaht(amount)}` }}</Button>
           </form>
         </SectionCard>
       </div>

@@ -30,9 +30,13 @@ const branchId = ref<string | null>((route.query.branch as string) || null)
 const { data: catalog } = await useCatalog(branchId)
 
 interface Person { branch_service_id: string | null; option_id: string | null }
-const people = ref<Person[]>([{ branch_service_id: (route.query.service as string) || null, option_id: null }])
+// ค่าที่ส่งมาจากแผงจองด่วนหน้าแรก: ?branch=&service=&option=&date=YYYY-MM-DD&time=<starts_at ISO>
+const qs = (k: string) => (typeof route.query[k] === 'string' && route.query[k] ? (route.query[k] as string) : null)
+const people = ref<Person[]>([{ branch_service_id: qs('service'), option_id: qs('option') }])
 const today = bangkokToday()
-const date = ref(addDays(today, 1))
+const qDate = qs('date')
+const date = ref(qDate && /^\d{4}-\d{2}-\d{2}$/.test(qDate) && qDate >= today ? qDate : addDays(today, 1))
+let wantedSlot = qs('time')
 const slots = ref<AvailableSlot[]>([])
 const loadingSlots = ref(false)
 const slotError = ref<string | null>(null)
@@ -109,6 +113,11 @@ watch(
       return
     }
     slots.value = (data ?? []) as unknown as AvailableSlot[]
+    // เลือกเวลาที่ลูกค้าเลือกไว้จากหน้าแรกให้ (ถ้ายังว่างอยู่) — ใช้ครั้งเดียว
+    if (wantedSlot) {
+      slot.value = slots.value.find((s) => s.starts_at === wantedSlot) ?? null
+      wantedSlot = null
+    }
   },
   { immediate: true },
 )
@@ -229,7 +238,7 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
           <CardContent class="grid gap-3 px-5">
             <EmptyState v-if="!catalog?.length" compact title="สาขานี้ยังไม่เปิดจองบริการออนไลน์" description="โทรจองที่สาขาได้ หรือเลือกสาขาอื่น" />
             <template v-else>
-              <fieldset v-for="(p, idx) in people" :key="idx" class="m-0 grid gap-3 rounded-lg border border-border bg-background/60 p-4">
+              <fieldset v-for="(p, idx) in people" :key="idx" class="m-0 grid gap-3 rounded-lg border border-border bg-muted p-4">
                 <div class="flex items-center justify-between">
                   <legend class="float-left text-[15px] font-medium text-heading">คนที่ {{ idx + 1 }}</legend>
                   <Button v-if="people.length > 1" variant="ghost" size="icon-sm" :aria-label="`ลบคนที่ ${idx + 1}`" @click="people.splice(idx, 1)"><X /></Button>
@@ -327,7 +336,7 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
                 <div class="grid gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>
               </div>
               <div class="grid gap-3 sm:grid-cols-2">
-                <div class="grid gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+                <div class="grid gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
                 <div class="grid gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
               </div>
               <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
@@ -366,7 +375,7 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
             <span class="num text-2xl font-semibold text-heading">{{ formatBaht(total) }}</span>
           </div>
         </div>
-        <div class="grid gap-3 border-t border-border bg-background/60 p-5">
+        <div class="grid gap-3 border-t border-border bg-muted p-5">
           <p class="m-0 text-sm text-muted-foreground">ชำระที่ร้านหลังใช้บริการ หลังกดจองต้องโอนมัดจำผ่าน PromptPay และส่งสลิปภายในเวลาที่กำหนด</p>
           <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
           <Button size="lg" class="w-full" :disabled="!slot || submitting" @click="submit">

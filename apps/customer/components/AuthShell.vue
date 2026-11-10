@@ -25,7 +25,7 @@ const perks = [
       </div>
     </Card>
 
-    <section v-if="!noAside" class="grid gap-4 rounded-xl bg-secondary/50 p-6 md:mt-0" aria-labelledby="perks-h">
+    <section v-if="!noAside" class="grid gap-4 rounded-xl bg-secondary p-6 md:mt-0" aria-labelledby="perks-h">
       <h2 id="perks-h" class="m-0 text-xl font-semibold">สมาชิกทำอะไรได้บ้าง</h2>
       <dl class="m-0 grid gap-4 sm:grid-cols-2 md:grid-cols-1 lg:grid-cols-2">
         <div v-for="p in perks" :key="p.title" class="grid gap-1">

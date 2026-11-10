@@ -13,7 +13,11 @@ export default defineNuxtConfig({
     head: {
       htmlAttrs: { lang: 'th' },
       title: "Ifeew's Thaimassage — Staff",
-      meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1' }],
+      meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }],
+      link: [
+        { rel: 'icon', type: 'image/png', sizes: '64x64', href: '/favicon.png' },
+        { rel: 'apple-touch-icon', href: '/favicon.png' },
+      ],
     },
   },
 
@@ -48,6 +52,8 @@ export default defineNuxtConfig({
       functionsUrl: '',
       // URL ของ Customer App (ใช้สร้างลิงก์ชำระมัดจำ/ติดตามการจอง)
       customerAppUrl: 'http://localhost:3000',
+      // Cloudinary cloud name (NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME) สำหรับรูปบริการ/รูปสาขา
+      cloudinaryCloudName: '',
     },
   },
 

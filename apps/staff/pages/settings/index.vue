@@ -111,7 +111,7 @@ onMounted(load)
           <TextField v-model="info.name" label="ชื่อที่แสดง" />
           <div class="grid gap-4 sm:grid-cols-2">
             <TextField v-model="info.legal_name" label="ชื่อนิติบุคคล" />
-            <TextField v-model="info.tax_id" label="เลขประจำตัวผู้เสียภาษี" hint="ตัวเลข 13 หลัก" maxlength="13" inputmode="numeric" class="num" />
+            <TextField v-model="info.tax_id" numeric="digits" label="เลขประจำตัวผู้เสียภาษี" hint="ตัวเลข 13 หลัก" maxlength="13" inputmode="numeric" class="num" />
           </div>
         </Card>
       </section>
@@ -122,7 +122,7 @@ onMounted(load)
           <p class="m-0 mt-1 text-sm text-muted-foreground">เงื่อนไขที่ลูกค้าและพนักงานเห็น</p>
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-2">
-          <TextField v-model="settings.cancellation_cutoff_hours" type="number" label="ยกเลิกการจองได้ก่อนนัด" hint="0-168" suffix="ชั่วโมง" />
+          <TextField v-model="settings.cancellation_cutoff_hours" numeric="integer" label="ยกเลิกการจองได้ก่อนนัด" hint="0-168" suffix="ชั่วโมง" />
           <TextField v-model="settings.large_expense_threshold" type="number" label="รายจ่ายที่ต้องแนบหลักฐาน" suffix="บาท" />
           <TextField
             v-model="settings.freelance_fuel_amount"
@@ -143,15 +143,15 @@ onMounted(load)
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-2 xl:grid-cols-3">
           <SelectField v-model="settings.booking_slot_minutes" :items="[10, 15, 20, 30, 60]" label="ช่วงเวลาเริ่ม (นาที)" />
-          <TextField v-model="settings.booking_buffer_minutes" type="number" label="เวลาเผื่อทำความสะอาด" hint="0-60" suffix="นาที" />
-          <TextField v-model="settings.booking_min_lead_minutes" type="number" label="จองล่วงหน้าขั้นต่ำ" suffix="นาที" />
-          <TextField v-model="settings.booking_max_advance_days" type="number" label="จองล่วงหน้าได้ไม่เกิน" suffix="วัน" />
-          <TextField v-model="settings.booking_max_items" type="number" label="จำนวนคนต่อการจอง" hint="1-10" suffix="คน" />
+          <TextField v-model="settings.booking_buffer_minutes" numeric="integer" label="เวลาเผื่อทำความสะอาด" hint="0-60" suffix="นาที" />
+          <TextField v-model="settings.booking_min_lead_minutes" numeric="integer" label="จองล่วงหน้าขั้นต่ำ" suffix="นาที" />
+          <TextField v-model="settings.booking_max_advance_days" numeric="integer" label="จองล่วงหน้าได้ไม่เกิน" suffix="วัน" />
+          <TextField v-model="settings.booking_max_items" numeric="integer" label="จำนวนคนต่อการจอง" hint="1-10" suffix="คน" />
           <TextField v-model="settings.deposit_per_person" type="number" label="มัดจำต่อคน" suffix="บาท" />
-          <TextField v-model="settings.booking_hold_minutes" type="number" label="เวลาให้ชำระมัดจำ" hint="5-60" suffix="นาที" />
-          <TextField v-model="settings.guest_max_active_bookings" type="number" label="Guest จองค้างได้ต่อเบอร์" suffix="ครั้ง" />
-          <TextField v-model="settings.tracking_token_days_after" type="number" label="ลิงก์ติดตามหมดอายุหลังนัด" suffix="วัน" />
-          <TextField v-model="settings.no_show_grace_minutes" type="number" label="บันทึกไม่มาตามนัดได้หลัง" suffix="นาที" />
+          <TextField v-model="settings.booking_hold_minutes" numeric="integer" label="เวลาให้ชำระมัดจำ" hint="5-60" suffix="นาที" />
+          <TextField v-model="settings.guest_max_active_bookings" numeric="integer" label="Guest จองค้างได้ต่อเบอร์" suffix="ครั้ง" />
+          <TextField v-model="settings.tracking_token_days_after" numeric="integer" label="ลิงก์ติดตามหมดอายุหลังนัด" suffix="วัน" />
+          <TextField v-model="settings.no_show_grace_minutes" numeric="integer" label="บันทึกไม่มาตามนัดได้หลัง" suffix="นาที" />
         </Card>
       </section>
 
@@ -161,8 +161,8 @@ onMounted(load)
           <p class="m-0 mt-1 text-sm text-muted-foreground">PIN และการออกจากระบบอัตโนมัติ</p>
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-3">
-          <TextField v-model="settings.staff_pin_max_attempts" type="number" label="กด PIN ผิดได้" hint="3-10" suffix="ครั้ง" />
-          <TextField v-model="settings.staff_pin_lockout_minutes" type="number" label="ล็อก PIN" hint="1-1440" suffix="นาที" />
+          <TextField v-model="settings.staff_pin_max_attempts" numeric="integer" label="กด PIN ผิดได้" hint="3-10" suffix="ครั้ง" />
+          <TextField v-model="settings.staff_pin_lockout_minutes" numeric="integer" label="ล็อก PIN" hint="1-1440" suffix="นาที" />
           <p class="m-0 self-center text-sm text-muted-foreground">ออกจากระบบอัตโนมัติทุกวันตอนตี 3 · เข้าสู่ระบบด้วย PIN = ลงเวลาเข้างานของวันนั้น</p>
         </Card>
       </section>

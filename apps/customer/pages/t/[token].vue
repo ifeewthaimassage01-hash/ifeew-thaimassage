@@ -40,7 +40,9 @@ onMounted(load)
       </template>
     </PageHeader>
     <div v-if="loading && !booking" class="grid gap-4 md:grid-cols-2"><Skeleton class="h-80 rounded-xl" /><Skeleton class="h-80 rounded-xl" /></div>
-    <Alert v-else-if="error" variant="info"><AlertDescription>{{ error }}</AlertDescription></Alert>
+    <Alert v-else-if="error" variant="info">
+      <AlertDescription>{{ error }} · <NuxtLink to="/check-booking">ตรวจสอบการจองด้วยเบอร์โทร</NuxtLink></AlertDescription>
+    </Alert>
     <BookingDetail v-else-if="booking" :booking="booking" :token="token" @updated="(v) => (booking = { ...booking!, ...v })" />
   </div>
 </template>

@@ -14,7 +14,7 @@ import {
 } from '@ifeew/shared'
 
 const supabase = useSupabaseClient()
-const { activeBranch } = useAccess()
+const { activeBranch, isOwner } = useAccess()
 const { board, loading, error, load } = usePosBoard()
 
 const finance = ref<FinanceBoard | null>(null)
@@ -116,13 +116,14 @@ async function refresh() {
       </template>
     </PageHeader>
 
-    <div class="mb-6 grid gap-4 sm:grid-cols-3">
-      <StatCard label="รอชำระ" :value="pendingCount" :icon="Clock" hint="ราย (รวมที่ยังไม่ออกบิล)" />
-      <StatCard label="ยอดค้างชำระ" :icon="Wallet">
+    <!-- สรุปยอด: เห็นเฉพาะเจ้าของร้าน -->
+    <div v-if="isOwner" class="mb-6 grid grid-cols-3 gap-2 sm:gap-4">
+      <StatCard dense label="รอชำระ" :value="pendingCount" :icon="Clock" hint="ราย (รวมที่ยังไม่ออกบิล)" />
+      <StatCard dense label="ยอดค้างชำระ" :icon="Wallet">
         <span class="text-pending-ink">{{ finance ? formatBaht(Number(finance.outstanding)) : '—' }}</span>
         <template #hint>เฉพาะบิลที่ออกแล้ว</template>
       </StatCard>
-      <StatCard label="ยอดขายวันนี้" :value="finance ? formatBaht(Number(finance.today_sales)) : '—'" :icon="ReceiptText" />
+      <StatCard dense label="ยอดขายวันนี้" :value="finance ? formatBaht(Number(finance.today_sales)) : '—'" :icon="ReceiptText" />
     </div>
 
     <Alert v-if="error || financeError" variant="destructive" class="mb-4"><AlertDescription>{{ error ?? financeError }}</AlertDescription></Alert>
@@ -141,7 +142,7 @@ async function refresh() {
         <li v-for="r in visible" :key="r.orderId" class="border-b border-border last:border-0">
           <NuxtLink
             :to="`/checkout/${r.orderId}`"
-            class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 text-foreground no-underline transition-colors hover:bg-muted/40 focus-visible:bg-muted/40 focus-visible:outline-none"
+            class="flex flex-wrap items-center justify-between gap-4 px-5 py-4 text-foreground no-underline transition-colors hover:bg-muted focus-visible:bg-muted focus-visible:outline-none"
           >
             <div class="min-w-0 flex-1">
               <p class="m-0 flex flex-wrap items-center gap-2 font-medium text-heading">

@@ -2,24 +2,32 @@
 import type { Component } from 'vue'
 import { NuxtLink } from '#components'
 
-// การ์ดสรุป: ป้าย · ตัวเลข/คำตอบ · บรรทัดรอง — ไอคอนเส้นสี accent (ไม่มีพื้นสี)
-defineProps<{ label: string; value?: string | number | null; hint?: string; icon?: Component; to?: string }>()
+// การ์ดสรุป (ตามภาพอ้างอิง): ไอคอนในวงกลมเบจ + ป้าย (และบรรทัดรองใต้ป้าย) · ตัวเลขใหญ่ + ช่อง trailing (เช่น กราฟจิ๋ว)
+// dense: ย่อขนาดบนมือถือ — ใช้เมื่อวางการ์ด 3 ใบเรียงแถวเดียวบนจอแคบ
+defineProps<{ label: string; value?: string | number | null; hint?: string; icon?: Component; to?: string; dense?: boolean }>()
 </script>
 
 <template>
   <component
     :is="to ? NuxtLink : 'div'"
     :to="to"
-    class="group flex flex-col gap-2 rounded-xl border border-border bg-card p-5 no-underline transition-colors"
-    :class="to ? 'hover:border-input' : ''"
+    class="group flex items-start gap-3 rounded-xl border border-border bg-card p-4 no-underline shadow-soft transition-colors max-sm:flex-col sm:gap-4 sm:px-5 sm:py-5"
+    :class="[to ? 'hover:border-input' : '', dense ? 'max-sm:gap-2 max-sm:p-3' : '']"
   >
-    <div class="flex items-center justify-between gap-3">
-      <span class="text-[15px] text-muted-foreground">{{ label }}</span>
-      <component :is="icon" v-if="icon" class="size-5 text-brand-accent" :stroke-width="1.75" aria-hidden="true" />
+    <span v-if="icon" class="grid size-12 shrink-0 place-items-center rounded-full bg-muted text-brand-accent" :class="dense ? 'max-sm:size-9' : ''" aria-hidden="true">
+      <component :is="icon" class="size-[22px]" :class="dense ? 'max-sm:size-[18px]' : ''" :stroke-width="1.5" />
+    </span>
+    <div class="grid w-full min-w-0 flex-1 gap-1.5">
+      <div class="min-w-0">
+        <span class="block truncate text-[14px] leading-snug text-muted-foreground" :class="dense ? 'max-sm:text-[13px]' : ''">{{ label }}</span>
+        <span v-if="hint || $slots.hint" class="line-clamp-2 block text-[12px] leading-snug text-muted-foreground/80"><slot name="hint">{{ hint }}</slot></span>
+      </div>
+      <div class="flex flex-wrap items-end justify-between gap-x-3 gap-y-2">
+        <div class="num min-w-0 truncate leading-none font-normal tracking-tight text-heading sm:text-[30px]" :class="dense ? 'text-[19px]' : 'text-[26px]'">
+          <slot>{{ value ?? '—' }}</slot>
+        </div>
+        <slot name="trailing" />
+      </div>
     </div>
-    <div class="num text-2xl leading-tight font-semibold text-heading">
-      <slot>{{ value ?? '—' }}</slot>
-    </div>
-    <p v-if="hint || $slots.hint" class="m-0 text-sm text-muted-foreground"><slot name="hint">{{ hint }}</slot></p>
   </component>
 </template>

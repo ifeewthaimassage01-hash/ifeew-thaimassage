@@ -17,7 +17,7 @@ const { groups, isActive } = useAppNav()
               :to="item.to"
               :aria-label="item.label"
               :aria-current="isActive(item.to) ? 'page' : undefined"
-              class="mx-auto flex size-11 items-center justify-center rounded-lg no-underline transition-colors"
+              class="mx-auto flex size-11 items-center justify-center rounded-xl no-underline transition-colors"
               :class="isActive(item.to) ? 'bg-secondary text-primary' : 'text-muted-foreground hover:bg-muted hover:text-heading'"
               @click="emit('navigate')"
             ><component :is="item.icon" class="size-5" :stroke-width="1.75" /></NuxtLink>
@@ -28,7 +28,7 @@ const { groups, isActive } = useAppNav()
           v-else
           :to="item.to"
           :aria-current="isActive(item.to) ? 'page' : undefined"
-          class="flex h-10 items-center gap-3 rounded-lg px-3 text-[15px] no-underline transition-colors"
+          class="flex h-10 items-center gap-3 rounded-xl px-3 text-[15px] no-underline transition-colors"
           :class="isActive(item.to) ? 'bg-secondary font-medium text-heading' : 'text-foreground hover:bg-muted hover:text-heading'"
           @click="emit('navigate')"
         >

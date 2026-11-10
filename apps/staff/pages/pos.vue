@@ -247,7 +247,7 @@ async function goToQueue() {
           <Button variant="ghost" size="icon" aria-label="ปิดเลขคิว" @click="created = null"><X /></Button>
         </div>
         <div class="mt-3 flex flex-wrap gap-3">
-          <div v-for="i in newQueues" :key="i.queue_id" class="min-w-40 rounded-xl bg-secondary/60 px-5 py-4 text-center">
+          <div v-for="i in newQueues" :key="i.queue_id" class="min-w-40 rounded-xl bg-secondary px-5 py-4 text-center">
             <p class="num m-0 text-5xl leading-none font-semibold text-heading">{{ formatQueueNumber(i.queue_number) }}</p>
             <p class="m-0 mt-2 text-[15px] text-heading">{{ i.service_name }} {{ formatDuration(i.duration_minutes) }}</p>
             <p class="m-0 text-sm text-muted-foreground">เริ่มประมาณ <span class="num">{{ bangkokTime(i.planned_starts_at) }}</span></p>
@@ -334,7 +334,7 @@ async function goToQueue() {
         <div class="-mx-6 grid content-start gap-4 overflow-y-auto px-6">
           <template v-if="step === 1">
             <form class="flex items-end gap-2" @submit.prevent="searchCustomer">
-              <TextField v-model="phone" label="เบอร์โทรเต็ม" type="tel" class="num flex-1" />
+              <TextField v-model="phone" numeric="digits" label="เบอร์โทรเต็ม" type="tel" class="num flex-1" />
               <Button type="submit"><Search /> ค้นหา</Button>
             </form>
             <div v-if="found?.length" class="grid gap-2">
@@ -342,7 +342,7 @@ async function goToQueue() {
                 v-for="c in found"
                 :key="c.customer_id"
                 type="button"
-                class="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:bg-muted/50 focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                class="flex items-center justify-between gap-3 rounded-lg border border-border px-4 py-3 text-left transition-colors hover:bg-muted focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
                 @click="chooseCustomer(c)"
               >
                 <span>
