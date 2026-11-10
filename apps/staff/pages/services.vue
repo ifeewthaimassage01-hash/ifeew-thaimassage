@@ -274,6 +274,39 @@ async function toggleCategory(c: Category) {
     fail(e)
   }
 }
+
+// ลบ (เฉพาะที่ยังไม่มีประวัติ — มีแล้วให้ปิดใช้งาน)
+const { remove, deletingId } = useDeleteRecord()
+async function removeService(s: Service) {
+  try {
+    const r = await remove(s.id, { fn: 'delete_service', args: { p_service_id: s.id } }, {
+      title: `ลบบริการ "${s.name}"?`,
+      description: 'ราคา ช่วงเวลา และการผูกเตียงของบริการนี้ในทุกสาขาจะถูกลบด้วย ย้อนกลับไม่ได้ ถ้าบริการเคยมีการจองหรือออเดอร์แล้ว ให้ใช้ "ปิดใช้งาน" ในหน้าแก้ไขแทน',
+      confirmText: 'ลบบริการ',
+    })
+    if (r === 'deleted') {
+      ok(`ลบบริการ ${s.name} แล้ว`)
+      await load()
+    }
+  } catch (e) {
+    fail(e, 'ลบบริการไม่สำเร็จ')
+  }
+}
+async function removeCategory(c: Category) {
+  try {
+    const r = await remove(c.id, { fn: 'delete_service_category', args: { p_category_id: c.id } }, {
+      title: `ลบหมวดหมู่ "${c.name}"?`,
+      description: 'ลบได้เฉพาะหมวดที่ไม่มีบริการอยู่ ย้อนกลับไม่ได้',
+      confirmText: 'ลบหมวดหมู่',
+    })
+    if (r === 'deleted') {
+      ok(`ลบหมวดหมู่ ${c.name} แล้ว`)
+      await load()
+    }
+  } catch (e) {
+    fail(e, 'ลบหมวดหมู่ไม่สำเร็จ')
+  }
+}
 </script>
 
 <template>
@@ -328,7 +361,10 @@ async function toggleCategory(c: Category) {
             <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" @click="toggleAtBranch(s)">
               {{ pricingOf(s.id)!.is_active ? 'หยุดขายที่สาขานี้' : 'เปิดขายที่สาขานี้' }}
             </Button>
-            <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" class="ml-auto" @click="historyService = s"><History /> ประวัติราคา</Button>
+            <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" @click="historyService = s"><History /> ประวัติราคา</Button>
+            <Button variant="ghost" size="sm" class="ml-auto text-danger-ink hover:bg-danger-soft hover:text-danger-ink" :disabled="deletingId === s.id" @click="removeService(s)">
+              <Trash2 /> {{ deletingId === s.id ? 'กำลังลบ…' : 'ลบ' }}
+            </Button>
           </div>
         </Card>
       </div>
@@ -352,7 +388,10 @@ async function toggleCategory(c: Category) {
               <TableCell><Badge :variant="c.is_active ? 'success' : 'neutral'" dot>{{ c.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}</Badge></TableCell>
               <TableCell class="text-right">
                 <Button size="sm" variant="ghost" @click="openCategory(c)">แก้ไข</Button>
-                <Button size="sm" variant="ghost" :class="c.is_active ? 'text-danger-ink' : ''" @click="toggleCategory(c)">{{ c.is_active ? 'ปิด' : 'เปิด' }}</Button>
+                <Button size="sm" variant="ghost" @click="toggleCategory(c)">{{ c.is_active ? 'ปิด' : 'เปิด' }}</Button>
+                <Button size="sm" variant="ghost" class="text-danger-ink hover:bg-danger-soft hover:text-danger-ink" :disabled="deletingId === c.id" @click="removeCategory(c)">
+                  {{ deletingId === c.id ? 'กำลังลบ…' : 'ลบ' }}
+                </Button>
               </TableCell>
             </TableRow>
             <TableRow v-if="!categories.length" class="hover:bg-transparent">

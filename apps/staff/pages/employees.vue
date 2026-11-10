@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // OWNER: พนักงาน — เพิ่ม, แก้ไข, รูป, ตั้ง PIN, ย้ายสาขา, ประวัติย้าย, เปลี่ยนสถานะ
 // การกระทำเสี่ยงสูงทั้งหมดผ่าน useStepUp (DB บังคับ TOTP ภายใน 5 นาที)
-import { ArrowLeftRight, EllipsisVertical, History, KeyRound, Pencil, UserCog, UserPlus } from '@lucide/vue'
+import { ArrowLeftRight, EllipsisVertical, History, KeyRound, Pencil, Trash2, UserCog, UserPlus } from '@lucide/vue'
 import {
   bangkokToday,
   employeeCodeSchema,
@@ -83,6 +83,32 @@ function ok(text: string) {
 }
 function fail(e: unknown, fallback?: string) {
   message.value = { type: 'error', text: errorText(e, fallback) }
+}
+
+// ลบพนักงาน — เฉพาะคนที่ยังไม่มีประวัติงาน (มีแล้วให้เปลี่ยนสถานะเป็นลาออก/ปิดใช้งาน) · ลบตัวเอง/เจ้าของร้านไม่ได้
+const currentUser = useSupabaseUser()
+const { remove, deletingId } = useDeleteRecord()
+async function removeEmployee(e: Employee) {
+  const res: { account_deleted?: boolean } = {}
+  try {
+    const r = await remove(
+      e.id,
+      async () => Object.assign(res, await call<{ account_deleted: boolean }>('staff-delete', { employee_id: e.id })),
+      {
+        title: `ลบพนักงาน "${e.nickname}"?`,
+        description: 'บัญชีเข้าสู่ระบบ ตารางงาน อัตราประกันมือ สิทธิ์สาขา และ PIN ของพนักงานคนนี้จะถูกลบถาวร ย้อนกลับไม่ได้ ถ้าเคยมีคิว ค่ามือ หรือการลงเวลาแล้ว ให้ใช้ "เปลี่ยนสถานะ" เป็นลาออกแทน',
+        confirmText: 'ลบพนักงาน',
+      },
+    )
+    if (r === 'deleted') {
+      ok(res.account_deleted === false
+        ? `ลบพนักงาน ${e.nickname} แล้ว แต่ลบบัญชีเข้าสู่ระบบไม่สำเร็จ (เข้าแอปไม่ได้แล้ว) — ลองอีกครั้งภายหลังหรือลบใน Supabase`
+        : `ลบพนักงาน ${e.nickname} และบัญชีเข้าสู่ระบบแล้ว`)
+      await load()
+    }
+  } catch (err) {
+    fail(err, 'ลบพนักงานไม่สำเร็จ')
+  }
 }
 
 // ---------------------------------------------------------------------------
@@ -398,10 +424,14 @@ onMounted(load)
                     <DropdownMenuItem v-if="item.status === 'ACTIVE'" @select="pinTarget = item; newPin = ''; pinDialog = true"><KeyRound /> ตั้ง PIN ใหม่</DropdownMenuItem>
                     <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openTransfer(item)"><ArrowLeftRight /> ย้ายสาขา</DropdownMenuItem>
                     <DropdownMenuItem @select="openHistory(item)"><History /> ประวัติย้ายสาขา</DropdownMenuItem>
-                    <template v-if="item.status !== 'RESIGNED'">
-                      <DropdownMenuSeparator />
-                      <DropdownMenuItem @select="openStatus(item)"><UserCog /> เปลี่ยนสถานะ</DropdownMenuItem>
-                    </template>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openStatus(item)"><UserCog /> เปลี่ยนสถานะ</DropdownMenuItem>
+                    <DropdownMenuItem
+                      v-if="item.user_id !== currentUser?.sub"
+                      class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink [&_svg]:text-danger-ink"
+                      :disabled="deletingId === item.id"
+                      @select="removeEmployee(item)"
+                    ><Trash2 /> ลบพนักงาน</DropdownMenuItem>
                   </DropdownMenuContent>
                 </DropdownMenu>
               </TableCell>

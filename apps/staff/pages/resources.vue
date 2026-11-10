@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // OWNER: ประเภททรัพยากร, จำนวนต่อสาขา, ทรัพยากรที่แต่ละบริการใช้, บัญชีรับมัดจำของสาขา
-import { Plus, X } from '@lucide/vue'
+import { Pencil, Plus, Trash2, X } from '@lucide/vue'
 import type { Tables } from '@ifeew/shared'
 
 
@@ -85,6 +85,35 @@ async function toggleType(t: ResourceType) {
     await load()
   } catch (e) {
     fail(e)
+  }
+}
+
+async function renameType(t: ResourceType) {
+  const name = await prompt({ title: 'แก้ชื่อประเภท', label: 'ชื่อประเภท', defaultValue: t.name, minLength: 1, maxLength: 100, confirmText: 'บันทึก' })
+  if (name === null || name.trim() === t.name) return
+  try {
+    await must(supabase.from('resource_types').update({ name: name.trim() }).eq('id', t.id))
+    ok('แก้ชื่อแล้ว')
+    await load()
+  } catch (e) {
+    fail(e, 'แก้ชื่อไม่สำเร็จ (ชื่อซ้ำหรือไม่)')
+  }
+}
+
+// ลบประเภท (ทุกสาขา) — เฉพาะที่ยังไม่เคยถูกใช้ในคิว
+const { remove, deletingId } = useDeleteRecord()
+async function removeType(t: ResourceType) {
+  try {
+    const r = await remove(t.id, { fn: 'delete_resource_type', args: { p_resource_type_id: t.id } }, {
+      title: `ลบ "${t.name}"?`,
+      description: 'จำนวนในทุกสาขาและการผูกกับบริการจะถูกลบด้วย ย้อนกลับไม่ได้ ถ้าเคยถูกใช้ในคิวแล้ว ให้ใช้ "ปิดประเภท" แทน',
+    })
+    if (r === 'deleted') {
+      ok(`ลบ ${t.name} แล้ว`)
+      await load()
+    }
+  } catch (e) {
+    fail(e, 'ลบไม่สำเร็จ')
   }
 }
 
@@ -217,7 +246,11 @@ async function saveAccount() {
           <TextField v-model="qty[t.id]!.total_quantity" numeric="integer" min="0" :aria-label="`จำนวน ${t.name}`" class="num" />
           <SelectField v-model="qty[t.id]!.status" :aria-label="`สถานะ ${t.name}`"
             :items="[{ value: 'ACTIVE', title: 'ใช้งาน' }, { value: 'MAINTENANCE', title: 'ซ่อมบำรุง' }, { value: 'DISABLED', title: 'ปิด' }]" />
-          <Button variant="ghost" size="sm" @click="toggleType(t)">{{ t.is_active ? 'ปิดประเภท' : 'เปิดประเภท' }}</Button>
+          <div class="col-span-2 flex flex-wrap justify-end gap-1 sm:col-span-1">
+            <Button variant="ghost" size="sm" :aria-label="`แก้ชื่อ ${t.name}`" @click="renameType(t)"><Pencil /></Button>
+            <Button variant="ghost" size="sm" @click="toggleType(t)">{{ t.is_active ? 'ปิดประเภท' : 'เปิดประเภท' }}</Button>
+            <Button variant="ghost" size="sm" class="text-danger-ink hover:bg-danger-soft hover:text-danger-ink" :aria-label="`ลบ ${t.name}`" :disabled="deletingId === t.id" @click="removeType(t)"><Trash2 /></Button>
+          </div>
         </div>
         <div v-if="types.length" class="flex justify-end px-5 py-4">
           <Button :disabled="saving" @click="saveQuantities">บันทึกจำนวน</Button>

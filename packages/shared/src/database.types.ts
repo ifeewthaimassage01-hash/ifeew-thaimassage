@@ -1278,6 +1278,11 @@ export type Database = {
       }
       daily_closings_list: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
       delete_branch: { Args: { p_branch_id: string }; Returns: undefined }
+      delete_employee: { Args: { p_employee_id: string }; Returns: string }
+      purge_staff_profile: { Args: { p_user_id: string }; Returns: boolean }
+      delete_resource_type: { Args: { p_resource_type_id: string }; Returns: undefined }
+      delete_service: { Args: { p_service_id: string }; Returns: undefined }
+      delete_service_category: { Args: { p_category_id: string }; Returns: undefined }
       owner_clear_transactions: { Args: { p_company_id: string; p_confirm: string }; Returns: undefined }
       image_upload_target: { Args: { p_kind: string; p_target_id: string }; Returns: string }
       lock_financial_period: { Args: { p_company_id: string; p_month: string }; Returns: undefined }
