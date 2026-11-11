@@ -1,4 +1,5 @@
 <script setup lang="ts">
+// แท็บ "ประกันมือ" ในหน้า เข้างานและประกันมือ (/attendance) — ย้ายมาจากหน้า /guarantees เดิม
 // OWNER: ประกันมือ — ประเภทหมอ (ประจำ/วิ่ง), ยอดประกันต่อวัน (มีประวัติ), การลงเวลา + ผลประกันรายวัน, ให้/ไม่ให้เป็นรายวัน
 import {
   addDays,
@@ -12,7 +13,6 @@ import {
 
 
 const { prompt } = useDialog()
-definePageMeta({ ownerOnly: true })
 
 const supabase = useSupabaseClient()
 const { company, branches } = useAccess()
@@ -122,7 +122,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
 
 <template>
   <div>
-    <PageHeader title="ประกันมือและการลงเวลา" description="หมอประจำที่เช็คชื่อเข้างาน (เข้าระบบครั้งแรกของวัน) ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวันทันที (ไม่นับทิป) · ระหว่างวันยอดเติมลดลงตามค่ามือที่ทำได้ · หมอวิ่งได้ค่ามือตามงานจริง" />
+    <p class="m-0 mb-4 max-w-[70ch] text-[15px] text-muted-foreground">หมอประจำที่เช็คชื่อเข้างาน (เข้าระบบครั้งแรกของวัน) ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวันทันที (ไม่นับทิป) · ระหว่างวันยอดเติมลดลงตามค่ามือที่ทำได้ · หมอวิ่งได้ค่ามือตามงานจริง</p>
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
     <div class="grid gap-6">

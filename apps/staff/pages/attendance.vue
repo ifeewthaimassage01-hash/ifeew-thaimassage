@@ -6,6 +6,10 @@ import { bangkokTime, bangkokToday, formatBaht, type AttendanceRow } from '@ifee
 
 definePageMeta({ ownerOnly: true })
 
+// แท็บ: การเข้างาน (ตารางรายเดือน) · ประกันมือ (ประเภทหมอ ยอดประกัน ผลรายวัน — components/GuaranteePanel.vue)
+const route = useRoute()
+const tab = ref<'attendance' | 'guarantee'>(route.query.tab === 'guarantee' ? 'guarantee' : 'attendance')
+
 const supabase = useSupabaseClient()
 const { company, branches } = useAccess()
 
@@ -92,7 +96,11 @@ const cellTitle = (r: AttendanceRow) =>
 
 <template>
   <div>
-    <PageHeader title="การเข้างาน" description="เวลาที่พนักงานเช็คชื่อเข้างาน (เข้าระบบครั้งแรกของวัน) · ช่องว่าง = ไม่ได้มา" />
+    <PageHeader title="เข้างานและประกันมือ" description="ใครมาทำงานวันไหน กี่โมง และค่าประกันมือของหมอประจำ" />
+    <SegmentedControl v-model="tab" :items="[{ value: 'attendance', label: 'การเข้างาน' }, { value: 'guarantee', label: 'ประกันมือ' }]" label="มุมมอง" class="mb-5" />
+
+    <GuaranteePanel v-if="tab === 'guarantee'" />
+    <template v-else>
 
     <div class="mb-4 flex flex-wrap items-end gap-3">
       <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
@@ -145,6 +153,7 @@ const cellTitle = (r: AttendanceRow) =>
         </tbody>
       </table>
     </div>
-    <p class="m-0 mt-3 text-sm text-muted-foreground">วางเมาส์บนเวลาเพื่อดูยอดประกันมือของวันนั้น · ตั้งยอดประกันมือ/ให้หรือไม่ให้รายวัน ที่เมนู “ประกันมือ/ลงเวลา”</p>
+    <p class="m-0 mt-3 text-sm text-muted-foreground">วางเมาส์บนเวลาเพื่อดูยอดประกันมือของวันนั้น · ตั้งยอดประกันมือ หรือให้/ไม่ให้เป็นรายวัน ที่แท็บ “ประกันมือ”</p>
+    </template>
   </div>
 </template>

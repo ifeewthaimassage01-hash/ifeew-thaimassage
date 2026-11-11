@@ -1,5 +1,4 @@
 <script setup lang="ts">
-import { RefreshCw } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 import { bangkokTime } from '@ifeew/shared'
 import type { DeviceStaff, LoginBranch } from '~/composables/useStaffDevice'
@@ -81,6 +80,25 @@ async function reload() {
   await loadBranches()
   await loadStaff()
 }
+
+// รีเฟรชรายชื่อเองเบื้องหลัง (แทนปุ่มโหลดใหม่) — ทุก 30 วินาที และเมื่อกลับมาที่หน้านี้
+//   ไม่ล้างรายชื่อเดิม (ไม่กะพริบ) และข้ามถ้ากำลังกรอก PIN อยู่
+async function refreshQuietly() {
+  const id = branchId.value
+  if (!id || selected.value || pinLoading.value || loadingList.value) return
+  try {
+    const res = await listBranchStaff(id)
+    if (branchId.value === id && !selected.value) {
+      staff.value = res.staff ?? []
+      listError.value = null
+    }
+  } catch {
+    // เงียบไว้ — รอบถัดไปจะลองใหม่ (ข้อผิดพลาดตอนเลือกสาขาจะแสดงตามปกติ)
+  }
+}
+useIntervalFn(refreshQuietly, 30_000)
+const visibility = useDocumentVisibility()
+watch(visibility, (v) => v === 'visible' && refreshQuietly())
 
 function choose(s: DeviceStaff) {
   if (s.locked) return
@@ -182,7 +200,7 @@ onMounted(reload)
 
       <!-- พนักงาน: เลือกชื่อ + PIN -->
       <Card v-if="mode === 'staff'" class="gap-0 py-0">
-        <div class="flex flex-wrap items-end justify-between gap-3 border-b border-border px-6 py-4">
+        <div class="border-b border-border px-6 py-4">
           <SelectField
             v-model="branchId"
             :items="branches"
@@ -193,9 +211,6 @@ onMounted(reload)
             :disabled="loadingBranches || branches.length === 0"
             class="w-full sm:w-72"
           />
-          <Button variant="ghost" size="icon" aria-label="โหลดรายชื่อใหม่" :disabled="loadingList || loadingBranches" @click="reload">
-            <RefreshCw :class="loadingList || loadingBranches ? 'animate-spin' : ''" />
-          </Button>
         </div>
 
         <div class="p-6">

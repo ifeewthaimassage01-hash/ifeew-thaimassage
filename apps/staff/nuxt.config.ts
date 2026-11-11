@@ -7,16 +7,25 @@ export default defineNuxtConfig({
 
   compatibilityDate: '2026-11-01',
   ssr: false,
+
+  // หน้าเดิมที่ย้ายไปรวมกับหน้าอื่น
+  routeRules: {
+    '/guarantees': { redirect: '/attendance?tab=guarantee' },
+  },
   devtools: { enabled: true },
 
   app: {
     head: {
       htmlAttrs: { lang: 'th' },
       title: "Ifeew's Thaimassage — Staff",
-      meta: [{ name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' }],
+      meta: [
+        { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
+        { name: 'theme-color', content: '#f8f3ed' },
+      ],
       link: [
         { rel: 'icon', type: 'image/png', sizes: '64x64', href: '/favicon.png' },
-        { rel: 'apple-touch-icon', href: '/favicon.png' },
+        { rel: 'apple-touch-icon', href: '/icons/icon-192.png' },
+        { rel: 'manifest', href: '/manifest.webmanifest' },
       ],
     },
   },

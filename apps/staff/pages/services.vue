@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // OWNER: บริการ + ช่วงเวลา + ราคา + ค่าแรงหมอนวด (ต่อสาขา) และหมวดหมู่
 // แก้ราคา/ค่าแรงเดิม = OWNER เท่านั้น (เหตุผลไม่บังคับ — migration 032)
-import { History, Pencil, Plus, Trash2 } from '@lucide/vue'
+import { EllipsisVertical, History, Image as ImageIcon, Pencil, Plus, Power, Trash2 } from '@lucide/vue'
 import {
   bangkokToday,
   formatBaht,
@@ -79,7 +79,15 @@ const form = ref({
 })
 const newMinutes = ref<number | string>('')
 const image = ref<File | File[] | null>(null)
-const { upload: uploadImage } = useImageUpload()
+const { upload: uploadImage, url: imageUrl } = useImageUpload()
+// รูปที่จะแสดงในหน้าต่างแก้ไข: ไฟล์ใหม่ที่เพิ่งเลือก (ยังไม่บันทึก) หรือรูปปัจจุบันของบริการ
+const pickedPreview = ref<string | null>(null)
+watch(image, (f) => {
+  if (pickedPreview.value) URL.revokeObjectURL(pickedPreview.value)
+  const file = Array.isArray(f) ? f[0] : f
+  pickedPreview.value = file ? URL.createObjectURL(file) : null
+})
+onBeforeUnmount(() => pickedPreview.value && URL.revokeObjectURL(pickedPreview.value))
 
 const hasExistingPrice = computed(() => !!editing.value && activeOptions(editing.value.id).length > 0)
 const scheduledOptions = computed<PricingOption[]>(() =>
@@ -327,44 +335,78 @@ async function removeCategory(c: Category) {
       <EmptyState v-if="!loading && !services.length" title="ยังไม่มีบริการ" description="เพิ่มบริการพร้อมช่วงเวลาและราคา แล้วเปิดขายที่สาขา">
         <Button @click="openService()"><Plus /> เพิ่มบริการ</Button>
       </EmptyState>
-      <div class="grid items-start gap-4 lg:grid-cols-2">
-        <Card v-for="s in services" :key="s.id" class="gap-0 py-0" :class="s.is_active ? '' : 'opacity-70'">
-          <div class="flex items-start justify-between gap-3 p-5">
-            <div class="min-w-0">
-              <p class="m-0 text-sm text-muted-foreground">{{ categoryName(s.category_id) }}</p>
-              <h2 class="m-0 text-[17px] font-semibold">{{ s.name }}</h2>
-              <p v-if="s.name_en" class="m-0 text-sm text-muted-foreground">{{ s.name_en }}</p>
+      <div class="grid gap-4 lg:grid-cols-2">
+        <!-- การ์ดบริการ: หัว (รูป · หมวด/ชื่อ · สถานะ) → ตารางราคา → แถบล่าง (แก้ไข + เมนู ⋯) -->
+        <Card v-for="s in services" :key="s.id" class="gap-0 overflow-hidden py-0" :class="s.is_active ? '' : 'opacity-70'">
+          <div class="flex gap-3.5 p-4">
+            <img
+              v-if="s.image_path"
+              :src="imageUrl('service', s.image_path, 200)!"
+              :alt="`รูป${s.name}`"
+              loading="lazy"
+              class="size-16 shrink-0 rounded-lg border border-border object-cover"
+            >
+            <span v-else class="grid size-16 shrink-0 place-items-center rounded-lg border border-dashed border-input bg-muted text-center text-[11px] leading-tight text-muted-foreground">
+              <ImageIcon class="mx-auto size-5 text-muted-soft" />ไม่มีรูป
+            </span>
+            <div class="grid min-w-0 flex-1 content-start gap-1">
+              <p class="m-0 truncate text-[13px] text-muted-foreground">{{ categoryName(s.category_id) }}</p>
+              <h2 class="m-0 truncate text-base leading-snug font-semibold">{{ s.name }}</h2>
+              <div>
+                <Badge v-if="!s.is_active" variant="neutral" dot>ปิดใช้งาน</Badge>
+                <Badge v-else-if="!pricingOf(s.id)" variant="neutral">ยังไม่ขายที่สาขานี้</Badge>
+                <Badge v-else-if="!pricingOf(s.id)!.is_active" variant="pending" dot>หยุดขายที่สาขานี้</Badge>
+                <Badge v-else variant="success" dot>ขายอยู่</Badge>
+              </div>
             </div>
-            <Badge v-if="!s.is_active" variant="neutral" dot>ปิดใช้งาน</Badge>
-            <Badge v-else-if="!pricingOf(s.id)" variant="neutral">ยังไม่ขายที่สาขานี้</Badge>
-            <Badge v-else-if="!pricingOf(s.id)!.is_active" variant="pending" dot>หยุดขายที่สาขานี้</Badge>
-            <Badge v-else variant="success" dot>ขายอยู่</Badge>
           </div>
 
-          <div v-if="activeOptions(s.id).length" class="border-t border-border">
-            <div class="grid grid-cols-3 px-5 pt-3 pb-1 text-[13px] font-medium text-muted-foreground">
-              <span>ระยะเวลา</span><span class="text-right">ราคา</span><span class="text-right">ค่าแรง</span>
-            </div>
-            <div v-for="o in activeOptions(s.id)" :key="o.option_id" class="grid grid-cols-3 px-5 py-1.5 text-[15px]">
-              <span class="text-heading">{{ formatDuration(o.duration_minutes) }}</span>
-              <span class="num text-right font-medium text-heading">{{ formatBaht(Number(o.current!.price)) }}</span>
-              <span class="num text-right text-muted-foreground">{{ formatBaht(Number(o.current!.therapist_fee)) }}</span>
-              <span v-if="o.scheduled" class="col-span-3 text-sm text-pending-ink">
-                ราคาใหม่ {{ fmt(o.scheduled.effective_from) }}: <span class="num">{{ formatBaht(Number(o.scheduled.price)) }}</span> / ค่าแรง <span class="num">{{ formatBaht(Number(o.scheduled.therapist_fee)) }}</span>
-              </span>
-            </div>
-            <div class="h-2" />
-          </div>
+          <table v-if="activeOptions(s.id).length" class="mx-4 mb-3 w-[calc(100%-2rem)] border-collapse text-[15px]">
+            <thead>
+              <tr class="text-[12px] text-muted-foreground">
+                <th scope="col" class="pb-1 text-left font-medium">เวลา</th>
+                <th scope="col" class="pb-1 text-right font-medium">ราคา</th>
+                <th scope="col" class="pb-1 text-right font-medium">ค่าแรงหมอ</th>
+              </tr>
+            </thead>
+            <tbody>
+              <template v-for="o in activeOptions(s.id)" :key="o.option_id">
+                <tr class="border-t border-border/70">
+                  <td class="py-1.5 text-heading">{{ formatDuration(o.duration_minutes) }}</td>
+                  <td class="num py-1.5 text-right font-semibold text-heading">{{ formatBaht(Number(o.current!.price)) }}</td>
+                  <td class="num py-1.5 text-right text-muted-foreground">{{ formatBaht(Number(o.current!.therapist_fee)) }}</td>
+                </tr>
+                <tr v-if="o.scheduled">
+                  <td colspan="3" class="pb-1.5 text-[13px] text-pending-ink">
+                    ราคาใหม่ตั้งแต่ {{ fmt(o.scheduled.effective_from) }}: <span class="num">{{ formatBaht(Number(o.scheduled.price)) }}</span>
+                    / ค่าแรง <span class="num">{{ formatBaht(Number(o.scheduled.therapist_fee)) }}</span>
+                  </td>
+                </tr>
+              </template>
+            </tbody>
+          </table>
+          <p v-else class="m-0 mx-4 mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">ยังไม่ได้ตั้งราคาที่สาขานี้ — กด “แก้ไข” เพื่อตั้งราคา</p>
 
-          <div class="flex flex-wrap gap-2 border-t border-border px-5 py-3">
-            <Button variant="outline" size="sm" @click="openService(s)"><Pencil /> แก้ไข</Button>
-            <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" @click="toggleAtBranch(s)">
-              {{ pricingOf(s.id)!.is_active ? 'หยุดขายที่สาขานี้' : 'เปิดขายที่สาขานี้' }}
-            </Button>
-            <Button v-if="pricingOf(s.id)" variant="ghost" size="sm" @click="historyService = s"><History /> ประวัติราคา</Button>
-            <Button variant="ghost" size="sm" class="ml-auto text-danger-ink hover:bg-danger-soft hover:text-danger-ink" :disabled="deletingId === s.id" @click="removeService(s)">
-              <Trash2 /> {{ deletingId === s.id ? 'กำลังลบ…' : 'ลบ' }}
-            </Button>
+          <div class="mt-auto flex items-center gap-2 border-t border-border bg-muted/40 px-3 py-2">
+            <Button variant="outline" size="sm" class="bg-card" @click="openService(s)"><Pencil /> แก้ไข</Button>
+            <span class="flex-1" />
+            <DropdownMenu>
+              <DropdownMenuTrigger as-child>
+                <Button variant="ghost" size="icon-sm" :aria-label="`ตัวเลือกเพิ่มเติม ${s.name}`"><EllipsisVertical /></Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent align="end" class="w-52">
+                <DropdownMenuItem v-if="pricingOf(s.id)" @select="toggleAtBranch(s)">
+                  <Power /> {{ pricingOf(s.id)!.is_active ? 'หยุดขายที่สาขานี้' : 'เปิดขายที่สาขานี้' }}
+                </DropdownMenuItem>
+                <DropdownMenuItem v-if="pricingOf(s.id)" @select="historyService = s"><History /> ประวัติราคา</DropdownMenuItem>
+                <DropdownMenuSeparator v-if="pricingOf(s.id)" />
+                <DropdownMenuItem
+                  class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink [&_svg]:text-danger-ink"
+                  :disabled="deletingId === s.id"
+                  @select="removeService(s)"
+                ><Trash2 /> ลบบริการ</DropdownMenuItem>
+              </DropdownMenuContent>
+            </DropdownMenu>
           </div>
         </Card>
       </div>
@@ -422,11 +464,11 @@ async function removeCategory(c: Category) {
               <TextField v-model="newMinutes" label="เพิ่มช่วงเวลา (นาที)" hint="เช่น 3 ชม. = 180" numeric="integer" min="5" max="600" class="flex-1" @keydown.enter.prevent="addDuration" />
               <Button type="button" variant="outline" class="mb-6" @click="addDuration"><Plus /> เพิ่ม</Button>
             </div>
-            <div v-for="(o, i) in form.options" :key="o.duration_minutes" class="grid grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-2 rounded-lg bg-muted p-3">
+            <div v-for="(o, i) in form.options" :key="o.duration_minutes" class="grid grid-cols-[3.25rem_minmax(0,1fr)_minmax(0,1fr)_auto] items-end gap-1.5 rounded-lg bg-muted p-2.5 sm:grid-cols-[96px_minmax(0,1fr)_minmax(0,1fr)_auto] sm:gap-2 sm:p-3">
               <span class="pb-2.5 text-[15px] font-medium text-heading">{{ formatDuration(o.duration_minutes) }}</span>
               <TextField v-model="o.price" label="ราคา" type="number" min="0" suffix="฿" class="num" />
               <TextField v-model="o.therapist_fee" label="ค่าแรง" type="number" min="0" suffix="฿" class="num" />
-              <Button type="button" variant="ghost" size="icon" class="text-danger-ink" :aria-label="`ลบช่วงเวลา ${formatDuration(o.duration_minutes)}`" @click="form.options.splice(i, 1)"><Trash2 /></Button>
+              <Button type="button" variant="ghost" size="icon" class="-mx-1 text-danger-ink sm:mx-0" :aria-label="`ลบช่วงเวลา ${formatDuration(o.duration_minutes)}`" @click="form.options.splice(i, 1)"><Trash2 /></Button>
             </div>
             <p v-if="!form.options.length" class="m-0 text-sm text-danger-ink">ยังไม่มีช่วงเวลา</p>
           </fieldset>
@@ -454,6 +496,14 @@ async function removeCategory(c: Category) {
           <TextareaField v-model="form.description" label="รายละเอียด" rows="2" />
           <div class="grid gap-1.5">
             <Label for="svc-image">รูปบริการ</Label>
+            <div v-if="pickedPreview || editing?.image_path" class="flex items-center gap-3">
+              <img
+                :src="pickedPreview ?? imageUrl('service', editing?.image_path, 400)!"
+                alt="รูปบริการ"
+                class="h-24 w-32 rounded-lg border border-border object-cover"
+              >
+              <span class="text-sm text-muted-foreground">{{ pickedPreview ? 'รูปใหม่ (บันทึกแล้วจะใช้รูปนี้)' : 'รูปที่ใช้อยู่ตอนนี้' }}</span>
+            </div>
             <input
               id="svc-image"
               type="file"
