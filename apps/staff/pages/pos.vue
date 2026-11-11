@@ -470,13 +470,14 @@ async function submitWalkIn() {
                 <li
                   v-for="o in s.options"
                   :key="o.option_id"
-                  class="flex min-h-12 items-center justify-between gap-3 rounded-lg px-3 py-1.5 transition-colors"
+                  class="grid min-h-12 grid-cols-[5rem_minmax(0,1fr)_auto] items-center gap-3 rounded-lg px-3 py-1.5 transition-colors"
                   :class="countOf(o.option_id) ? 'bg-secondary' : 'bg-muted/50'"
                 >
-                  <span class="flex items-baseline gap-3">
-                    <span class="flex items-center gap-1.5 text-[15px] font-medium text-heading"><Clock class="size-4 self-center text-brand-accent" /> {{ formatDuration(o.duration_minutes) }}</span>
-                    <span class="num text-[15px] font-semibold text-heading">{{ formatBaht(Number(o.price)) }}</span>
+                  <!-- คอลัมน์: เวลา (กว้างคงที่) | ราคา (ชิดขวา ตัวเลขตรงหลักกัน) | ปุ่ม -->
+                  <span class="flex items-center gap-1.5 text-[15px] leading-none font-medium text-heading">
+                    <Clock class="size-4 shrink-0 text-brand-accent" /> {{ formatDuration(o.duration_minutes) }}
                   </span>
+                  <span class="num text-right text-[15px] leading-none font-semibold text-heading tabular-nums">{{ formatBaht(Number(o.price)) }}</span>
 
                   <Button
                     v-if="!countOf(o.option_id)"

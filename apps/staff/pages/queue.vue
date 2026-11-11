@@ -2,7 +2,7 @@
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
 // มือถือ: แท็บ รอเรียก / กำลังให้บริการ / เสร็จ-ยกเลิก · จอใหญ่แสดงครบทุกคอลัมน์
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
-import { Clock, EllipsisVertical, KeyRound, Users } from '@lucide/vue'
+import { CircleCheck, Clock, EllipsisVertical, HandHeart, Hourglass, KeyRound, Users } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -80,6 +80,13 @@ function groupsOf(statuses: QueueStatus[]) {
     else groups.push({ orderId: r.order.order_id, rows: [r] })
   }
   return groups
+}
+// สี/ไอคอนของแต่ละคอลัมน์ (โทนเดียวกับพื้นครีม — ใช้สีเฉพาะจุดและป้ายจำนวน)
+function columnTone(key: string) {
+  if (key === 'waiting') return { dot: 'bg-brand-accent', pill: 'bg-pending-soft text-pending-ink', icon: Hourglass, empty: 'ไม่มีคิวรอเรียก' }
+  if (key === 'service') return { dot: 'bg-success', pill: 'bg-success-soft text-success-ink', icon: HandHeart, empty: 'ยังไม่มีใครกำลังนวด' }
+  if (key === 'done') return { dot: 'bg-muted-soft', pill: 'bg-secondary text-heading', icon: CircleCheck, empty: 'ยังไม่มีคิวที่เสร็จ' }
+  return { dot: 'bg-primary', pill: 'bg-secondary text-heading', icon: Hourglass, empty: 'ไม่มีคิวตอนนี้' }
 }
 const isWaiting = (s: QueueStatus) => ['WAITING', 'CALLED', 'ACCEPTED'].includes(s)
 const message = ref<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
@@ -465,13 +472,19 @@ async function submitClock(pin: string) {
       <section
         v-for="c in panels"
         :key="c.key"
-        class="grid gap-3 rounded-xl bg-secondary p-3"
+        class="grid content-start gap-2.5 rounded-2xl border border-border bg-muted/40 p-3"
         :aria-labelledby="`col-${c.key}`"
       >
-        <h2 :id="`col-${c.key}`" class="m-0 flex items-center justify-between px-1 text-[15px] font-semibold">
-          {{ c.title }} <span class="num rounded-md bg-card px-2 text-sm font-medium text-muted-foreground">{{ byColumn(c.statuses).length }}</span>
+        <!-- หัวคอลัมน์: จุดสีบอกสถานะ + ชื่อ + จำนวน (ป้ายสีเดียวกัน) -->
+        <h2 :id="`col-${c.key}`" class="m-0 flex items-center gap-2 px-1 pb-0.5 text-[15px] font-semibold text-heading">
+          <span class="size-2.5 shrink-0 rounded-full" :class="columnTone(c.key).dot" aria-hidden="true" />
+          {{ c.title }}
+          <span class="num ml-auto min-w-7 rounded-full px-2 py-0.5 text-center text-[13px] font-semibold" :class="columnTone(c.key).pill">{{ byColumn(c.statuses).length }}</span>
         </h2>
-        <p v-if="!byColumn(c.statuses).length" class="m-0 rounded-lg border border-dashed border-input px-3 py-4 text-center text-sm text-muted-foreground">ไม่มีคิว</p>
+        <p v-if="!byColumn(c.statuses).length" class="m-0 flex flex-col items-center gap-1.5 rounded-xl bg-card/70 px-3 py-6 text-center text-sm text-muted-foreground">
+          <component :is="columnTone(c.key).icon" class="size-5 text-muted-soft" aria-hidden="true" />
+          {{ columnTone(c.key).empty }}
+        </p>
         <!-- คิวที่มาด้วยกัน (ออเดอร์เดียวกัน) อยู่ในกรอบเดียว · มาคนเดียว = การ์ดเดี่ยว -->
         <div
           v-for="g in groupsOf(c.statuses)"
