@@ -23,6 +23,8 @@ watch(
   (m) => {
     if (!m) return
     // ผิดพลาด/เตือน ค้างนานกว่า ให้มีเวลาอ่าน
+    // ข้อความผลการทำรายการแสดงทีละอัน: อันใหม่แทนอันเก่า (ไม่กองเรียงลงมา)
+    toast.dismiss()
     show[m.type](m.text, { duration: m.type === 'error' || m.type === 'warning' ? 8000 : 4000 })
     emit('close')
   },

@@ -111,7 +111,7 @@ async function clearTransactions() {
     const id = company.value.company_id
     await run(() => must(supabase.rpc('owner_clear_transactions', { p_company_id: id, p_confirm: clearConfirm.value.trim() })))
     clearConfirm.value = ''
-    message.value = { type: 'success', text: 'ล้างข้อมูลการใช้งานแล้ว · เปิดกะใหม่ก่อนเริ่มรับเงิน' }
+    message.value = { type: 'success', text: 'ล้างข้อมูลการใช้งานแล้ว' }
   } catch (e) {
     if ((e as Error)?.message !== 'STEP_UP_CANCELLED') message.value = { type: 'error', text: errorText(e, 'ล้างข้อมูลไม่สำเร็จ') }
   } finally {

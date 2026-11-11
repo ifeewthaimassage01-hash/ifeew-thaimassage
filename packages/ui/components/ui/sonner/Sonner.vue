@@ -9,19 +9,22 @@ import { Toaster as Sonner } from "vue-sonner"
 const props = withDefaults(defineProps<ToasterProps>(), {
   position: "top-center",
   closeButton: true,
+  expand: false,
+  visibleToasts: 3,
 })
 
 const toastOptions = computed<ToasterProps["toastOptions"]>(() => ({
   ...props.toastOptions,
   classes: {
-    toast: "!rounded-xl !border !border-border !bg-card !text-heading !shadow-soft !text-[15px] !gap-3 !py-3.5 !pl-4",
-    title: "!font-medium !leading-snug",
-    description: "!text-muted-foreground",
-    success: "!border-l-4 !border-l-success [&_[data-icon]]:!text-success-ink",
-    error: "!border-l-4 !border-l-danger [&_[data-icon]]:!text-danger-ink",
-    warning: "!border-l-4 !border-l-pending-ink [&_[data-icon]]:!text-pending-ink",
-    info: "!border-l-4 !border-l-brand-accent [&_[data-icon]]:!text-brand-accent",
-    closeButton: "!bg-card !border-border !text-muted-foreground hover:!text-heading",
+    // แยกจากพื้นหลังครีมให้ชัด: พื้นสีอ่อนตามประเภท + ขอบหนาสีเข้ม + เงาลึก · ปุ่มปิดอยู่มุมขวาในกรอบ
+    toast: "!rounded-xl !border-2 !shadow-[0_12px_32px_-10px_rgb(74_55_40/0.45)] !text-[15px] !gap-3 !py-3.5 !pl-4 !pr-11",
+    title: "!font-semibold !leading-snug",
+    description: "!opacity-80",
+    success: "!bg-success-soft !border-success-ink/45 !text-success-ink [&_[data-icon]]:!text-success-ink",
+    error: "!bg-danger-soft !border-danger-ink/45 !text-danger-ink [&_[data-icon]]:!text-danger-ink",
+    warning: "!bg-pending-soft !border-pending-ink/45 !text-pending-ink [&_[data-icon]]:!text-pending-ink",
+    info: "!bg-card !border-brand-accent/60 [&_[data-icon]]:!text-brand-accent",
+    closeButton: "!transform-none !left-auto !right-2.5 !top-1/2 !-translate-y-1/2 !translate-x-0 !size-7 !border-0 !bg-transparent !text-current !opacity-60 hover:!opacity-100 hover:!bg-black/5",
     ...props.toastOptions?.classes,
   },
 }))
@@ -33,7 +36,7 @@ const toastOptions = computed<ToasterProps["toastOptions"]>(() => ({
     :style="{
       '--normal-bg': 'var(--card)',
       '--normal-text': 'var(--heading)',
-      '--normal-border': 'var(--border)',
+      '--normal-border': 'var(--input)',
       '--border-radius': 'var(--radius)',
     }"
     v-bind="{ ...props, toastOptions }"
