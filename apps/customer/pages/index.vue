@@ -1,18 +1,13 @@
 <script setup lang="ts">
 // หน้าแรก (ภาพอ้างอิง Warm Minimal):
 //   Hero + แผงจองด่วน → บริการแนะนำ → สาขาของเรา + ทำไมต้องเลือกเรา → จองง่าย 3 ขั้นตอน + คำโปรย
-// ข้อมูลจริงทั้งหมด: useBranches / useOpenToday / useCatalog / my_bookings (สมาชิก)
-import { ArrowRight, CalendarCheck, CalendarDays, Check, ChevronRight, CircleCheck, Clock, MapPin, Navigation, Phone, Wallet } from '@lucide/vue'
-import { bangkokDateLong, bangkokTime, type BookingView } from '@ifeew/shared'
+// ข้อมูลจริงทั้งหมด: useBranches / useOpenToday / useCatalog
+import { ArrowRight, CalendarDays, Check, ChevronRight, CircleCheck, Clock, MapPin, Navigation, Phone } from '@lucide/vue'
 import { hhmm } from '~/composables/useOpenToday'
 
 useHead({ title: "Ifeew's Thaimassage — จองนวดไทยออนไลน์" })
 
 const config = useRuntimeConfig()
-const user = useSupabaseUser()
-const supabase = useSupabaseClient()
-const { code } = useCompany()
-const { customer, ensure } = useCustomer()
 
 const { data: branches, pending, error } = await useBranches()
 const branchIds = computed(() => (branches.value ?? []).map((b) => b.id))
@@ -49,21 +44,6 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
 const mapHref = (b: { map_url: string | null; address: string | null; name: string }) =>
   b.map_url || `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(b.address || b.name)}`
 
-// สมาชิก: นัดครั้งถัดไป + จำนวนที่รอโอนมัดจำ (โหลดฝั่ง client)
-const myBookings = ref<BookingView[] | null>(null)
-onMounted(async () => {
-  if (!user.value) return
-  await ensure().catch(() => {})
-  const { data } = await supabase.rpc('my_bookings', { p_company_code: code })
-  myBookings.value = (data ?? []) as unknown as BookingView[]
-})
-const next = computed(() =>
-  (myBookings.value ?? [])
-    .filter((b) => ['PENDING', 'CONFIRMED'].includes(b.status) && new Date(b.starts_at).getTime() > Date.now())
-    .sort((a, b) => a.starts_at.localeCompare(b.starts_at))[0] ?? null,
-)
-const awaitingDeposit = computed(() => (myBookings.value ?? []).filter((b) => b.can_upload_slip).length)
-
 const reasons = ['หมอนวดมืออาชีพ', 'บรรยากาศผ่อนคลาย', 'สะอาด ปลอดภัย', 'บริการด้วยใจ']
 const steps = [
   { icon: MapPin, title: 'เลือกสาขา', sub: 'และบริการ' },
@@ -93,7 +73,7 @@ const steps = [
           <h1 id="hero-h" class="m-0 mt-4 font-display text-[44px] leading-[1.05] font-bold tracking-tight text-heading sm:text-[56px] lg:text-[68px]">Ifeew Massage</h1>
           <p class="m-0 mt-3 text-[19px] leading-snug font-medium text-heading sm:text-[23px]">ให้ทุกช่วงเวลา… เป็นช่วงเวลาของการผ่อนคลาย</p>
           <p class="m-0 mt-3 max-w-md text-[15px] text-muted-foreground sm:text-[16px]">
-            <template v-if="user && customer">สวัสดี คุณ{{ customer.first_name }} · </template>นวดไทย นวดน้ำมัน และอีกหลายบริการ ด้วยทีมงานมืออาชีพ ในบรรยากาศอบอุ่น เป็นส่วนตัว
+            นวดไทย นวดน้ำมัน และอีกหลายบริการ ด้วยทีมงานมืออาชีพ ในบรรยากาศอบอุ่น เป็นส่วนตัว
           </p>
           <div class="mt-6 flex flex-wrap items-center gap-4">
             <Button as-child size="lg" class="h-12 rounded-full px-7 text-[16px] max-sm:w-full">
@@ -111,20 +91,6 @@ const steps = [
     <div class="relative mx-auto grid w-full max-w-[1200px] gap-10 px-4 md:px-8 lg:-mt-[110px]">
       <!-- แผงจองด่วน -->
       <HomeQuickBooking v-if="branches?.length" :branches="branches" :catalog="catalog ?? []" />
-
-      <!-- สมาชิก: นัดถัดไป / รอโอนมัดจำ -->
-      <div v-if="user && myBookings && (next || awaitingDeposit)" class="-mt-4 grid gap-3 sm:grid-cols-2">
-        <NuxtLink v-if="next" :to="`/bookings/${next.booking_id}`" class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-foreground no-underline shadow-soft hover:border-input">
-          <CalendarCheck class="size-5 shrink-0 text-brand-accent" aria-hidden="true" />
-          <span class="min-w-0 flex-1 text-[14px]">นัดถัดไป · <span class="num font-medium text-heading">{{ bangkokTime(next.starts_at) }} น.</span> {{ bangkokDateLong(next.starts_at) }} · {{ next.branch.name }}</span>
-          <ChevronRight class="size-4 shrink-0 text-muted-soft" aria-hidden="true" />
-        </NuxtLink>
-        <NuxtLink v-if="awaitingDeposit" to="/bookings" class="flex items-center gap-3 rounded-xl border border-border bg-card px-4 py-3 text-foreground no-underline shadow-soft hover:border-input">
-          <Wallet class="size-5 shrink-0 text-brand-accent" aria-hidden="true" />
-          <span class="min-w-0 flex-1 text-[14px]">รอโอนมัดจำ <span class="num font-medium text-heading">{{ awaitingDeposit }}</span> รายการ · ส่งสลิปก่อนหมดเวลากันคิว</span>
-          <ChevronRight class="size-4 shrink-0 text-muted-soft" aria-hidden="true" />
-        </NuxtLink>
-      </div>
 
       <!-- บริการแนะนำ -->
       <section class="grid gap-4" aria-labelledby="services-h">

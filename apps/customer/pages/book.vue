@@ -19,9 +19,7 @@ useHead({ title: "จองบริการ — Ifeew's Thaimassage" })
 const MAX_PEOPLE = 4
 const route = useRoute()
 const supabase = useSupabaseClient()
-const user = useSupabaseUser()
 const { code: companyCode } = useCompany()
-const { customer, ensure } = useCustomer()
 const { call } = useEdgeFunction()
 const { data: branches } = await useBranches()
 const { data: policies } = await usePolicies()
@@ -52,8 +50,6 @@ const submitting = ref(false)
 const error = ref<string | null>(null)
 let idempotencyKey = newIdempotencyKey()
 
-onMounted(() => ensure().catch(() => {}))
-const isMember = computed(() => !!user.value && !!customer.value)
 
 watch(branchId, (_, old) => {
   if (old !== undefined && old !== null) people.value = [{ branch_service_id: null, option_id: null }]
@@ -130,20 +126,6 @@ async function submit() {
   }
   submitting.value = true
   try {
-    if (isMember.value) {
-      const { data, error: err } = await supabase.rpc('create_member_booking', {
-        p_company_code: companyCode,
-        p_branch_id: branchId.value!,
-        p_starts_at: slot.value.starts_at,
-        p_option_ids: optionIds.value,
-        p_note: note.value.trim() || null,
-        p_idempotency_key: idempotencyKey,
-      })
-      if (err) throw new Error(err.message)
-      await navigateTo(`/bookings/${(data as unknown as BookingView).booking_id}`)
-      return
-    }
-
     const first = personNameSchema.safeParse(guest.firstName)
     const phone = thaiPhoneSchema.safeParse(guest.phone)
     if (!first.success || !phone.success) throw new Error('กรุณากรอกชื่อและเบอร์โทรให้ถูกต้อง')
@@ -325,23 +307,17 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
         <Card v-if="slot" class="gap-4 py-5">
           <CardHeader class="px-5"><CardTitle as="h2" class="text-base">ข้อมูลผู้จอง</CardTitle></CardHeader>
           <CardContent class="grid gap-4 px-5">
-            <p v-if="isMember" class="m-0 rounded-lg bg-muted px-4 py-3 text-heading">{{ customer?.first_name }} {{ customer?.last_name }} · <span class="num">{{ customer?.phone }}</span></p>
-            <template v-else>
-              <p class="m-0 text-[15px] text-muted-foreground">
-                จองได้โดยไม่ต้องสมัครสมาชิก หรือ
-                <NuxtLink :to="{ path: '/login', query: { redirect: route.fullPath } }">เข้าสู่ระบบ</NuxtLink>
-              </p>
-              <div class="grid grid-cols-2 gap-3">
-                <div class="grid content-start gap-1.5"><Label for="g-first">ชื่อ</Label><Input id="g-first" v-model="guest.firstName" autocomplete="given-name" required /></div>
-                <div class="grid content-start gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>
-              </div>
-              <div class="grid gap-3 sm:grid-cols-2">
-                <div class="grid content-start gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
-                <div class="grid content-start gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
-              </div>
-              <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
-              <ClientOnly><TurnstileWidget ref="turnstile" @token="(t: string) => (turnstileToken = t)" /></ClientOnly>
-            </template>
+            <p class="m-0 text-[15px] text-muted-foreground">จองได้ทันที ไม่ต้องสมัครสมาชิก · ใช้เบอร์โทรนี้ตรวจสอบการจองภายหลัง</p>
+            <div class="grid grid-cols-2 gap-3">
+              <div class="grid content-start gap-1.5"><Label for="g-first">ชื่อ</Label><Input id="g-first" v-model="guest.firstName" autocomplete="given-name" required /></div>
+              <div class="grid content-start gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>
+            </div>
+            <div class="grid gap-3 sm:grid-cols-2">
+              <div class="grid content-start gap-1.5"><Label for="g-phone">เบอร์โทร</Label><Input id="g-phone" v-model="guest.phone" numeric="digits" type="tel" inputmode="tel" autocomplete="tel" required class="num" /></div>
+              <div class="grid content-start gap-1.5"><Label for="g-email">อีเมล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-email" v-model="guest.email" type="email" autocomplete="email" /></div>
+            </div>
+            <ConsentFields v-model:privacy="privacy" v-model:marketing="marketing" :policies="policies ?? null" />
+            <ClientOnly><TurnstileWidget ref="turnstile" @token="(t: string) => (turnstileToken = t)" /></ClientOnly>
             <div class="grid gap-1.5">
               <Label for="note">หมายเหตุถึงร้าน <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label>
               <Textarea id="note" v-model="note" rows="2" maxlength="500" placeholder="เช่น ขอหมอผู้หญิง หรือเจ็บไหล่ขวา" />

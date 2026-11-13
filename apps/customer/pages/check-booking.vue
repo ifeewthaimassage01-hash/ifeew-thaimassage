@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ตรวจสอบการจองสำหรับ Guest (ไม่ได้ login): กรอกเบอร์โทร → รายการการจอง → กดเปิด /t/<token>
+// ตรวจสอบการจอง (ลูกค้าทุกคนเป็น Guest): กรอกเบอร์โทร → รายการการจอง → กดเปิด /t/<token>
 // token ที่ได้เป็นแบบชั่วคราว (30 นาที) ออกโดย Edge Function guest-booking-lookup
 import { ChevronRight, Search } from '@lucide/vue'
 import { bangkokDateLong, bangkokTime, bookingStatusLabels, thaiPhoneSchema, type BookingView } from '@ifeew/shared'
@@ -9,7 +9,6 @@ useHead({
   meta: [{ name: 'robots', content: 'noindex' }],
 })
 
-const user = useSupabaseUser()
 const { code: companyCode } = useCompany()
 const { call } = useEdgeFunction()
 
@@ -71,10 +70,6 @@ const maskedPhone = computed(() => (result.value ? `${result.value.phone.slice(0
   <div class="mx-auto max-w-2xl">
     <PageHeader title="ตรวจสอบการจอง" description="กรอกเบอร์โทรที่ใช้ตอนจอง เพื่อดูวันนัดและสถานะการจอง" />
 
-    <Alert v-if="user" variant="info" class="mb-6">
-      <AlertDescription>คุณเข้าสู่ระบบอยู่ ดูการจองทั้งหมดได้ที่ <NuxtLink to="/bookings">การจองของฉัน</NuxtLink></AlertDescription>
-    </Alert>
-
     <!-- ฟอร์มค้นหา -->
     <Card v-if="!result" class="gap-4 py-5">
       <CardContent class="px-5">
@@ -99,7 +94,7 @@ const maskedPhone = computed(() => (result.value ? `${result.value.phone.slice(0
             <Search /> {{ loading ? 'กำลังค้นหา…' : 'ค้นหาการจอง' }}
           </Button>
           <p class="m-0 text-sm text-muted-foreground">
-            แสดงการจองย้อนหลังไม่เกิน 90 วัน · ถ้าเป็นสมาชิก <NuxtLink :to="{ path: '/login', query: { redirect: '/bookings' } }">เข้าสู่ระบบ</NuxtLink> เพื่อดูการจองของคุณ
+            แสดงการจองย้อนหลังไม่เกิน 90 วัน
           </p>
         </form>
       </CardContent>

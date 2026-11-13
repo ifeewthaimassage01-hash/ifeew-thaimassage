@@ -4,7 +4,6 @@ import { CalendarDays, CalendarSearch, House, Info, MapPin, Menu, Phone, Sparkle
 // Shell ลูกค้า (ภาพอ้างอิง Warm Minimal): Top navigation แนวนอน · เนื้อหา · Footer
 //   ≥1024 เมนูแนวนอน · <1024 โลโก้ + ปุ่มเมนู (drawer) · มือถือมีปุ่มจองค้างล่างจอ
 const route = useRoute()
-const user = useSupabaseUser()
 const drawer = ref(false)
 watch(() => route.fullPath, () => (drawer.value = false))
 
@@ -13,9 +12,7 @@ const top = computed(() => [
   { to: '/services', label: 'บริการ', icon: Sparkles },
   { to: '/branches', label: 'สาขา', icon: MapPin },
   { to: '/#about', label: 'เกี่ยวกับเรา', icon: Info },
-  user.value
-    ? { to: '/bookings', label: 'การจองของฉัน', icon: CalendarDays }
-    : { to: '/check-booking', label: 'ตรวจสอบการจอง', icon: CalendarSearch },
+  { to: '/check-booking', label: 'ตรวจสอบการจอง', icon: CalendarSearch },
 ])
 const isActive = (i: { to: string; exact?: boolean }) =>
   i.to.includes('#') ? false : i.exact ? route.path === i.to : route.path === i.to || route.path.startsWith(`${i.to}/`)
@@ -56,7 +53,6 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
           <Button v-if="route.path !== '/book'" as-child class="hidden h-11 rounded-full px-5 sm:inline-flex">
             <NuxtLink to="/book"><CalendarDays /> จองคิว</NuxtLink>
           </Button>
-          <AppAccountMenu />
 
           <Sheet v-model:open="drawer">
             <SheetTrigger as-child>

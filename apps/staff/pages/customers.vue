@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// ลูกค้า: ค้นหาด้วยเบอร์เต็ม (ผลปิดบัง) -> เปิดดูรายละเอียด (บันทึก audit) -> แก้ไข / จับคู่ Guest
+// ลูกค้า (Guest ทั้งหมด): ค้นหาด้วยเบอร์เต็ม (ผลปิดบัง) -> เปิดดูรายละเอียด (บันทึก audit) -> แก้ไข / จับคู่
 // OWNER: คำขอลบข้อมูล (PDPA)
 import { Link2, Search, UserPlus } from '@lucide/vue'
 import { personNameSchema, reasonSchema, thaiPhoneSchema, type CustomerDetail, type Tables } from '@ifeew/shared'
@@ -109,7 +109,7 @@ async function saveCustomer() {
 }
 
 // ---------------------------------------------------------------------------
-// จับคู่ Guest -> ลูกค้ารายอื่นที่เบอร์เดียวกัน (พนักงานยืนยัน)
+// จับคู่ลูกค้า -> ลูกค้ารายอื่นที่เบอร์เดียวกัน (พนักงานยืนยัน)
 // ---------------------------------------------------------------------------
 const mergeDialog = ref(false)
 const mergeSource = ref<SearchRow | null>(null)
@@ -118,7 +118,7 @@ const mergeReason = ref('')
 const mergeTargets = computed(() =>
   (results.value ?? [])
     .filter((r) => r.customer_id !== mergeSource.value?.customer_id)
-    .map((r) => ({ value: r.customer_id, title: `${r.display_name} ${r.is_member ? '(สมาชิก)' : '(Guest)'}` })),
+    .map((r) => ({ value: r.customer_id, title: `${r.display_name} · ${r.phone_masked}` })),
 )
 
 function openMerge(row: SearchRow) {
@@ -289,22 +289,20 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
                     <span class="num block text-sm text-muted-foreground">{{ r.phone_masked }}</span>
                   </span>
                 </button>
-                <Badge :variant="r.is_member ? 'default' : 'neutral'">{{ r.is_member ? 'สมาชิก' : 'Guest' }}</Badge>
-                <Button v-if="!r.is_member && results.length > 1" variant="ghost" size="sm" @click="openMerge(r)"><Link2 /> จับคู่</Button>
+                <Button v-if="results.length > 1" variant="ghost" size="sm" @click="openMerge(r)"><Link2 /> จับคู่</Button>
               </div>
             </li>
           </ul>
         </SectionCard>
 
         <SectionCard v-if="selected" :title="`${selected.first_name} ${selected.last_name}`.trim()"
-          :description="selected.is_member ? 'ชื่อ เบอร์ และอีเมลของสมาชิก ลูกค้าแก้เองในแอป พนักงานแก้ได้เฉพาะหมายเหตุ' : 'ลูกค้า Guest แก้ข้อมูลได้'">
-          <template #actions><Badge :variant="selected.is_member ? 'default' : 'neutral'">{{ selected.is_member ? 'สมาชิก' : 'Guest' }}</Badge></template>
+          description="แก้ชื่อ เบอร์โทร อีเมล และหมายเหตุของลูกค้าได้">
           <form class="grid gap-4" @submit.prevent="saveCustomer">
             <div class="grid gap-4 sm:grid-cols-2">
-              <TextField v-model="editForm.first_name" label="ชื่อ" :disabled="selected.is_member" />
-              <TextField v-model="editForm.last_name" label="นามสกุล" :disabled="selected.is_member" />
-              <TextField v-model="editForm.phone" numeric="digits" label="เบอร์โทร" :disabled="selected.is_member" class="num" />
-              <TextField v-model="editForm.email" label="อีเมล" :disabled="selected.is_member" />
+              <TextField v-model="editForm.first_name" label="ชื่อ" />
+              <TextField v-model="editForm.last_name" label="นามสกุล" />
+              <TextField v-model="editForm.phone" numeric="digits" label="เบอร์โทร" class="num" />
+              <TextField v-model="editForm.email" label="อีเมล" />
             </div>
             <TextareaField v-model="editForm.staff_note" label="หมายเหตุของร้าน" hint="ลูกค้าไม่เห็น" rows="2" />
             <div class="flex flex-wrap items-center justify-between gap-3">
@@ -380,7 +378,7 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
     <Dialog v-model:open="mergeDialog">
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
-          <DialogTitle>จับคู่ลูกค้า Guest</DialogTitle>
+          <DialogTitle>จับคู่ลูกค้า</DialogTitle>
           <DialogDescription>รวม “{{ mergeSource?.display_name }}” เข้ากับลูกค้าที่เลือก ใช้เมื่อยืนยันกับลูกค้าแล้วว่าเป็นคนเดียวกัน</DialogDescription>
         </DialogHeader>
         <form class="grid gap-4" @submit.prevent="submitMerge">

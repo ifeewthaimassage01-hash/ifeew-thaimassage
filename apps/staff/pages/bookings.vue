@@ -447,7 +447,6 @@ async function submitCreate() {
                   <span class="block font-medium text-heading">{{ c.display_name }}</span>
                   <span class="num block text-sm text-muted-foreground">{{ c.phone_masked }}</span>
                 </span>
-                <Badge :variant="c.is_member ? 'default' : 'neutral'">{{ c.is_member ? 'สมาชิก' : 'Guest' }}</Badge>
               </button>
             </div>
             <EmptyState v-else-if="found" compact title="ไม่พบลูกค้า" description="เพิ่มลูกค้าใหม่ได้ที่เมนู “ลูกค้า”" />

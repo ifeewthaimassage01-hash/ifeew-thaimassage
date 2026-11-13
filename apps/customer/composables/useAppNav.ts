@@ -1,5 +1,5 @@
 import type { Component } from 'vue'
-import { CalendarCheck, CalendarPlus, CalendarSearch, HandHeart, History, House, MapPin, UserRound } from '@lucide/vue'
+import { CalendarPlus, CalendarSearch, HandHeart, House, MapPin } from '@lucide/vue'
 
 export interface NavItem {
   to: string
@@ -7,30 +7,22 @@ export interface NavItem {
   icon: Component
 }
 
-/** เมนูของลูกค้า — ไม่มีฟังก์ชันจัดการร้าน (DESIGN.md §4) */
+/** เมนูของลูกค้า — จองแบบ Guest อย่างเดียว (ไม่มีระบบสมาชิก/เข้าสู่ระบบ) */
 export function useAppNav() {
-  const user = useSupabaseUser()
   const route = useRoute()
 
-  const groups = computed(() => {
-    const main: NavItem[] = [
-      { to: '/', label: 'หน้าแรก', icon: House },
-      { to: '/services', label: 'บริการ', icon: HandHeart },
-      { to: '/branches', label: 'สาขา', icon: MapPin },
-      { to: '/book', label: 'จองคิว', icon: CalendarPlus },
-      // Guest ตรวจสอบการจองด้วยเบอร์โทร (สมาชิกใช้ "การจองของฉัน")
-      ...(user.value ? [] : [{ to: '/check-booking', label: 'ตรวจสอบการจอง', icon: CalendarSearch }]),
-    ]
-    const mine: NavItem[] = [
-      { to: '/bookings', label: 'การจองของฉัน', icon: CalendarCheck },
-      { to: '/history', label: 'ประวัติการนวด', icon: History },
-      { to: '/profile', label: 'โปรไฟล์', icon: UserRound },
-    ]
-    return [
-      { label: 'เมนู', items: main },
-      ...(user.value ? [{ label: 'บัญชีของฉัน', items: mine }] : []),
-    ]
-  })
+  const groups = computed(() => [
+    {
+      label: 'เมนู',
+      items: [
+        { to: '/', label: 'หน้าแรก', icon: House },
+        { to: '/services', label: 'บริการ', icon: HandHeart },
+        { to: '/branches', label: 'สาขา', icon: MapPin },
+        { to: '/book', label: 'จองคิว', icon: CalendarPlus },
+        { to: '/check-booking', label: 'ตรวจสอบการจอง', icon: CalendarSearch },
+      ] satisfies NavItem[],
+    },
+  ])
 
   const isActive = (to: string) => (to === '/' ? route.path === '/' : route.path === to || route.path.startsWith(`${to}/`))
 
@@ -38,14 +30,7 @@ export function useAppNav() {
   const crumbs = computed(() => {
     const all = groups.value.flatMap((g) => g.items)
     const item = all.filter((i) => i.to !== '/').find((i) => isActive(i.to))
-    const extra: Record<string, string> = {
-      '/login': 'เข้าสู่ระบบ',
-      '/register': 'สมัครสมาชิก',
-      '/complete-profile': 'ข้อมูลของคุณ',
-      '/check-booking': 'ตรวจสอบการจอง',
-    }
     if (route.path.startsWith('/t/')) return [{ label: 'สถานะการจอง' }]
-    if (extra[route.path]) return [{ label: extra[route.path]! }]
     if (!item) return [{ label: 'หน้าแรก' }]
     const detail = route.path !== item.to
     return detail ? [{ label: item.label, to: item.to }, { label: 'รายละเอียด' }] : [{ label: item.label }]
