@@ -1,0 +1,618 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-11-14T22:49:26.985Z",
+  "title": "Design System: Ifeew's Thaimassage",
+  "extensions": {
+    "colorMeta": {
+      "primary": {
+        "role": "primary",
+        "displayName": "Teak Brown",
+        "canonical": "#93704f",
+        "tonalRamp": [
+          "#3a2b1f",
+          "#543f2d",
+          "#6d533a",
+          "#846447",
+          "#ae9379",
+          "#c9b6a4",
+          "#e1d5c9",
+          "#f4eee7"
+        ]
+      },
+      "primary-hover": {
+        "role": "primary",
+        "displayName": "Oiled Teak",
+        "canonical": "#886342",
+        "tonalRamp": [
+          "#37281b",
+          "#4e3926",
+          "#654a31",
+          "#7a593b",
+          "#a68970",
+          "#c4b09d",
+          "#ded1c5",
+          "#f3ede6"
+        ]
+      },
+      "brand-accent": {
+        "role": "primary",
+        "displayName": "Sandalwood",
+        "canonical": "#a9825e",
+        "tonalRamp": [
+          "#413123",
+          "#5f4834",
+          "#7c5f45",
+          "#977454",
+          "#bfa185",
+          "#d4bfab",
+          "#e7dacd",
+          "#f6f0e9"
+        ]
+      },
+      "cream-canvas": {
+        "role": "neutral",
+        "displayName": "Cream Canvas",
+        "canonical": "#f8f3ed",
+        "tonalRamp": [
+          "#58534e",
+          "#86817c",
+          "#b4aea9",
+          "#ddd8d2",
+          "#faf5f0",
+          "#fcf8f3",
+          "#fdf9f5",
+          "#fefbf7"
+        ]
+      },
+      "warm-white-surface": {
+        "role": "neutral",
+        "displayName": "Warm Linen",
+        "canonical": "#fffcf8",
+        "tonalRamp": [
+          "#5b5551",
+          "#8a8581",
+          "#b9b5b1",
+          "#e3dfdb",
+          "#fffcf8",
+          "#fffcf8",
+          "#fffcf8",
+          "#fffcf8"
+        ]
+      },
+      "muted-fill": {
+        "role": "neutral",
+        "displayName": "Rice Paper",
+        "canonical": "#f4ebe1",
+        "tonalRamp": [
+          "#57504b",
+          "#847d76",
+          "#b1a9a1",
+          "#d9d0c7",
+          "#f7efe7",
+          "#faf4ed",
+          "#fcf7f2",
+          "#fefaf6"
+        ]
+      },
+      "accent-fill": {
+        "role": "neutral",
+        "displayName": "Toasted Rice",
+        "canonical": "#f0e5d9",
+        "tonalRamp": [
+          "#564f48",
+          "#827a72",
+          "#aea59b",
+          "#d6cbc0",
+          "#f4ebe1",
+          "#f8f1e9",
+          "#fbf6ef",
+          "#fefaf5"
+        ]
+      },
+      "beige-secondary": {
+        "role": "neutral",
+        "displayName": "Beige Secondary",
+        "canonical": "#ede0d2",
+        "tonalRamp": [
+          "#554d46",
+          "#81776e",
+          "#aca196",
+          "#d3c7ba",
+          "#f2e7dc",
+          "#f6eee5",
+          "#faf4ed",
+          "#fdf9f4"
+        ]
+      },
+      "border": {
+        "role": "neutral",
+        "displayName": "Hairline Beige",
+        "canonical": "#ede4da",
+        "tonalRamp": [
+          "#554e48",
+          "#817972",
+          "#aca49c",
+          "#d3cac1",
+          "#f2eae2",
+          "#f6f0e9",
+          "#faf5f0",
+          "#fdfaf5"
+        ]
+      },
+      "input-border": {
+        "role": "neutral",
+        "displayName": "Input Beige",
+        "canonical": "#e3d6c7",
+        "tonalRamp": [
+          "#524a43",
+          "#7c7269",
+          "#a59a8e",
+          "#cabeb0",
+          "#eae0d3",
+          "#f1e9e0",
+          "#f7f1ea",
+          "#fcf8f3"
+        ]
+      },
+      "heading": {
+        "role": "neutral",
+        "displayName": "Coffee",
+        "canonical": "#514337",
+        "tonalRamp": [
+          "#261e18",
+          "#332921",
+          "#3f332a",
+          "#4a3d32",
+          "#7d7167",
+          "#a8a098",
+          "#cec8c2",
+          "#eeeae5"
+        ]
+      },
+      "body-text": {
+        "role": "neutral",
+        "displayName": "Warm Ink",
+        "canonical": "#66594d",
+        "tonalRamp": [
+          "#2d251e",
+          "#3d342c",
+          "#4d4339",
+          "#5c5045",
+          "#8c8278",
+          "#b3aba3",
+          "#d4cec8",
+          "#f0ece7"
+        ]
+      },
+      "secondary-text": {
+        "role": "neutral",
+        "displayName": "Driftwood",
+        "canonical": "#7a6e61",
+        "tonalRamp": [
+          "#332b24",
+          "#473e36",
+          "#5b5147",
+          "#6e6257",
+          "#9b9287",
+          "#bdb5ad",
+          "#dad4ce",
+          "#f2eee9"
+        ]
+      },
+      "muted-icon": {
+        "role": "neutral",
+        "displayName": "Dry Reed",
+        "canonical": "#b6a797",
+        "tonalRamp": [
+          "#453c34",
+          "#655b51",
+          "#85796d",
+          "#a39586",
+          "#c8bcaf",
+          "#dbd2c8",
+          "#ebe4dd",
+          "#f8f4ee"
+        ]
+      },
+      "success": {
+        "role": "status",
+        "displayName": "Sage",
+        "canonical": "#6f9277",
+        "tonalRamp": [
+          "#2f362b",
+          "#425041",
+          "#546a56",
+          "#64826a",
+          "#93ad97",
+          "#b7c7b8",
+          "#d7ded4",
+          "#f1f1eb"
+        ]
+      },
+      "success-ink": {
+        "role": "status",
+        "displayName": "Sage Ink",
+        "canonical": "#557560",
+        "tonalRamp": [
+          "#282d24",
+          "#354235",
+          "#425646",
+          "#4d6956",
+          "#809786",
+          "#aab9ac",
+          "#cfd6cd",
+          "#eeefe9"
+        ]
+      },
+      "success-soft": {
+        "role": "status",
+        "displayName": "Sage Tint",
+        "canonical": "#e6eee6",
+        "tonalRamp": [
+          "#53514c",
+          "#7d7e78",
+          "#a7aba4",
+          "#cdd3cc",
+          "#ecf2eb",
+          "#f3f5ef",
+          "#f8f8f3",
+          "#fdfbf6"
+        ]
+      },
+      "danger": {
+        "role": "status",
+        "displayName": "Clay Rose",
+        "canonical": "#c87870",
+        "tonalRamp": [
+          "#4a2e29",
+          "#6e433d",
+          "#925851",
+          "#b26b64",
+          "#d69992",
+          "#e4bab4",
+          "#f0d7d2",
+          "#faefea"
+        ]
+      },
+      "danger-ink": {
+        "role": "status",
+        "displayName": "Clay Rose Ink",
+        "canonical": "#9e5149",
+        "tonalRamp": [
+          "#3d221d",
+          "#59302a",
+          "#753d36",
+          "#8d4941",
+          "#b67c75",
+          "#cfa7a1",
+          "#e4ccc7",
+          "#f5ebe7"
+        ]
+      },
+      "danger-soft": {
+        "role": "status",
+        "displayName": "Clay Rose Tint",
+        "canonical": "#f6e5e1",
+        "tonalRamp": [
+          "#584f4b",
+          "#857a76",
+          "#b2a5a1",
+          "#dbcbc7",
+          "#f8ebe7",
+          "#fbf1ed",
+          "#fcf6f2",
+          "#fefaf6"
+        ]
+      },
+      "pending-ink": {
+        "role": "status",
+        "displayName": "Amber Husk Ink",
+        "canonical": "#72543e",
+        "tonalRamp": [
+          "#30231a",
+          "#433124",
+          "#563f2e",
+          "#674c38",
+          "#957e6d",
+          "#b9a89b",
+          "#d8cdc4",
+          "#f1ebe5"
+        ]
+      },
+      "pending-soft": {
+        "role": "status",
+        "displayName": "Amber Husk Tint",
+        "canonical": "#f2e6d6",
+        "tonalRamp": [
+          "#574f47",
+          "#837a70",
+          "#afa599",
+          "#d7ccbe",
+          "#f5ecdf",
+          "#f9f1e7",
+          "#fbf6ee",
+          "#fefaf5"
+        ]
+      },
+      "chart-1": {
+        "role": "chart",
+        "displayName": "Booking Stage Light",
+        "canonical": "#e2c9ad",
+        "tonalRamp": [
+          "#52463b",
+          "#7b6c5c",
+          "#a4917c",
+          "#c9b399",
+          "#e9d6c0",
+          "#f1e3d3",
+          "#f7eee3",
+          "#fcf7f1"
+        ]
+      },
+      "chart-2": {
+        "role": "chart",
+        "displayName": "Booking Stage Mid",
+        "canonical": "#b38b67",
+        "tonalRamp": [
+          "#443426",
+          "#644d39",
+          "#83664b",
+          "#a07c5c",
+          "#c6a78b",
+          "#d9c4b0",
+          "#eadccf",
+          "#f7f1ea"
+        ]
+      },
+      "chart-3": {
+        "role": "chart",
+        "displayName": "Booking Stage Deep",
+        "canonical": "#6e4f37",
+        "tonalRamp": [
+          "#2f2218",
+          "#412f21",
+          "#533c2a",
+          "#634732",
+          "#927a67",
+          "#b7a698",
+          "#d6ccc2",
+          "#f1ebe5"
+        ]
+      },
+      "chart-4": {
+        "role": "chart",
+        "displayName": "Warm Ash",
+        "canonical": "#d9d4ce",
+        "tonalRamp": [
+          "#4f4945",
+          "#77716c",
+          "#9e9993",
+          "#c1bcb6",
+          "#e3ded9",
+          "#ece8e3",
+          "#f4f1ec",
+          "#fbf8f4"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "title-lg": {
+        "displayName": "Title Large",
+        "purpose": "Emphasized card headings and setup steps (17px, text-title)."
+      },
+      "small": {
+        "displayName": "Small",
+        "purpose": "Secondary lines and descriptions (14px, text-sm)."
+      },
+      "micro": {
+        "displayName": "Micro",
+        "purpose": "Chart ticks, timeline, bottom-nav labels only (12px)."
+      },
+      "display": {
+        "displayName": "Display",
+        "purpose": "Customer hero title and wordmark only (Cormorant Garamond)."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Page titles; 24px mobile, 28px desktop."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Card, section, step, and dialog headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text in UI; 16px document base."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Table headers, nav group labels, metadata. Sentence case."
+      },
+      "stat": {
+        "displayName": "Stat",
+        "purpose": "Large tabular numbers in StatCards."
+      }
+    },
+    "shadows": [
+      {
+        "name": "soft",
+        "value": "0 4px 20px rgba(111, 83, 57, 0.055)",
+        "purpose": "Resting cards and StatCards."
+      },
+      {
+        "name": "float",
+        "value": "0 12px 32px rgba(81, 67, 55, 0.10)",
+        "purpose": "Floating save bars and overlays."
+      },
+      {
+        "name": "bottom-nav",
+        "value": "0 -6px 24px -8px rgb(74 55 40 / 0.18)",
+        "purpose": "Mobile bottom navigation only."
+      }
+    ],
+    "motion": [
+      {
+        "name": "press",
+        "value": "transform 150ms, scale(0.98) on :active",
+        "purpose": "Button press feedback."
+      },
+      {
+        "name": "state",
+        "value": "background-color, color, border-color 150ms",
+        "purpose": "Hover and selection changes."
+      },
+      {
+        "name": "reduced-motion",
+        "value": "animation and transition durations 0.01ms",
+        "purpose": "Global prefers-reduced-motion override."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "sm",
+        "value": "640px"
+      },
+      {
+        "name": "md",
+        "value": "768px"
+      },
+      {
+        "name": "lg",
+        "value": "1024px"
+      },
+      {
+        "name": "xl",
+        "value": "1280px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action on a view.",
+      "html": "<button class=\"ds-btn-primary\">บันทึก</button>",
+      "css": ".ds-btn-primary{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;background:var(--primary,#93704f);color:#fff;height:44px;padding:0 20px;border:0;border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;transition:background-color .15s,transform .15s}.ds-btn-primary:hover{background:var(--primary-hover,#886342)}.ds-btn-primary:active{transform:scale(.98)}.ds-btn-primary:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(169,130,94,.6)}"
+    },
+    {
+      "name": "Outline Button",
+      "kind": "button",
+      "refersTo": "button-outline",
+      "description": "Secondary action next to a primary.",
+      "html": "<button class=\"ds-btn-outline\">ยกเลิก</button>",
+      "css": ".ds-btn-outline{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;background:var(--card,#fffcf8);color:var(--heading,#514337);height:44px;padding:0 20px;border:1px solid var(--input,#e3d6c7);border-radius:8px;font-size:15px;font-weight:500;cursor:pointer;transition:background-color .15s}.ds-btn-outline:hover{background:var(--muted,#f4ebe1)}.ds-btn-outline:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(169,130,94,.6)}"
+    },
+    {
+      "name": "Ghost Button",
+      "kind": "button",
+      "refersTo": "button-ghost",
+      "description": "Row actions and toolbars.",
+      "html": "<button class=\"ds-btn-ghost\">แก้ไข</button>",
+      "css": ".ds-btn-ghost{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;background:transparent;color:var(--heading,#514337);height:36px;padding:0 12px;border:0;border-radius:8px;font-size:14px;font-weight:500;cursor:pointer}.ds-btn-ghost:hover{background:var(--muted,#f4ebe1)}.ds-btn-ghost:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(169,130,94,.6)}"
+    },
+    {
+      "name": "Text Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "Labelled input with hint.",
+      "html": "<label class=\"ds-field\"><span class=\"ds-field-label\">เบอร์โทร</span><input class=\"ds-input\" placeholder=\"0812345678\"><span class=\"ds-field-hint\">ใช้ตรวจสอบการจองภายหลัง</span></label>",
+      "css": ".ds-field{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;display:grid;gap:6px}.ds-field-label{font-size:15px;font-weight:500;color:var(--heading,#514337)}.ds-field-hint{font-size:13px;color:var(--muted-foreground,#7a6e61)}.ds-input{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;height:44px;padding:0 14px;background:var(--card,#fffcf8);color:var(--heading,#514337);border:1px solid var(--input,#e3d6c7);border-radius:8px;font-size:16px;outline:none}.ds-input::placeholder{color:var(--muted-foreground,#7a6e61)}.ds-input:focus-visible{border-color:var(--ring,#a9825e);box-shadow:0 0 0 3px rgba(169,130,94,.4)}"
+    },
+    {
+      "name": "Status Badges",
+      "kind": "chip",
+      "refersTo": "badge-success",
+      "description": "Status always carries a word.",
+      "html": "<span class=\"ds-badge ds-ok\">ยืนยันแล้ว</span> <span class=\"ds-badge ds-wait\">รอชำระ</span> <span class=\"ds-badge ds-bad\">ยกเลิก</span>",
+      "css": ".ds-badge{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;display:inline-flex;align-items:center;gap:6px;padding:2px 8px;border-radius:6px;font-size:13px;font-weight:500;line-height:20px}.ds-badge::before{content:\"\";width:6px;height:6px;border-radius:50%;background:currentColor}.ds-ok{background:#e6eee6;color:#557560}.ds-wait{background:#f2e6d6;color:#72543e}.ds-bad{background:#f6e5e1;color:#9e5149}"
+    },
+    {
+      "name": "Section Card",
+      "kind": "card",
+      "refersTo": "card",
+      "description": "Warm-white card with a header hairline.",
+      "html": "<section class=\"ds-card\"><header class=\"ds-card-head\"><h3>การจองวันนี้</h3><p>8 รายการ</p></header><div class=\"ds-card-body\">คุณสมใจ 14:00 น. 2 คน</div></section>",
+      "css": ".ds-card{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;background:var(--card,#fffcf8);border:1px solid var(--border,#ede4da);border-radius:16px;box-shadow:0 4px 20px rgba(111,83,57,.055);overflow:hidden;color:var(--foreground,#66594d)}.ds-card-head{padding:16px 20px;border-bottom:1px solid var(--border,#ede4da)}.ds-card-head h3{margin:0;font-size:16px;font-weight:600;color:var(--heading,#514337)}.ds-card-head p{margin:2px 0 0;font-size:14px;color:var(--muted-foreground,#7a6e61)}.ds-card-body{padding:20px;font-size:15px}"
+    },
+    {
+      "name": "Sidebar Nav Item",
+      "kind": "nav",
+      "refersTo": "nav-item-active",
+      "description": "Staff sidebar link, active and idle.",
+      "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item is-active\" href=\"#\">คิว</a><a class=\"ds-nav-item\" href=\"#\">การจอง</a></nav>",
+      "css": ".ds-nav{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;display:grid;gap:2px;width:220px;background:var(--background,#f8f3ed);padding:8px}.ds-nav-item{display:flex;align-items:center;height:40px;padding:0 12px;border-radius:12px;font-size:15px;color:var(--muted-foreground,#7a6e61);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--muted,#f4ebe1);color:var(--heading,#514337)}.ds-nav-item:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(169,130,94,.6)}.ds-nav-item.is-active{background:var(--secondary,#ede0d2);color:var(--primary,#93704f);font-weight:500}"
+    },
+    {
+      "name": "Stat Card",
+      "kind": "custom",
+      "description": "Icon circle, label, large tabular number.",
+      "html": "<div class=\"ds-stat\"><span class=\"ds-stat-icon\">฿</span><div><span class=\"ds-stat-label\">ยอดค้างชำระ</span><span class=\"ds-stat-value\">฿12,400</span></div></div>",
+      "css": ".ds-stat{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;display:flex;gap:16px;align-items:flex-start;padding:20px;background:var(--card,#fffcf8);border:1px solid var(--border,#ede4da);border-radius:16px;box-shadow:0 4px 20px rgba(111,83,57,.055)}.ds-stat-icon{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;background:var(--muted,#f4ebe1);color:var(--brand-accent,#a9825e);font-size:20px}.ds-stat-label{display:block;font-size:14px;color:var(--muted-foreground,#7a6e61)}.ds-stat-value{display:block;margin-top:6px;font-size:30px;line-height:1;color:var(--heading,#514337);font-variant-numeric:tabular-nums}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Quiet Treatment Room",
+    "overview": "Every screen should feel like walking into a good treatment room: warm, clean, softly lit, nothing out of place, and everything you need within reach. The cream canvas is the room; warm-white cards are the linen laid on top; muted brown is the polished teak you touch to act. Nothing shouts. Hierarchy comes from whitespace and type weight before color.\n\nThe same room serves two very different visitors. Customers on the booking site move slowly and want reassurance: a full-bleed photo, a serif wordmark, generous space, and a booking path with no surprises. Staff at the front desk move fast with a customer waiting: the same materials, but denser, with large touch targets, obvious next actions, and money always legible. Components are soft and composed at rest, then crisp and confident the moment someone has to act.\n\nThe system rejects cold gray, pure black, neon, saturated or purple-blue gradients, glassmorphism, heavy shadows, and dark brown as a large background.",
+    "keyCharacteristics": [
+      "One continuous cream canvas; content sits on warm-white cards with a beige hairline and a barely-there shadow.",
+      "Muted brown is the only action color; status colors appear only with a text label.",
+      "Thai-first typography in DM Sans + Noto Sans Thai; Cormorant Garamond only for the customer wordmark and hero.",
+      "Tabular numbers for every price, time, count, and queue number.",
+      "Large, forgiving controls (44px on touch, 40px on desktop)."
+    ],
+    "rules": [
+      {
+        "name": "The 60-30-10 Rule",
+        "body": "Cream and warm-white make up about 60% of any screen, beige fills, borders, and text about 30%, and brown plus status colors at most 10%, only where attention is needed.",
+        "section": "colors"
+      },
+      {
+        "name": "The Graphics-Only Rule",
+        "body": "Sandalwood (#a9825e) and the bright status fills (#6f9277, #c87870) never carry text; text uses the matching ink (#557560, #9e5149, #72543e).",
+        "section": "colors"
+      },
+      {
+        "name": "The Never-Color-Alone Rule",
+        "body": "Every status shown by color also has a word or icon (badge with label, dot plus text).",
+        "section": "colors"
+      },
+      {
+        "name": "The Tabular Money Rule",
+        "body": "Prices, times, dates, counts, and queue numbers use tabular figures (`.num`) so columns of money line up.",
+        "section": "typography"
+      },
+      {
+        "name": "The 13px Floor Rule",
+        "body": "Readable text never goes below 13px; 12px is reserved for chart ticks, timelines, and bottom-nav labels, and text is never dimmed with opacity to look secondary (use Driftwood instead).",
+        "section": "typography"
+      },
+      {
+        "name": "The One Serif Rule",
+        "body": "Cormorant Garamond appears only on the customer site's wordmark and hero; the staff app is sans throughout.",
+        "section": "typography"
+      },
+      {
+        "name": "The Border-Before-Shadow Rule",
+        "body": "Prefer a hairline beige border over a shadow; never stack heavy shadows or add one to every card in a list.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "**Do** keep the canvas Cream Canvas (#f8f3ed) everywhere and put content on Warm Linen (#fffcf8) cards with a Hairline Beige border.",
+      "**Do** use Teak Brown (#93704f) only for the primary action on a view and for active/selected states.",
+      "**Do** pair every status color with a label, and use the ink shade (#557560, #9e5149, #72543e) for status text.",
+      "**Do** use tabular figures for all money, time, and counts.",
+      "**Do** keep touch targets at least 40px (44px for primary actions on touch screens) and respect reduced motion.",
+      "**Do** show clear confirmation dialogs, with a reason field, for destructive or money-moving actions."
+    ],
+    "donts": [
+      "**Don't** use dark brown as a large background, pure black, cold gray, neon, or purple/blue gradients.",
+      "**Don't** add heavy shadows, glassmorphism, or borders between sidebar, topbar, and content.",
+      "**Don't** use Sandalwood (#a9825e) or the bright status fills as text color.",
+      "**Don't** use the serif display face inside the staff app.",
+      "**Don't** use all-caps or tracked-out labels.",
+      "**Don't** let content overflow horizontally on mobile; stack tables instead of forcing sideways scroll."
+    ]
+  }
+}

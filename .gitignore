@@ -13,3 +13,6 @@ supabase/functions/.env
 
 # ข้อมูลจริงสำหรับสร้างบริษัท (มีอีเมล/นโยบายจริง)
 tools/bootstrap/company.json
+
+# impeccable: ไบนารีของ engine (ดาวน์โหลดใหม่ได้ ไม่เก็บใน git)
+.claude/skills/impeccable/scripts/bin/
