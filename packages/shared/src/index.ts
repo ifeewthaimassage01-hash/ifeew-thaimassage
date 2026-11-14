@@ -282,6 +282,8 @@ export interface BookingView {
   tracking_token?: string
   slip_outcome?: 'VERIFIED' | 'REJECTED' | 'REVIEW'
   slip_message?: string
+  /** ผูกการจองนี้กับ LINE ของลูกค้าแล้ว (ได้ยืนยัน/เตือนนัดทาง LINE) */
+  line_linked?: boolean
 }
 
 export interface AvailableSlot {

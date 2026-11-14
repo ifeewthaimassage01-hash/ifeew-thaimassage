@@ -74,6 +74,13 @@ async function confirmCancel() {
       @updated="(v) => (booking = { ...booking!, ...v })"
       @cancel="cancelReason = ''; cancelOpen = true"
     />
+    <LineLinkCard
+      v-if="booking"
+      :token="token"
+      :linked="!!booking.line_linked"
+      :status="booking.status"
+      @linked="booking = { ...booking!, line_linked: true }"
+    />
 
     <Dialog v-model:open="cancelOpen">
       <DialogContent class="sm:max-w-md">

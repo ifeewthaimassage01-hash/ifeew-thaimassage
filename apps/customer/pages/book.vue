@@ -1,7 +1,8 @@
 <script setup lang="ts">
 // จองบริการ: สาขา -> บริการ/ระยะเวลา (สูงสุด 4 คน) -> วัน -> เวลาว่าง -> ข้อมูลผู้จอง -> ยืนยัน (มัดจำ)
 // คำถามของหน้า: "ว่างกี่โมง รวมเท่าไร" — สรุปการจองอยู่ข้างขวา (มือถืออยู่ก่อนปุ่มจอง)
-import { Check, UserPlus, X } from '@lucide/vue'
+import { Check, MessageCircle, UserPlus, X } from '@lucide/vue'
+import { toast } from 'vue-sonner'
 import {
   addDays,
   bangkokToday,
@@ -49,6 +50,27 @@ const turnstile = ref<{ reset: () => void } | null>(null)
 const submitting = ref(false)
 const error = ref<string | null>(null)
 let idempotencyKey = newIdempotencyKey()
+
+// เข้าสู่ระบบด้วย LINE อยู่: ส่งยืนยันการจองและเตือนก่อนถึงนัดเข้า LINE · เติมชื่อจาก LINE ให้
+const line = useLiff()
+watch(
+  () => line.user.value?.name,
+  (name) => {
+    if (name && !guest.firstName) guest.firstName = name.slice(0, 100)
+  },
+  { immediate: true },
+)
+const lineLoggingIn = ref(false)
+async function lineLogin() {
+  lineLoggingIn.value = true
+  try {
+    await line.login()
+  } catch (e) {
+    toast.error(e instanceof Error ? e.message : 'เข้าสู่ระบบด้วย LINE ไม่สำเร็จ')
+  } finally {
+    lineLoggingIn.value = false
+  }
+}
 
 
 watch(branchId, (_, old) => {
@@ -145,6 +167,7 @@ async function submit() {
       privacy_version_id: policies.value.PRIVACY_NOTICE.id,
       turnstile_token: turnstileToken.value,
       idempotency_key: idempotencyKey,
+      line_id_token: line.user.value ? await line.idToken() : null,
     })
     // เก็บลิงก์ไว้ในเครื่องนี้ ให้ Guest กลับมาดูได้
     const saved = JSON.parse(localStorage.getItem('ifeew.guest_bookings') ?? '[]') as string[]
@@ -197,6 +220,18 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
         </span>
       </li>
     </ol>
+
+    <!-- ยังไม่ได้เข้าสู่ระบบด้วย LINE: ชวนก่อนเริ่มกรอก (การเข้าสู่ระบบพาออกจากหน้านี้ชั่วคราว) -->
+    <ClientOnly>
+      <div
+        v-if="line.available.value && !line.user.value && !line.restoring.value && !slot"
+        class="mb-6 flex flex-col gap-3 rounded-[14px] border border-border bg-card px-4 py-3 sm:flex-row sm:items-center"
+      >
+        <span class="grid size-9 shrink-0 place-items-center rounded-full bg-[#06C755] text-white max-sm:hidden" aria-hidden="true"><MessageCircle class="size-[18px]" /></span>
+        <p class="m-0 min-w-0 flex-1 text-[15px] text-foreground">เข้าสู่ระบบด้วย LINE เพื่อรับยืนยันการจองและข้อความเตือนก่อนถึงนัดในแชท</p>
+        <Button variant="outline" class="shrink-0" :disabled="lineLoggingIn" @click="lineLogin">เข้าสู่ระบบด้วย LINE</Button>
+      </div>
+    </ClientOnly>
 
     <div class="grid items-start gap-6 lg:grid-cols-[minmax(0,1fr)_340px]">
       <div class="grid gap-4">
@@ -308,6 +343,12 @@ const currentStep = computed(() => steps.value.findIndex((s) => !s.done))
           <CardHeader class="px-5"><CardTitle as="h2" class="text-base">ข้อมูลผู้จอง</CardTitle></CardHeader>
           <CardContent class="grid gap-4 px-5">
             <p class="m-0 text-[15px] text-muted-foreground">จองได้ทันที ไม่ต้องสมัครสมาชิก · ใช้เบอร์โทรนี้ตรวจสอบการจองภายหลัง</p>
+            <p v-if="line.user.value" class="m-0 rounded-lg bg-success-soft px-3 py-2 text-sm text-success-ink">
+              เข้าสู่ระบบด้วย LINE ของ{{ line.user.value.name }} ระบบจะส่งยืนยันการจองและเตือนก่อนถึงนัดทาง LINE
+              <template v-if="line.isFriend.value === false">
+                <a v-if="line.addFriendUrl.value" :href="line.addFriendUrl.value" class="font-medium underline">เพิ่มเพื่อน LINE ของร้าน</a><span v-else class="font-medium">เพิ่มเพื่อน LINE ของร้าน</span> ก่อน จึงจะได้รับข้อความ
+              </template>
+            </p>
             <div class="grid grid-cols-2 gap-3">
               <div class="grid content-start gap-1.5"><Label for="g-first">ชื่อ</Label><Input id="g-first" v-model="guest.firstName" autocomplete="given-name" required /></div>
               <div class="grid content-start gap-1.5"><Label for="g-last">นามสกุล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label><Input id="g-last" v-model="guest.lastName" autocomplete="family-name" /></div>

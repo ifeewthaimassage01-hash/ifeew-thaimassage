@@ -1,0 +1,113 @@
+// LINE Messaging API + LINE Login (LIFF) helper
+// ค่าทั้งหมดตั้งจากแอปพนักงาน (/settings/line) → private.line_settings + Supabase Vault
+// อ่านด้วย public.line_secret (service_role เท่านั้น)
+import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
+
+const API = 'https://api.line.me'
+
+export interface LineSecret {
+  company_id: string
+  access_token: string | null
+  channel_secret: string | null
+  login_channel_id: string | null
+  confirm_enabled: boolean
+  webhook_url: string
+}
+
+export async function lineSecret(
+  admin: SupabaseClient,
+  by: { companyId?: string; companyCode?: string },
+): Promise<LineSecret | null> {
+  const { data, error } = await admin.rpc('line_secret', {
+    p_company_id: by.companyId ?? null,
+    p_company_code: by.companyCode ?? null,
+  })
+  if (error) throw error
+  return (data as LineSecret | null) ?? null
+}
+
+async function lineFetch(token: string, path: string, init: RequestInit = {}): Promise<Response> {
+  return await fetch(`${API}${path}`, {
+    ...init,
+    headers: { Authorization: `Bearer ${token}`, 'Content-Type': 'application/json', ...(init.headers ?? {}) },
+  })
+}
+
+/** ส่ง push message (นับโควตาของ LINE OA) · คืน HTTP status */
+export async function linePush(token: string, to: string, text: string): Promise<number> {
+  const res = await lineFetch(token, '/v2/bot/message/push', {
+    method: 'POST',
+    body: JSON.stringify({ to, messages: [{ type: 'text', text: text.slice(0, 5000) }] }),
+  })
+  if (!res.ok) console.error('line push', res.status, await res.text().catch(() => ''))
+  return res.status
+}
+
+/** ตอบกลับข้อความ (ฟรี ไม่นับโควตา) ด้วย replyToken จาก webhook */
+export async function lineReply(token: string, replyToken: string, text: string): Promise<void> {
+  if (!replyToken) return
+  const res = await lineFetch(token, '/v2/bot/message/reply', {
+    method: 'POST',
+    body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: text.slice(0, 5000) }] }),
+  })
+  if (!res.ok) console.error('line reply', res.status, await res.text().catch(() => ''))
+}
+
+export async function lineGroupName(token: string, groupId: string): Promise<string | null> {
+  const res = await lineFetch(token, `/v2/bot/group/${encodeURIComponent(groupId)}/summary`)
+  if (!res.ok) return null
+  return ((await res.json()) as { groupName?: string }).groupName ?? null
+}
+
+/** GET แบบคืน JSON หรือ null (ใช้ในหน้าตั้งค่า) */
+export async function lineGet<T>(token: string, path: string): Promise<{ status: number; data: T | null }> {
+  const res = await lineFetch(token, path)
+  return { status: res.status, data: res.ok ? ((await res.json()) as T) : null }
+}
+
+export async function lineSend<T>(
+  token: string,
+  method: 'POST' | 'PUT',
+  path: string,
+  body: unknown,
+): Promise<{ status: number; data: T | null }> {
+  const res = await lineFetch(token, path, { method, body: JSON.stringify(body) })
+  const text = await res.text()
+  let data: T | null = null
+  try {
+    data = text ? (JSON.parse(text) as T) : null
+  } catch {
+    data = null
+  }
+  return { status: res.status, data }
+}
+
+/** ตรวจลายเซ็น webhook: base64(HMAC-SHA256(channel secret, raw body)) */
+export async function lineSignatureOk(secret: string | null, rawBody: string, signature: string | null): Promise<boolean> {
+  if (!secret || !signature) return false
+  const key = await crypto.subtle.importKey('raw', new TextEncoder().encode(secret), { name: 'HMAC', hash: 'SHA-256' }, false, [
+    'sign',
+  ])
+  const mac = new Uint8Array(await crypto.subtle.sign('HMAC', key, new TextEncoder().encode(rawBody)))
+  const expected = btoa(String.fromCharCode(...mac))
+  if (expected.length !== signature.length) return false
+  let diff = 0
+  for (let i = 0; i < expected.length; i++) diff |= expected.charCodeAt(i) ^ signature.charCodeAt(i)
+  return diff === 0
+}
+
+/** ยืนยัน LIFF ID token กับ LINE → LINE user ID (sub) หรือ null */
+export async function lineVerifyIdToken(loginChannelId: string | null, idToken: string): Promise<string | null> {
+  if (!loginChannelId || !idToken || idToken.length > 4000) return null
+  const res = await fetch(`${API}/oauth2/v2.1/verify`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+    body: new URLSearchParams({ id_token: idToken, client_id: loginChannelId }),
+  })
+  if (!res.ok) {
+    console.warn('line verify id token', res.status)
+    return null
+  }
+  const sub = ((await res.json()) as { sub?: string }).sub ?? ''
+  return /^U[0-9a-f]{32}$/.test(sub) ? sub : null
+}

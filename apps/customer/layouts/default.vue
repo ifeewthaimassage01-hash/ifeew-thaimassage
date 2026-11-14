@@ -49,6 +49,8 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
           </nav>
           <div class="flex-1 lg:hidden" />
 
+          <ClientOnly><LineAccountButton /></ClientOnly>
+
           <Button v-if="route.path !== '/book'" as-child class="hidden h-11 rounded-full px-5 sm:inline-flex">
             <NuxtLink to="/book"><CalendarDays /> จองคิว</NuxtLink>
           </Button>

@@ -9,6 +9,7 @@ import {
   HandCoins,
   LayoutDashboard,
   ListOrdered,
+  MessageCircle,
   MonitorSmartphone,
   ReceiptText,
   Settings,
@@ -91,6 +92,7 @@ export function useStaffNav() {
         { to: '/branches', label: 'สาขา', icon: Building2 },
         { to: '/settings', label: 'ตั้งค่าบริษัท', icon: Settings, exact: true },
         { to: '/settings/devices', label: 'ตั้งค่าเครื่อง', icon: MonitorSmartphone },
+        { to: '/settings/line', label: 'LINE OA', icon: MessageCircle },
       ],
     },
   ]

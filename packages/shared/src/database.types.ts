@@ -1196,6 +1196,16 @@ export type Database = {
         Returns: undefined
       }
       push_unsubscribe: { Args: { p_endpoint: string }; Returns: undefined }
+      line_create_link_code: { Args: { p_company_id: string; p_branch_id: string | null }; Returns: Json }
+      line_groups_list: { Args: { p_company_id: string }; Returns: Json }
+      line_unlink_group: { Args: { p_company_id: string; p_group_id: string }; Returns: undefined }
+      line_settings_get: { Args: { p_company_id: string }; Returns: Json }
+      line_settings_save: { Args: { p_company_id: string; p: Json }; Returns: undefined }
+      line_set_credentials: {
+        Args: { p_company_id: string; p_access_token: string | null; p_channel_secret: string | null }
+        Returns: undefined
+      }
+      line_public_config: { Args: { p_company_code: string }; Returns: Json }
       queue_extend: { Args: { p_queue_id: string; p_option_id: string; p_idempotency_key: string }; Returns: Json }
       queue_handover: {
         Args: { p_queue_id: string; p_employee_id: string; p_reason: string; p_confirm_off_shift?: boolean }
