@@ -288,7 +288,7 @@ export type Database = {
       }
       employees: {
         Row: Stamp & {
-          employment_type: 'REGULAR' | 'FREELANCE'
+          employment_type: 'REGULAR'
           id: string
           company_id: string
           user_id: string
@@ -306,7 +306,7 @@ export type Database = {
           nickname?: string
           photo_path?: string | null
           start_date?: string
-          employment_type?: 'REGULAR' | 'FREELANCE'
+          employment_type?: 'REGULAR'
         }
         Relationships: []
       }

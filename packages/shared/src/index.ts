@@ -644,8 +644,9 @@ export interface ExpenseRow {
 // -----------------------------------------------------------------------------
 // Phase 8: การเงินส่วนกลาง
 // -----------------------------------------------------------------------------
-export type EmploymentType = 'REGULAR' | 'FREELANCE'
-export const employmentTypeLabels: Record<EmploymentType, string> = { REGULAR: 'หมอประจำ', FREELANCE: 'หมอวิ่ง' }
+/** เลิกใช้ FREELANCE แล้ว (migration 064) — หมอที่มีบัญชีเป็นหมอประจำทุกคน */
+export type EmploymentType = 'REGULAR'
+export const employmentTypeLabels: Record<EmploymentType, string> = { REGULAR: 'หมอประจำ' }
 
 export interface AttendanceToday {
   employee_id: string

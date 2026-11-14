@@ -5,7 +5,6 @@ import {
   adjustmentSourceLabels,
   addDays,
   bangkokToday,
-  employmentTypeLabels,
   formatBaht,
   type CommissionSummary,
   type PayoutView,
@@ -192,7 +191,7 @@ watch(() => company.value?.company_id, async (id) => {
             </TableHeader>
             <TableBody>
               <TableRow v-for="e in data.employees" :key="e.employee_id">
-                <TableCell><span class="text-heading">{{ e.nickname }}</span> <span class="text-sm text-muted-foreground">{{ employmentTypeLabels[e.employment_type] }}</span></TableCell>
+                <TableCell><span class="text-heading">{{ e.nickname }}</span></TableCell>
                 <TableCell class="num text-right">{{ formatBaht(Number(e.service)) }}</TableCell>
                 <TableCell class="num text-right">{{ formatBaht(Number(e.guarantee)) }}</TableCell>
                 <TableCell class="num text-right">{{ formatBaht(Number(e.adjustments)) }}</TableCell>

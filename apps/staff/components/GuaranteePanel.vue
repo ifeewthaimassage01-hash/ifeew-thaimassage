@@ -5,10 +5,8 @@ import {
   addDays,
   bangkokTime,
   bangkokToday,
-  employmentTypeLabels,
   formatBaht,
   type AttendanceRow,
-  type EmploymentType,
 } from '@ifeew/shared'
 
 
@@ -18,7 +16,7 @@ const supabase = useSupabaseClient()
 const { company, branches } = useAccess()
 const { run } = useStepUp()
 
-type Emp = { id: string; nickname: string; employee_code: string; employment_type: EmploymentType; status: string }
+type Emp = { id: string; nickname: string; employee_code: string; employment_type: string; status: string }
 type Rate = { employee_id: string; daily_amount: number; effective_from: string; effective_to: string | null }
 
 const employees = ref<Emp[]>([])
@@ -44,14 +42,6 @@ const currentRate = (id: string) =>
   rates.value.find((r) => r.employee_id === id && r.effective_from <= today && (!r.effective_to || r.effective_to > today))
 const futureRates = (id: string) => rates.value.filter((r) => r.employee_id === id && r.effective_from > today)
 
-async function setType(emp: Emp, type: EmploymentType) {
-  try {
-    await must(supabase.from('employees').update({ employment_type: type }).eq('id', emp.id))
-    await loadEmployees()
-  } catch (e) {
-    fail(e)
-  }
-}
 
 const rateDialog = ref(false)
 const rateEmp = ref<Emp | null>(null)
@@ -122,32 +112,22 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
 
 <template>
   <div>
-    <p class="m-0 mb-4 max-w-[70ch] text-[15px] text-muted-foreground">หมอประจำที่เช็คชื่อเข้างาน (เข้าระบบครั้งแรกของวัน) ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวันทันที (ไม่นับทิป) · ระหว่างวันยอดเติมลดลงตามค่ามือที่ทำได้ · หมอวิ่งได้ค่ามือตามงานจริง</p>
+    <p class="m-0 mb-4 max-w-[70ch] text-[15px] text-muted-foreground">หมอประจำที่เช็คชื่อเข้างาน (เข้าระบบครั้งแรกของวัน) ได้ค่ามือไม่น้อยกว่ายอดประกันต่อวันทันที (ไม่นับทิป) · ระหว่างวันยอดเติมลดลงตามค่ามือที่ทำได้</p>
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
     <div class="grid gap-6">
-      <SectionCard title="ประเภทหมอและยอดประกัน" :description="`${employees.length} คน`" flush>
+      <SectionCard title="ยอดประกันมือ" :description="`${employees.length} คน`" flush>
         <div class="overflow-x-auto">
           <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
-                <TableHead>หมอ</TableHead><TableHead>ประเภท</TableHead><TableHead class="text-right">ประกันมือ/วัน</TableHead>
+                <TableHead>หมอ</TableHead><TableHead class="text-right">ประกันมือ/วัน</TableHead>
                 <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               <TableRow v-for="e in employees" :key="e.id">
                 <TableCell><span class="font-medium text-heading">{{ e.nickname }}</span> <span class="num text-sm text-muted-foreground">{{ e.employee_code }}</span></TableCell>
-                <TableCell>
-                  <SegmentedControl
-        :fill="false"
-                    :model-value="e.employment_type"
-                    :items="[{ value: 'REGULAR', label: employmentTypeLabels.REGULAR }, { value: 'FREELANCE', label: employmentTypeLabels.FREELANCE }]"
-                    size="sm"
-                    :label="`ประเภทของ ${e.nickname}`"
-                    @update:model-value="(v) => setType(e, v as EmploymentType)"
-                  />
-                </TableCell>
                 <TableCell class="text-right">
                   <span class="num text-heading">{{ currentRate(e.id) ? formatBaht(Number(currentRate(e.id)!.daily_amount)) : '—' }}</span>
                   <span v-for="f in futureRates(e.id)" :key="f.effective_from" class="block text-sm text-muted-foreground">
@@ -155,11 +135,11 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
                   </span>
                 </TableCell>
                 <TableCell class="text-right">
-                  <Button v-if="e.employment_type === 'REGULAR'" size="sm" variant="outline" @click="openRate(e)">ตั้งยอด</Button>
+                  <Button size="sm" variant="outline" @click="openRate(e)">ตั้งยอด</Button>
                 </TableCell>
               </TableRow>
               <TableRow v-if="!employees.length" class="hover:bg-transparent">
-                <TableCell colspan="4" class="py-8 text-center text-muted-foreground">ยังไม่มีพนักงาน</TableCell>
+                <TableCell colspan="3" class="py-8 text-center text-muted-foreground">ยังไม่มีพนักงาน</TableCell>
               </TableRow>
             </TableBody>
           </Table>

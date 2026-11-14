@@ -64,8 +64,8 @@ const expenseLines = computed(() => {
 const customerLines = computed(() => {
   const c = data.value?.customers
   return [
-    { key: 'REGULAR', label: 'หมอประจำ', n: n(c?.REGULAR) },
-    { key: 'FREELANCE', label: 'หมอฟรีแลนซ์', n: n(c?.FREELANCE) },
+    // หมอที่มีบัญชีทุกคนเป็นหมอประจำ (เลิกใช้ประเภทหมอฟรีแลนซ์ใน migration 064 · รวมข้อมูลเก่าไว้ที่หมอประจำ)
+    { key: 'REGULAR', label: 'หมอประจำ', n: n(c?.REGULAR) + n(c?.FREELANCE) },
     { key: 'WALK_IN', label: 'หมอวิ่ง', n: n(c?.WALK_IN) },
   ]
 })
