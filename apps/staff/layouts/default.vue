@@ -38,13 +38,12 @@ const roleLabel = computed(() => (isOwner.value ? 'เจ้าของร้�
     <div class="min-h-dvh md:pl-[76px] xl:pl-[var(--sidebar-width)]">
       <!-- Sidebar: ตรึงกับจอ (fixed) — เมนูยาวเลื่อนในตัวเอง ไม่เลื่อนหายไปกับหน้า -->
       <aside class="fixed inset-y-0 left-0 z-20 hidden w-[76px] flex-col bg-background md:flex xl:w-[var(--sidebar-width)]">
-        <NuxtLink to="/" class="flex shrink-0 flex-col gap-2 px-6 pt-7 pb-5 text-heading no-underline max-xl:items-center max-xl:px-0" aria-label="แดชบอร์ด">
-          <BrandMark class="size-11" />
-          <span class="hidden min-w-0 xl:block">
-            <span class="block truncate text-[15px] leading-tight font-semibold">Ifeew's Thaimassage</span>
-          </span>
+        <NuxtLink to="/" class="mx-4 mt-5 mb-4 flex shrink-0 items-center gap-3 rounded-xl px-2 py-1.5 text-heading no-underline focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none max-xl:mx-auto max-xl:px-0" aria-label="แดชบอร์ด">
+          <BrandMark class="size-10 shrink-0" />
+          <span class="hidden min-w-0 text-[15px] leading-tight font-semibold xl:block">IFEEW'S<br>THAIMASSAGE</span>
         </NuxtLink>
-        <div class="scrollbar-hidden flex-1 overflow-y-auto px-4 pb-4">
+        <!-- เมนูยาวเลื่อนได้ · ขอบล่างจางลงให้รู้ว่ายังมีต่อ -->
+        <div class="scrollbar-hidden flex-1 overflow-y-auto px-4 pt-2 pb-8 [mask-image:linear-gradient(to_bottom,black_calc(100%-2rem),transparent)]">
           <StaffSidebarNav class="hidden xl:grid" />
           <StaffSidebarNav compact class="xl:hidden" />
         </div>
@@ -61,7 +60,7 @@ const roleLabel = computed(() => (isOwner.value ? 'เจ้าของร้�
               <SheetContent side="left" class="w-[85vw] max-w-xs gap-0 bg-background p-0">
                 <SheetHeader class="h-16 flex-row items-center gap-2.5 px-5">
                   <BrandMark class="size-8" />
-                  <SheetTitle class="text-[15px] text-heading">{{ company?.company_name ?? "Ifeew's Thaimassage" }}</SheetTitle>
+                  <SheetTitle class="text-[15px] text-heading">{{ company?.company_name ?? "IFEEW'S Thaimassage" }}</SheetTitle>
                   <SheetDescription class="sr-only">เมนูหลัก</SheetDescription>
                 </SheetHeader>
                 <div class="scrollbar-hidden overflow-y-auto px-3 py-2"><StaffSidebarNav @navigate="drawer = false" /></div>

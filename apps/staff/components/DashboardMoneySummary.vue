@@ -79,6 +79,7 @@ const periodLabel = computed(() => ({ today: 'วันนี้', '7d': '7 ว�
         สรุปการเงิน<span class="font-normal text-muted-foreground"> · {{ periodLabel }}</span>
       </h2>
       <SegmentedControl
+        :fill="false"
         v-model="period"
         size="sm"
         :items="[{ value: 'today', label: 'วันนี้' }, { value: '7d', label: '7 วัน' }, { value: 'month', label: 'เดือนนี้' }]"

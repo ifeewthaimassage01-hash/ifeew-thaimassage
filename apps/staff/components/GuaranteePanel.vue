@@ -140,6 +140,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
                 <TableCell><span class="font-medium text-heading">{{ e.nickname }}</span> <span class="num text-sm text-muted-foreground">{{ e.employee_code }}</span></TableCell>
                 <TableCell>
                   <SegmentedControl
+        :fill="false"
                     :model-value="e.employment_type"
                     :items="[{ value: 'REGULAR', label: employmentTypeLabels.REGULAR }, { value: 'FREELANCE', label: employmentTypeLabels.FREELANCE }]"
                     size="sm"

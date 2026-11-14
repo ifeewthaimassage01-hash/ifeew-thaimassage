@@ -678,7 +678,7 @@ watch(companyId, loadAll)
 
           <!-- ตัวอย่างข้อความ: หน้าตาเหมือนแชท LINE -->
           <aside class="grid gap-3 lg:sticky lg:top-24" aria-label="ตัวอย่างข้อความ">
-            <SegmentedControl v-model="preview" :items="previewItems" label="ดูตัวอย่าง" class="w-full flex-nowrap [&>button]:flex-1 [&>button]:px-2" />
+            <SegmentedControl v-model="preview" :items="previewItems" label="ดูตัวอย่าง" :fill="false" class="w-full flex-nowrap [&>button]:flex-1 [&>button]:px-2" />
             <div class="grid min-h-64 content-start gap-2 rounded-[18px] bg-secondary p-3 sm:p-4 lg:min-h-80">
               <span class="justify-self-center rounded-full bg-card/70 px-3 py-0.5 text-xs text-muted-foreground">{{ previewWhen }}</span>
               <div v-if="previewText" class="mt-2 flex items-start gap-2.5">

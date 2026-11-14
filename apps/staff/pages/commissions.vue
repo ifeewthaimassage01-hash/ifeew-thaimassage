@@ -178,9 +178,7 @@ watch(() => company.value?.company_id, async (id) => {
       <!-- สรุปรายหมอ -->
       <SectionCard title="สรุปรายหมอ" flush>
         <template #actions>
-          <TextField v-model="from" type="date" aria-label="ตั้งแต่" class="w-40" />
-          <span class="text-muted-foreground">ถึง</span>
-          <TextField v-model="to" type="date" aria-label="ถึง" class="w-40" />
+          <DateRangeFilter v-model:from="from" v-model:to="to" :presets="['month', 'last-month', 'year']" label="ช่วงวันที่ของสรุป" />
         </template>
         <LoadingBar v-if="loading" />
         <div v-if="data" class="overflow-x-auto">

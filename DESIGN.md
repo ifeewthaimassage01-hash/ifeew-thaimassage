@@ -141,8 +141,8 @@ components:
     rounded: "{rounded.chip}"
     padding: "2px 8px"
   nav-item-active:
-    backgroundColor: "{colors.beige-secondary}"
-    textColor: "{colors.primary}"
+    backgroundColor: "{colors.warm-white-surface}"
+    textColor: "{colors.heading}"
     rounded: "{rounded.inset}"
     height: "40px"
 ---
@@ -276,7 +276,7 @@ Gently rounded and consistent by hierarchy: the bigger the container, the softer
 - **Labels:** always visible above the field; hints in 13px Driftwood below.
 
 ### Navigation
-- **Staff sidebar:** grouped links with 13px group labels; items 40px tall, 12px radius; active item in Beige Secondary with a Teak Brown icon; hover Rice Paper.
+- **Staff sidebar:** logo and wordmark side by side at the top; grouped links with 13px group labels spaced 24px apart (more air above a label than below it); items 40px tall, 12px radius, Driftwood icons. The active item is a raised Warm Linen tile (Soft shadow plus a hairline ring) with a Teak Brown icon and medium-weight Coffee text, the same "linen on cream" lift as the customer nav; hover is Rice Paper. The scrolling list fades out over its last 32px to show there is more.
 - **Staff mobile:** fixed bottom bar with five destinations, rounded top corners, warm-white surface.
 - **Customer:** pill links in the topbar, the active one on Warm Linen with the Soft shadow; drawer on small screens.
 

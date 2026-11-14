@@ -102,15 +102,21 @@ const cellTitle = (r: AttendanceRow) =>
     <GuaranteePanel v-if="tab === 'guarantee'" />
     <template v-else>
 
-    <div class="mb-4 flex flex-wrap items-end gap-3">
-      <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-        <Button variant="ghost" size="icon-sm" aria-label="เดือนก่อน" @click="shiftMonth(-1)"><ChevronLeft /></Button>
-        <span class="min-w-36 text-center text-[15px] font-medium text-heading">{{ monthLabel }}</span>
-        <Button variant="ghost" size="icon-sm" aria-label="เดือนถัดไป" :disabled="isCurrentMonth" @click="shiftMonth(1)"><ChevronRight /></Button>
-      </div>
-      <SelectField v-if="branches.length > 1" v-model="branchId" :items="branchItems" aria-label="สาขา" class="w-48" />
-      <p class="m-0 ml-auto text-[15px] text-muted-foreground">เช็คชื่อรวม <span class="num font-semibold text-heading">{{ totalCheckins }}</span> ครั้ง</p>
-    </div>
+    <FilterPanel label="ตัวกรองการเข้างาน">
+      <FilterRow label="เดือน">
+        <div class="flex w-full items-center gap-1 rounded-lg border border-border bg-background p-1 sm:w-auto">
+          <Button variant="ghost" size="icon-sm" aria-label="เดือนก่อน" @click="shiftMonth(-1)"><ChevronLeft /></Button>
+          <span class="min-w-36 flex-1 text-center text-[15px] font-medium text-heading" aria-live="polite">{{ monthLabel }}</span>
+          <Button variant="ghost" size="icon-sm" aria-label="เดือนถัดไป" :disabled="isCurrentMonth" @click="shiftMonth(1)"><ChevronRight /></Button>
+        </div>
+        <Button v-if="!isCurrentMonth" variant="ghost" size="sm" @click="month = today.slice(0, 7)">เดือนนี้</Button>
+      </FilterRow>
+      <FilterRow v-if="branches.length > 1" label="สาขา">
+        <SelectField v-model="branchId" :items="branchItems" aria-label="สาขา" class="w-full sm:w-64" />
+      </FilterRow>
+    </FilterPanel>
+
+    <p class="m-0 mb-3 px-1 text-[15px] text-muted-foreground">เช็คชื่อรวม <span class="num font-semibold text-heading">{{ totalCheckins }}</span> ครั้งใน{{ monthLabel }}</p>
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-3" />

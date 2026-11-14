@@ -188,20 +188,23 @@ async function copyPreviousWeek() {
       </template>
     </PageHeader>
 
-    <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex w-full items-center gap-1 rounded-lg border border-border bg-card p-1 sm:w-auto">
-        <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ก่อน" @click="monday = addDays(monday, -7)"><ChevronLeft /></Button>
-        <span class="num min-w-0 flex-1 truncate px-1 text-center text-[15px] font-medium text-heading sm:min-w-[220px] sm:px-2">{{ weekLabel }}</span>
-        <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ถัดไป" @click="monday = addDays(monday, 7)"><ChevronRight /></Button>
-        <Button variant="ghost" size="sm" @click="monday = mondayOf(bangkokToday())">สัปดาห์นี้</Button>
-      </div>
-      <div class="flex flex-wrap items-center gap-4">
-        <div class="flex items-center gap-3 text-sm text-muted-foreground" aria-hidden="true">
-          <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-secondary" />กะ</span>
-          <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-pending-soft ring-1 ring-brand-accent/40" />ลา</span>
+    <FilterPanel label="ตัวกรองตารางงาน">
+      <FilterRow label="สัปดาห์">
+        <div class="flex w-full items-center gap-1 rounded-lg border border-border bg-background p-1 sm:w-auto">
+          <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ก่อน" @click="monday = addDays(monday, -7)"><ChevronLeft /></Button>
+          <span class="num min-w-0 flex-1 truncate px-1 text-center text-[15px] font-medium text-heading sm:min-w-[220px] sm:px-2" aria-live="polite">{{ weekLabel }}</span>
+          <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ถัดไป" @click="monday = addDays(monday, 7)"><ChevronRight /></Button>
         </div>
-        <CheckboxField v-model="showCancelled" label="แสดงกะที่ยกเลิก" />
-      </div>
+        <Button v-if="monday !== mondayOf(bangkokToday())" variant="ghost" size="sm" @click="monday = mondayOf(bangkokToday())">สัปดาห์นี้</Button>
+      </FilterRow>
+      <FilterRow label="แสดง">
+        <CheckboxField v-model="showCancelled" label="กะที่ยกเลิก" class="sm:pt-2" />
+      </FilterRow>
+    </FilterPanel>
+
+    <div class="mb-3 flex items-center gap-4 px-1 text-sm text-muted-foreground" aria-hidden="true">
+      <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-secondary" />กะ</span>
+      <span class="flex items-center gap-1.5"><span class="size-2.5 rounded-sm bg-pending-soft ring-1 ring-brand-accent/40" />ลา</span>
     </div>
 
     <MessageAlert :message="message" class="mb-4" @close="message = null" />

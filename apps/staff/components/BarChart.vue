@@ -50,6 +50,7 @@ function barPath(i: number, v: number): string {
     <div class="mb-3 flex items-center justify-between gap-3">
       <h3 class="m-0 text-base font-semibold">{{ title }}</h3>
       <SegmentedControl
+        :fill="false"
         :model-value="showTable ? 'table' : 'chart'"
         :items="[{ value: 'chart', label: 'กราฟ' }, { value: 'table', label: 'ตาราง' }]"
         size="sm"

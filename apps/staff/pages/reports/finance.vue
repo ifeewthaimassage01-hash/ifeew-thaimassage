@@ -3,7 +3,6 @@
 import { Download } from '@lucide/vue'
 import {
   abnormalFlagLabels,
-  addDays,
   bangkokToday,
   formatBaht,
   toCsv,
@@ -101,16 +100,17 @@ function exportCsv() {
       class="mb-4"
     />
 
-    <div class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4">
-      <SelectField v-if="tab === 'finance'" v-model="branchId" :items="branchItems" label="สาขา" class="w-52" />
-      <TextField v-model="from" type="date" label="ตั้งแต่" class="w-44" />
-      <TextField v-model="to" type="date" label="ถึง" class="w-44" />
-      <div v-if="tab === 'finance'" class="grid gap-1.5">
-        <span class="text-sm font-medium text-heading">จัดกลุ่ม</span>
-        <SegmentedControl v-model="group" :items="[{ value: 'DAY', label: 'รายวัน' }, { value: 'MONTH', label: 'รายเดือน' }, { value: 'YEAR', label: 'รายปี' }]" label="จัดกลุ่ม" />
-      </div>
-      <Button variant="ghost" @click="from = addDays(bangkokToday(), -6); to = bangkokToday()">7 วันล่าสุด</Button>
-    </div>
+    <FilterPanel label="ตัวกรองรายงาน">
+      <FilterRow v-if="tab === 'finance'" label="สาขา">
+        <SelectField v-model="branchId" :items="branchItems" aria-label="สาขา" class="w-full sm:w-64" />
+      </FilterRow>
+      <FilterRow label="ช่วงวันที่">
+        <DateRangeFilter v-model:from="from" v-model:to="to" :presets="['month', 'last-month', 'year']" />
+      </FilterRow>
+      <FilterRow v-if="tab === 'finance'" label="แสดงเป็น">
+        <SegmentedControl v-model="group" :items="[{ value: 'DAY', label: 'รายวัน' }, { value: 'MONTH', label: 'รายเดือน' }, { value: 'YEAR', label: 'รายปี' }]" label="จัดกลุ่ม" fill />
+      </FilterRow>
+    </FilterPanel>
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-3" />

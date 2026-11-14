@@ -1,6 +1,6 @@
 {
   "schemaVersion": 2,
-  "generatedAt": "2026-11-14T22:49:26.985Z",
+  "generatedAt": "2026-11-14T22:59:41.431Z",
   "title": "Design System: Ifeew's Thaimassage",
   "extensions": {
     "colorMeta": {
@@ -541,7 +541,7 @@
       "refersTo": "nav-item-active",
       "description": "Staff sidebar link, active and idle.",
       "html": "<nav class=\"ds-nav\"><a class=\"ds-nav-item is-active\" href=\"#\">คิว</a><a class=\"ds-nav-item\" href=\"#\">การจอง</a></nav>",
-      "css": ".ds-nav{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;display:grid;gap:2px;width:220px;background:var(--background,#f8f3ed);padding:8px}.ds-nav-item{display:flex;align-items:center;height:40px;padding:0 12px;border-radius:12px;font-size:15px;color:var(--muted-foreground,#7a6e61);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--muted,#f4ebe1);color:var(--heading,#514337)}.ds-nav-item:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(169,130,94,.6)}.ds-nav-item.is-active{background:var(--secondary,#ede0d2);color:var(--primary,#93704f);font-weight:500}"
+      "css": ".ds-nav{font-family:'DM Sans','Noto Sans Thai',system-ui,sans-serif;display:grid;gap:2px;width:220px;background:var(--background,#f8f3ed);padding:8px}.ds-nav-item{display:flex;align-items:center;height:40px;padding:0 12px;border-radius:12px;font-size:15px;color:var(--muted-foreground,#7a6e61);text-decoration:none;transition:background-color .15s}.ds-nav-item:hover{background:var(--muted,#f4ebe1);color:var(--heading,#514337)}.ds-nav-item:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(169,130,94,.6)}.ds-nav-item.is-active{background:var(--card,#fffcf8);color:var(--heading,#514337);font-weight:500;box-shadow:0 4px 20px rgba(111,83,57,.055),0 0 0 1px var(--border,#ede4da)}"
     },
     {
       "name": "Stat Card",

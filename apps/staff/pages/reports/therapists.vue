@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // OWNER: สรุปงานรายหมอ (จำนวนบริการ เวลา นอกกะ ส่งต่อ ค่ามือประมาณการ)
-import { addDays, bangkokToday, formatBaht, formatDuration, type TherapistSummaryRow } from '@ifeew/shared'
+import { bangkokToday, formatBaht, formatDuration, type TherapistSummaryRow } from '@ifeew/shared'
 
 definePageMeta({ ownerOnly: true })
 
@@ -43,12 +43,14 @@ watch([branchId, from, to, () => company.value?.company_id], load, { immediate: 
   <div>
     <PageHeader title="สรุปงานหมอ" description="จำนวนบริการ เวลาทำงาน งานก่อนเช็คชื่อ การส่งต่อ และค่ามือประมาณการของหมอแต่ละคน" />
 
-    <div class="mb-6 grid gap-3 rounded-xl border border-border bg-card p-4 sm:grid-cols-2 lg:grid-cols-[220px_180px_180px_auto] lg:items-end">
-      <SelectField v-model="branchId" :items="branchItems" label="สาขา" />
-      <TextField v-model="from" type="date" label="ตั้งแต่" />
-      <TextField v-model="to" type="date" label="ถึง" />
-      <Button variant="outline" class="w-fit" @click="from = addDays(bangkokToday(), -6); to = bangkokToday()">7 วันล่าสุด</Button>
-    </div>
+    <FilterPanel label="ตัวกรองสรุปงานหมอ">
+      <FilterRow label="สาขา">
+        <SelectField v-model="branchId" :items="branchItems" aria-label="สาขา" class="w-full sm:w-64" />
+      </FilterRow>
+      <FilterRow label="ช่วงวันที่">
+        <DateRangeFilter v-model:from="from" v-model:to="to" :presets="['week', 'month', 'last-month']" />
+      </FilterRow>
+    </FilterPanel>
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-3" />

@@ -465,7 +465,7 @@ async function submitClock(pin: string) {
         { value: 'done', label: `เสร็จ / ยกเลิก (${byColumn(columns[2]!.statuses).length})` },
       ]"
       label="สถานะคิว"
-      class="mx-auto mb-4 flex w-fit justify-center lg:hidden"
+      class="mb-4 sm:flex sm:w-full sm:[&>button]:flex-1 lg:hidden"
     />
 
     <div class="grid items-start gap-4 lg:grid-cols-3">

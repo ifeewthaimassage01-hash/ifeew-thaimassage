@@ -38,17 +38,17 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
       <template #actions><Button as-child variant="outline"><NuxtLink to="/reports/finance">รายงานการเงิน</NuxtLink></Button></template>
     </PageHeader>
     <Alert v-if="error" variant="destructive" class="mb-6"><AlertDescription>{{ error }}</AlertDescription></Alert>
-    <div v-if="!dash && !error" class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4"><Skeleton v-for="n in 4" :key="n" class="h-32 rounded-xl" /></div>
+    <div v-if="!dash && !error" class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4"><Skeleton v-for="n in 4" :key="n" class="h-32 rounded-xl" /></div>
 
     <div v-if="dash" class="grid gap-6">
-      <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-        <StatCard label="รายรับวันนี้" :icon="Banknote" :value="baht(dash.kpis.today.revenue)" :hint="`เมื่อวาน ${baht(dash.kpis.yesterday.revenue)}`" />
-        <StatCard label="รายรับเดือนนี้" :icon="CalendarRange" :value="baht(dash.kpis.month.revenue)">
+      <div class="grid grid-cols-2 gap-3 sm:gap-4 xl:grid-cols-4">
+        <StatCard dense label="รายรับวันนี้" :icon="Banknote" :value="baht(dash.kpis.today.revenue)" :hint="`เมื่อวาน ${baht(dash.kpis.yesterday.revenue)}`" />
+        <StatCard dense label="รายรับเดือนนี้" :icon="CalendarRange" :value="baht(dash.kpis.month.revenue)">
           <template #hint><span class="num font-medium text-heading">{{ change(dash.kpis.month.revenue, dash.kpis.prev_month_same_period.revenue) ?? '—' }}</span> เทียบช่วงเดียวกันเดือนก่อน</template>
         </StatCard>
-        <StatCard label="กำไรเบื้องต้นเดือนนี้" :icon="TrendingUp" :value="baht(Number(dash.kpis.month.profit) - Number(dash.hq_expenses_month))"
+        <StatCard dense label="กำไรเบื้องต้นเดือนนี้" :icon="TrendingUp" :value="baht(Number(dash.kpis.month.profit) - Number(dash.hq_expenses_month))"
           :hint="`รายจ่าย ${baht(Number(dash.kpis.month.expenses) + Number(dash.hq_expenses_month))} · ค่ามือ ${baht(dash.kpis.month.commission)}`" />
-        <StatCard label="รายรับปีนี้" :icon="ChartColumn" :value="baht(dash.kpis.year.revenue)">
+        <StatCard dense label="รายรับปีนี้" :icon="ChartColumn" :value="baht(dash.kpis.year.revenue)">
           <template #hint><span class="num font-medium text-heading">{{ change(dash.kpis.year.revenue, dash.kpis.prev_year_same_period.revenue) ?? '—' }}</span> เทียบปีก่อน</template>
         </StatCard>
       </div>

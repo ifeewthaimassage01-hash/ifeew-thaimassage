@@ -20,6 +20,9 @@ const saving = ref(false)
 const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 const fail = (e: unknown) => (message.value = { type: 'error', text: errorText(e) })
 
+const rangeLabel = computed(() => describeRange(from.value, to.value))
+const recordedCount = computed(() => rows.value.filter((r) => r.status === 'RECORDED').length)
+
 const branchId = computed(() => (scope.value === 'HQ' ? null : activeBranch.value?.branch_id ?? null))
 const total = computed(() => rows.value.filter((r) => r.status === 'RECORDED').reduce((s, r) => s + Number(r.amount), 0))
 
@@ -165,16 +168,27 @@ async function rejectVoid(r: ExpenseRow) {
       <template #actions><Button @click="openNew"><Plus /> บันทึกรายจ่าย</Button></template>
     </PageHeader>
 
-    <!-- ตัวกรอง: เจ้าของร้านเลือกช่วงวัน/สำนักงานใหญ่ได้ · พนักงานเห็นแค่ยอดรวม -->
-    <div class="mb-4 flex flex-wrap items-end gap-3">
-      <template v-if="isOwner">
-        <SegmentedControl v-model="scope" :items="[{ value: 'BRANCH', label: 'สาขา' }, { value: 'HQ', label: 'สำนักงานใหญ่' }]" label="รายจ่ายของ" />
-        <TextField v-model="from" type="date" label="ตั้งแต่" class="w-40" />
-        <TextField v-model="to" type="date" label="ถึง" class="w-40" />
-      </template>
-      <p class="m-0 ml-auto text-right text-[15px] text-muted-foreground">
-        {{ isOwner ? 'รวม' : 'รวม 7 วันล่าสุด' }} <span class="num text-lg font-semibold text-heading">{{ formatBaht(total) }}</span>
+    <!-- ตัวกรอง (เจ้าของร้าน) -->
+    <FilterPanel v-if="isOwner" label="ตัวกรองรายจ่าย">
+      <FilterRow label="รายจ่ายของ">
+        <SegmentedControl
+          v-model="scope"
+          :items="[{ value: 'BRANCH', label: activeBranch ? `สาขา${activeBranch.name}` : 'สาขา' }, { value: 'HQ', label: 'สำนักงานใหญ่' }]"
+          label="รายจ่ายของ"
+          fill
+        />
+      </FilterRow>
+      <FilterRow label="ช่วงวันที่">
+        <DateRangeFilter v-model:from="from" v-model:to="to" />
+      </FilterRow>
+    </FilterPanel>
+
+    <!-- สรุปของช่วงที่เลือก -->
+    <div class="mb-3 flex items-baseline justify-between gap-3 px-1">
+      <p class="m-0 min-w-0 text-[15px] text-muted-foreground">
+        <span class="num">{{ recordedCount }}</span> รายการใน{{ isOwner ? rangeLabel : '7 วันล่าสุด' }}
       </p>
+      <p class="m-0 shrink-0 text-[15px] text-muted-foreground">รวม <span class="num text-xl font-semibold text-heading">{{ formatBaht(total) }}</span></p>
     </div>
 
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
