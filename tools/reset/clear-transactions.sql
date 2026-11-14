@@ -38,6 +38,8 @@ truncate table
   public.booking_deposits,
   public.booking_items,
   public.bookings,
+  private.booking_line_recipients,
+  private.push_outbox,
   public.expenses,
   public.branch_daily_closings,
   public.commission_payout_items,
