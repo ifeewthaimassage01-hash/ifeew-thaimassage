@@ -47,16 +47,16 @@ defineProps<{
       <h2 id="res-h" class="m-0 mb-3 text-[15px] font-semibold">เตียงและอุปกรณ์ตอนนี้</h2>
       <p v-if="!dash.resources.length" class="m-0 py-4 text-center text-sm text-muted-foreground">ยังไม่ได้ตั้งค่าเตียงและอุปกรณ์</p>
       <ul v-else class="m-0 grid list-none gap-x-8 p-0 md:grid-cols-2">
-        <li v-for="r in dash.resources" :key="r.resource_type_id" class="flex items-center gap-3 border-b border-border/70 py-2.5">
+        <li v-for="r in dash.resources" :key="r.resource_type_id" class="grid grid-cols-[2rem_minmax(0,1fr)_5.75rem] items-center gap-3 border-b border-border/70 py-3 last:border-b-0 md:[&:nth-last-child(2):nth-child(odd)]:border-b-0">
           <span class="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-brand-accent" aria-hidden="true"><BedDouble class="size-4" :stroke-width="1.6" /></span>
-          <span class="min-w-0 flex-1">
+          <span class="min-w-0">
             <span class="block truncate text-sm text-heading">{{ r.name }}</span>
-            <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted" role="img" :aria-label="`ใช้อยู่ ${r.in_use} จาก ${r.total}`">
+            <span class="mt-1.5 block h-1.5 overflow-hidden rounded-full bg-muted" role="img" :aria-label="`ใช้อยู่ ${r.in_use} จาก ${r.total}`">
               <span class="block h-full rounded-full bg-brand-accent" :style="{ width: `${r.total ? Math.min(100, (r.in_use / r.total) * 100) : 0}%` }" />
             </span>
           </span>
-          <Badge v-if="r.status !== 'ACTIVE'" variant="danger" class="shrink-0">{{ r.status === 'MAINTENANCE' ? 'ซ่อมบำรุง' : 'ปิดใช้งาน' }}</Badge>
-          <Badge v-else :variant="r.total - r.in_use > 0 ? 'success' : 'pending'" class="shrink-0">
+          <Badge v-if="r.status !== 'ACTIVE'" variant="danger" class="w-full justify-center">{{ r.status === 'MAINTENANCE' ? 'ซ่อมบำรุง' : 'ปิดใช้งาน' }}</Badge>
+          <Badge v-else :variant="r.total - r.in_use > 0 ? 'success' : 'pending'" class="w-full justify-center">
             ว่าง <span class="num">{{ Math.max(0, r.total - r.in_use) }}/{{ r.total }}</span>
           </Badge>
         </li>

@@ -1,19 +1,28 @@
 <script setup lang="ts">
-import { CalendarCheck, ListOrdered, ReceiptText, Store, Wallet } from '@lucide/vue'
+import type { Component } from 'vue'
+import { CalendarCheck, LayoutDashboard, ListOrdered, ReceiptText, Store, Wallet } from '@lucide/vue'
 
 // แถบเมนูล่างสำหรับมือถือ (<768) — ทางลัดงานประจำวันที่ใช้บ่อย
+//   เจ้าของร้าน 6 ช่อง (มีแดชบอร์ด) · พนักงาน 5 ช่อง ไม่มีแดชบอร์ด (หน้า / พาไปหน้าร้าน)
 const route = useRoute()
+const { isOwner } = useAccess()
 
-const items = [
+type Item = { to: string; label: string; icon: Component; also?: string[]; exact?: boolean }
+const daily: Item[] = [
   { to: '/pos', label: 'หน้าร้าน', icon: Store },
   { to: '/queue', label: 'คิว', icon: ListOrdered },
   { to: '/payments', label: 'ชำระเงิน', icon: Wallet, also: ['/checkout'] },
   { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
-  { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText },
 ]
+const expenses: Item = { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText }
+const items = computed<Item[]>(() =>
+  isOwner.value
+    ? [{ to: '/', label: 'แดชบอร์ด', icon: LayoutDashboard, exact: true }, ...daily, expenses]
+    : [...daily, expenses],
+)
 
-const isActive = (i: (typeof items)[number]) =>
-  [i.to, ...(i.also ?? [])].some((p) => route.path === p || route.path.startsWith(`${p}/`))
+const isActive = (i: Item) =>
+  i.exact ? route.path === i.to : [i.to, ...(i.also ?? [])].some((p) => route.path === p || route.path.startsWith(`${p}/`))
 </script>
 
 <template>
@@ -22,7 +31,7 @@ const isActive = (i: (typeof items)[number]) =>
     aria-label="เมนูลัด"
     class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-8px_rgb(74_55_40/0.18)] md:hidden"
   >
-    <ul class="m-0 grid h-[68px] list-none grid-cols-5 p-0">
+    <ul class="m-0 grid h-[68px] list-none p-0" :class="items.length > 5 ? 'grid-cols-6' : 'grid-cols-5'">
       <li v-for="item in items" :key="item.to" class="min-w-0">
         <NuxtLink
           :to="item.to"
