@@ -61,6 +61,8 @@ export default defineNuxtConfig({
       functionsUrl: '',
       // URL ของ Customer App (ใช้สร้างลิงก์ชำระมัดจำ/ติดตามการจอง)
       customerAppUrl: 'http://localhost:3000',
+      // Web Push: VAPID public key (ไม่ใช่ความลับ — คู่กับ VAPID_PRIVATE_KEY ใน Supabase secrets ของ push-dispatch)
+      vapidPublicKey: 'BCfNaeVG1hes4ecQxqJovdhyAF37pje9P0ZWBB1htdVLK8Gmo907yNMLn8rpqxUoi9oG55s1QYmb5XErT3RTYjo',
       // Cloudinary cloud name (NUXT_PUBLIC_CLOUDINARY_CLOUD_NAME) สำหรับรูปบริการ/รูปสาขา
       cloudinaryCloudName: '',
     },

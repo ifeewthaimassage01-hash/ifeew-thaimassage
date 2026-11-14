@@ -1,6 +1,7 @@
 <script setup lang="ts">
-// ติดตามการจองด้วย Tracking Token (Guest / ลิงก์ที่ร้านส่งให้) — ดูสถานะ + ชำระมัดจำเท่านั้น
+// ติดตามการจองด้วย Tracking Token (ลูกค้า Guest / ลิงก์ที่ร้านส่งให้) — ดูสถานะ · ชำระมัดจำ · ยกเลิกการจองเอง
 import { RefreshCw } from '@lucide/vue'
+import { toast } from 'vue-sonner'
 import type { BookingView } from '@ifeew/shared'
 
 useHead({
@@ -30,6 +31,28 @@ async function load() {
 }
 
 onMounted(load)
+
+// ยกเลิกเองได้เมื่อยังไม่ถึงคิว และสลิปไม่ได้รอตรวจ (ระยะเวลาก่อนนัดตรวจที่ระบบ)
+const canCancel = computed(
+  () => !!booking.value && ['PENDING', 'CONFIRMED'].includes(booking.value.status) && booking.value.deposit_status !== 'PENDING_REVIEW',
+)
+const cancelOpen = ref(false)
+const cancelReason = ref('')
+const cancelling = ref(false)
+
+async function confirmCancel() {
+  cancelling.value = true
+  try {
+    const view = await call<BookingView>('booking-tracking', { token: token.value, action: 'cancel', reason: cancelReason.value.trim() })
+    booking.value = { ...booking.value!, ...view }
+    cancelOpen.value = false
+    toast.success('ยกเลิกการจองแล้ว')
+  } catch (e) {
+    toast.error(edgeErrorText(e, 'ยกเลิกไม่สำเร็จ กรุณาติดต่อร้าน'))
+  } finally {
+    cancelling.value = false
+  }
+}
 </script>
 
 <template>
@@ -43,6 +66,30 @@ onMounted(load)
     <Alert v-else-if="error" variant="info">
       <AlertDescription>{{ error }} · <NuxtLink to="/check-booking">ตรวจสอบการจองด้วยเบอร์โทร</NuxtLink></AlertDescription>
     </Alert>
-    <BookingDetail v-else-if="booking" :booking="booking" :token="token" @updated="(v) => (booking = { ...booking!, ...v })" />
+    <BookingDetail
+      v-else-if="booking"
+      :booking="booking"
+      :token="token"
+      :can-cancel="canCancel"
+      @updated="(v) => (booking = { ...booking!, ...v })"
+      @cancel="cancelReason = ''; cancelOpen = true"
+    />
+
+    <Dialog v-model:open="cancelOpen">
+      <DialogContent class="sm:max-w-md">
+        <DialogHeader>
+          <DialogTitle>ยกเลิกการจองนี้?</DialogTitle>
+          <DialogDescription>เมื่อยกเลิกแล้ว คิวจะถูกปล่อยให้ลูกค้าท่านอื่น ถ้าโอนมัดจำแล้ว ร้านจะติดต่อกลับเรื่องการคืนเงิน</DialogDescription>
+        </DialogHeader>
+        <div class="grid gap-1.5">
+          <Label for="cancel-reason">เหตุผล <span class="font-normal text-muted-foreground">(ไม่บังคับ)</span></Label>
+          <Textarea id="cancel-reason" v-model="cancelReason" rows="2" maxlength="500" placeholder="เช่น ติดธุระ" />
+        </div>
+        <DialogFooter class="gap-2">
+          <Button variant="outline" :disabled="cancelling" @click="cancelOpen = false">ไม่ยกเลิก</Button>
+          <Button variant="destructive" :disabled="cancelling" @click="confirmCancel">{{ cancelling ? 'กำลังยกเลิก…' : 'ยืนยันยกเลิก' }}</Button>
+        </DialogFooter>
+      </DialogContent>
+    </Dialog>
   </div>
 </template>

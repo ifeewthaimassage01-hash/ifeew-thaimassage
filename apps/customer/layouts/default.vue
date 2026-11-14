@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { CalendarDays, CalendarSearch, House, Info, MapPin, Menu, Phone, Sparkles } from '@lucide/vue'
+import { CalendarDays, CalendarSearch, House, MapPin, Menu, Phone, Sparkles } from '@lucide/vue'
 
 // Shell ลูกค้า (ภาพอ้างอิง Warm Minimal): Top navigation แนวนอน · เนื้อหา · Footer
 //   ≥1024 เมนูแนวนอน · <1024 โลโก้ + ปุ่มเมนู (drawer) · มือถือมีปุ่มจองค้างล่างจอ
@@ -11,11 +11,10 @@ const top = computed(() => [
   { to: '/', label: 'หน้าแรก', icon: House, exact: true },
   { to: '/services', label: 'บริการ', icon: Sparkles },
   { to: '/branches', label: 'สาขา', icon: MapPin },
-  { to: '/#about', label: 'เกี่ยวกับเรา', icon: Info },
   { to: '/check-booking', label: 'ตรวจสอบการจอง', icon: CalendarSearch },
 ])
 const isActive = (i: { to: string; exact?: boolean }) =>
-  i.to.includes('#') ? false : i.exact ? route.path === i.to : route.path === i.to || route.path.startsWith(`${i.to}/`)
+  i.exact ? route.path === i.to : route.path === i.to || route.path.startsWith(`${i.to}/`)
 
 // หน้าแรกเป็น full-bleed (hero ลอดใต้ topbar) หน้าอื่นอยู่ในคอนเทนเนอร์
 const home = computed(() => route.path === '/')

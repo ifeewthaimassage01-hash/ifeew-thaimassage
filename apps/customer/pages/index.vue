@@ -148,7 +148,7 @@ const steps = [
             </div>
           </article>
 
-          <section id="about" class="relative flex scroll-mt-24 flex-col justify-center overflow-hidden rounded-2xl border border-border bg-muted p-6" aria-labelledby="why-h">
+          <section class="relative flex flex-col justify-center overflow-hidden rounded-2xl border border-border bg-muted p-6" aria-labelledby="why-h">
             <h2 id="why-h" class="relative z-10 m-0 mb-4 text-[18px] font-semibold">ทำไมต้องเลือก Ifeew Massage?</h2>
             <ul class="relative z-10 m-0 grid list-none gap-3 p-0">
               <li v-for="r in reasons" :key="r" class="flex items-center gap-3 text-[15px] text-foreground">

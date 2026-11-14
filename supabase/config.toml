@@ -450,3 +450,7 @@ verify_jwt = false
 
 [functions.booking-deposit-slip]
 verify_jwt = false
+
+# แจ้งเตือน Web Push: DB (pg_net) เรียกหลังมีเหตุการณ์ · ตรวจสิทธิ์ด้วย outbox id ที่ใช้ได้ครั้งเดียว
+[functions.push-dispatch]
+verify_jwt = false

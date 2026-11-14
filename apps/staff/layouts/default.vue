@@ -84,6 +84,9 @@ const roleLabel = computed(() => (isOwner.value ? 'เจ้าของร้�
             />
             <span v-else-if="branches[0]" class="hidden truncate text-[15px] text-muted-foreground lg:block">{{ branches[0].name }}</span>
 
+            <!-- แจ้งเตือนเข้ามือถือ (Web Push) -->
+            <StaffPushToggle />
+
             <!-- สร้างรายการใหม่ -->
             <DropdownMenu>
               <DropdownMenuTrigger as-child>
