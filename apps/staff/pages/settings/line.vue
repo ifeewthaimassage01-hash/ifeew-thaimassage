@@ -594,7 +594,7 @@ watch(companyId, loadAll)
                       <li v-for="g in groups" :key="g.group_id" class="flex flex-wrap items-center gap-x-3 gap-y-1 px-4 py-3">
                         <div class="grid min-w-0 flex-1">
                           <span class="truncate font-medium text-heading">{{ g.group_name || 'กลุ่ม LINE' }}</span>
-                          <span class="text-sm text-muted-foreground">{{ g.branch_name ? `สาขา${g.branch_name}` : 'ทุกสาขา' }}</span>
+                          <span class="text-sm text-muted-foreground">{{ g.branch_name ? branchLabel(g.branch_name) : 'ทุกสาขา' }}</span>
                         </div>
                         <div class="-ml-2 flex gap-1 sm:ml-0">
                           <Button variant="ghost" size="sm" :disabled="testing === g.group_id" @click="testGroup(g)"><Send /> ส่งทดสอบ</Button>

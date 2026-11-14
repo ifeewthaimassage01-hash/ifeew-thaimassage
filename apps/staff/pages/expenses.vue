@@ -173,7 +173,7 @@ async function rejectVoid(r: ExpenseRow) {
       <FilterRow label="รายจ่ายของ">
         <SegmentedControl
           v-model="scope"
-          :items="[{ value: 'BRANCH', label: activeBranch ? `สาขา${activeBranch.name}` : 'สาขา' }, { value: 'HQ', label: 'สำนักงานใหญ่' }]"
+          :items="[{ value: 'BRANCH', label: branchLabel(activeBranch?.name) }, { value: 'HQ', label: 'สำนักงานใหญ่' }]"
           label="รายจ่ายของ"
           fill
         />

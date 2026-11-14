@@ -95,7 +95,7 @@ Deno.serve(async (req) => {
       const events = (linked?.events ?? []).map((e) => EVENT_LABELS[e] ?? e)
       await reply(
         linked
-          ? `✅ เชื่อมกลุ่มนี้กับ ${linked.company_name}${linked.branch_name ? ` (สาขา${linked.branch_name})` : ' (ทุกสาขา)'} แล้ว` +
+          ? `✅ เชื่อมกลุ่มนี้กับ ${linked.company_name}${linked.branch_name ? ` (${linked.branch_name.startsWith('สาขา') ? '' : 'สาขา'}${linked.branch_name})` : ' (ทุกสาขา)'} แล้ว` +
               (events.length ? `\nจะแจ้งเตือนเมื่อ: ${events.join(' · ')}` : '\nตอนนี้ยังไม่ได้เลือกเหตุการณ์ที่จะแจ้งเตือน (ตั้งได้ในแอปพนักงาน)')
           : 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว (ใช้ได้ 30 นาที ครั้งเดียว) กรุณาสร้างรหัสใหม่ในแอปพนักงาน',
       )

@@ -126,7 +126,7 @@ const roleLabel = computed(() => (isOwner.value ? 'เจ้าของร้�
         </header>
 
         <!-- มือถือ: เว้นที่ด้านล่างให้แถบเมนูล่าง (h-16 + safe area) -->
-        <main class="mx-auto w-full max-w-[1480px] flex-1 px-4 pt-4 pb-[calc(7rem+env(safe-area-inset-bottom))] md:px-6 md:pt-5 md:pb-12 xl:pr-8 xl:pl-2">
+        <main class="mx-auto w-full max-w-[1480px] flex-1 px-6 pt-6 pb-[calc(7rem+env(safe-area-inset-bottom))] md:pb-12 xl:pr-8 xl:pl-2">
           <slot />
         </main>
       </div>
