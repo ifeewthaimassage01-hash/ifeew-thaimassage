@@ -127,18 +127,27 @@ const newQueues = computed(() =>
   (created.value?.items ?? []).filter((i) => !createdBefore.value.has(i.queue_id) && i.queue_status !== 'CANCELLED'),
 )
 
+// กด "เช็กอิน" → ขั้น "เลือกหมอ" ก่อน (เหมือนรับลูกค้าหน้าร้าน) · ยังไม่บันทึกอะไร
+//   กดยืนยันด้านล่าง = เช็กอินจริง (สร้างคิว) แล้วเริ่มนวดคิวที่เลือกหมอไว้
+//   ย้อนกลับ = ไม่เกิดอะไรขึ้น การจองยังรอเช็กอินอยู่
+const checkinBooking = ref<StaffBookingRow | null>(null)
+const checkinMode = computed(() => !!checkinBooking.value)
+
 async function checkIn(b: StaffBookingRow) {
-  saving.value = true
-  try {
-    createdBefore.value = new Set()
-    created.value = (await must(supabase.rpc('pos_check_in_booking', { p_booking_id: b.booking_id }))) as unknown as PosOrder
-    show('done')
-    await load()
-  } catch (e) {
-    fail(e, 'เช็กอินไม่สำเร็จ')
-  } finally {
-    saving.value = false
+  if (!therapists.value.length) {
+    // สาขาไม่มีหมอในระบบ: เช็กอินเลยเหมือนเดิม
+    checkinBooking.value = b
+    assigns.value = b.items.map(() => ({ kind: 'none', employeeId: null, name: '', fuel: false }))
+    await finishCheckin()
+    return
   }
+  addToOrder.value = null
+  customerLabel.value = b.customer_name
+  checkinBooking.value = b
+  assigns.value = b.items.map(() => ({ kind: 'none', employeeId: null, name: '', fuel: false }))
+  step.value = 4
+  show('walkin')
+  await loadFuelSetting()
 }
 
 // ---------------------------------------------------------------------------
@@ -169,22 +178,40 @@ const catalogGroups = computed(() => {
 })
 const countOf = (id: string) => picked.value.filter((x) => x === id).length
 const total = computed(() => picked.value.reduce((sum, id) => sum + Number(optionOf(id)?.price ?? 0), 0))
-const steps = computed(() =>
-  ['เลือกบริการ', 'เลือกเวลา', 'เลือกหมอ'],
-)
-const stepIndex = computed(() => step.value - 2)
+const steps = computed(() => (checkinMode.value ? ['เลือกหมอ'] : ['เลือกบริการ', 'เลือกเวลา', 'เลือกหมอ']))
+const stepIndex = computed(() => (checkinMode.value ? 0 : step.value - 2))
+/** บริการของคนที่ idx (รับหน้าร้าน = ตัวเลือกที่กด · เช็กอิน = คิวที่สร้างจากการจอง) */
+const personService = (idx: number) => {
+  if (checkinMode.value) {
+    const it = checkinBooking.value?.items[idx]
+    return it ? `${it.service_name} ${formatDuration(it.duration_minutes)}` : ''
+  }
+  const o = optionOf(picked.value[idx]!)
+  return o ? `${o.name} ${formatDuration(o.duration_minutes ?? 0)}` : ''
+}
 
 // ---------------------------------------------------------------------------
-// ขั้นที่ 4: เลือกหมอต่อคน (เฉพาะลูกค้าหน้าร้าน · ลูกค้าจองเลือกหมอในหน้าคิวเหมือนเดิม)
+// ขั้นที่ 4: เลือกหมอต่อคน (ลูกค้าหน้าร้าน และลูกค้าจองหลังกดเช็กอิน)
 //   เลือกหมอ = สร้างคิวแล้วเริ่มนวดทันที (queue_call_start เหมือนกด "เริ่มนวด" ในหน้าคิว)
 //   "เลือกทีหลัง" = คิวรอเรียกตามปกติ
 // ---------------------------------------------------------------------------
-type Assign = { kind: 'later' | 'staff' | 'freelance'; employeeId: string | null; name: string; fuel: boolean }
+// none = ยังไม่ได้เลือก (ทำเหมือน later: คิวรอเรียกในหน้าคิว) · later = กด "เลือกหมอทีหลัง" เอง
+type Assign = { kind: 'none' | 'later' | 'staff' | 'freelance'; employeeId: string | null; name: string; fuel: boolean }
+const starting = (a: Assign) => a.kind === 'staff' || a.kind === 'freelance'
 const assigns = ref<Assign[]>([])
 const fuelSetting = ref(0)
 const therapists = computed(() => board.value?.therapists ?? [])
 const takenBy = (employeeId: string, idx: number) =>
   assigns.value.some((a, j) => j !== idx && a.kind === 'staff' && a.employeeId === employeeId)
+type Therapist = (typeof therapists.value)[number]
+/** สถานะของหมอบนการ์ด: ข้อความ + สีจุด · unavailable = กดไม่ได้ */
+function therapistState(t: Therapist, idx: number) {
+  if (t.busy_queue_number) return { text: `มีคิว ${formatQueueNumber(t.busy_queue_number)}`, dot: 'bg-muted-soft', unavailable: true }
+  if (takenBy(t.employee_id, idx)) return { text: 'เลือกให้คนอื่นแล้ว', dot: 'bg-muted-soft', unavailable: true }
+  if (t.on_shift) return { text: 'เข้างานแล้ว', dot: 'bg-success', unavailable: false }
+  return { text: 'ยังไม่เช็คชื่อ', dot: 'bg-brand-accent', unavailable: false }
+}
+const isPicked = (a: Assign, t: Therapist) => a.kind === 'staff' && a.employeeId === t.employee_id
 function chooseTherapist(idx: number, kind: Assign['kind'], employeeId: string | null = null) {
   const a = assigns.value[idx]!
   a.kind = kind
@@ -192,13 +219,45 @@ function chooseTherapist(idx: number, kind: Assign['kind'], employeeId: string |
   if (kind !== 'freelance') a.fuel = false
 }
 const assignsReady = computed(() => assigns.value.every((a) => a.kind !== 'freelance' || a.name.trim().length > 0))
+async function loadFuelSetting() {
+  if (!company.value) return
+  const { data } = await supabase.from('company_settings').select('freelance_fuel_amount').eq('company_id', company.value.company_id).maybeSingle()
+  fuelSetting.value = Number(data?.freelance_fuel_amount ?? 0)
+}
 async function goToTherapist() {
   if (!startAt.value) return
   step.value = 4
-  assigns.value = picked.value.map(() => ({ kind: 'later', employeeId: null, name: '', fuel: false }))
-  if (company.value) {
-    const { data } = await supabase.from('company_settings').select('freelance_fuel_amount').eq('company_id', company.value.company_id).maybeSingle()
-    fuelSetting.value = Number(data?.freelance_fuel_amount ?? 0)
+  assigns.value = picked.value.map(() => ({ kind: 'none', employeeId: null, name: '', fuel: false }))
+  await loadFuelSetting()
+}
+
+// เช็กอิน: บันทึกเช็กอิน (สร้างคิว) → เริ่มนวดคิวที่เลือกหมอไว้ → หน้าเลขคิว
+async function finishCheckin() {
+  const b = checkinBooking.value
+  if (!b) return
+  saving.value = true
+  try {
+    createdBefore.value = new Set()
+    created.value = (await must(supabase.rpc('pos_check_in_booking', { p_booking_id: b.booking_id }))) as unknown as PosOrder
+    // คิวเรียงตามลำดับรายการในการจอง (คนที่ 1, 2, …)
+    const fresh = created.value.items
+      .filter((i) => i.queue_status !== 'CANCELLED')
+      .sort((x, y) => x.queue_number - y.queue_number)
+    let failed: string[] = []
+    if (assigns.value.some(starting)) {
+      failed = await startAssigned(fresh)
+    }
+    await load()
+    created.value = board.value?.orders.find((o) => o.order_id === created.value?.order_id) ?? created.value
+    checkinBooking.value = null
+    show('done')
+    if (failed.length) {
+      message.value = { type: 'warning', text: `เริ่มนวดไม่สำเร็จ ยังรอเรียกอยู่ — เลือกหมอในหน้าคิว (${failed.join(' · ')})` }
+    }
+  } catch (e) {
+    fail(e, 'เช็กอินไม่สำเร็จ')
+  } finally {
+    saving.value = false
   }
 }
 
@@ -207,7 +266,7 @@ async function startAssigned(items: PosOrder['items']) {
   const failed: string[] = []
   for (const [idx, a] of assigns.value.entries()) {
     const q = items[idx]
-    if (!q || a.kind === 'later') continue
+    if (!q || !starting(a)) continue
     const { error: err } = await supabase.rpc('queue_call_start', {
       p_queue_id: q.queue_id,
       p_employee_id: a.kind === 'staff' ? a.employeeId : null,
@@ -221,6 +280,7 @@ async function startAssigned(items: PosOrder['items']) {
 }
 
 async function startWalkIn(order: PosOrder | null = null) {
+  checkinBooking.value = null
   addToOrder.value = order
   step.value = 2
   customerLabel.value = order?.customer_name ?? 'ลูกค้าทั่วไป'
@@ -243,7 +303,12 @@ function removeOne(id: string) {
 }
 
 function back() {
-  if (step.value === 4) step.value = 3
+  if (checkinMode.value) {
+    // ยังไม่ได้เช็กอิน: กลับไปรายชื่อลูกค้าที่จองไว้ การจองยังอยู่
+    checkinBooking.value = null
+    show('bookings')
+  }
+  else if (step.value === 4) step.value = 3
   else if (step.value === 3) step.value = 2
   else show('home')
 }
@@ -288,7 +353,7 @@ async function submitWalkIn() {
       .filter((i) => !createdBefore.value.has(i.queue_id) && i.queue_status !== 'CANCELLED')
       .sort((a, b) => a.queue_number - b.queue_number)
     let failed: string[] = []
-    if (assigns.value.some((a) => a.kind !== 'later')) {
+    if (assigns.value.some(starting)) {
       failed = await startAssigned(fresh)
       await load()
       created.value = board.value?.orders.find((o) => o.order_id === created.value!.order_id) ?? created.value
@@ -434,13 +499,13 @@ async function submitWalkIn() {
     <div v-else-if="screen === 'walkin'" class="grid gap-5 pb-24">
       <div class="grid gap-3">
         <div class="flex items-center gap-2">
-          <Button variant="ghost" size="icon" :aria-label="stepIndex === 0 ? 'ยกเลิก' : 'ย้อนกลับ'" @click="back">
-            <X v-if="stepIndex === 0" class="size-5" /><ArrowLeft v-else class="size-5" />
+          <Button variant="ghost" size="icon" :aria-label="checkinMode ? 'ย้อนกลับ' : stepIndex === 0 ? 'ยกเลิก' : 'ย้อนกลับ'" @click="back">
+            <X v-if="stepIndex === 0 && !checkinMode" class="size-5" /><ArrowLeft v-else class="size-5" />
           </Button>
-          <h2 class="m-0 text-lg font-semibold">{{ addToOrder ? `เพิ่มบริการ · ${customerLabel}` : 'รับลูกค้าใหม่' }}</h2>
+          <h2 class="m-0 text-lg font-semibold">{{ checkinMode ? `เช็กอิน · ${customerLabel}` : addToOrder ? `เพิ่มบริการ · ${customerLabel}` : 'รับลูกค้าใหม่' }}</h2>
         </div>
         <!-- ตัวบอกขั้น -->
-        <ol class="m-0 flex list-none gap-2 p-0" :aria-label="`ขั้นที่ ${stepIndex + 1} จาก ${steps.length}`">
+        <ol v-if="!checkinMode" class="m-0 flex list-none gap-2 p-0" :aria-label="`ขั้นที่ ${stepIndex + 1} จาก ${steps.length}`">
           <li v-for="(t, i) in steps" :key="t" class="flex flex-1 flex-col gap-1">
             <span class="h-1.5 rounded-full" :class="i <= stepIndex ? 'bg-primary' : 'bg-secondary'" />
             <span class="text-[13px]" :class="i === stepIndex ? 'font-semibold text-heading' : 'text-muted-foreground'">{{ i + 1 }}. {{ t }}</span>
@@ -504,45 +569,60 @@ async function submitWalkIn() {
       <!-- ขั้นที่ 4: เลือกหมอ (ต่อคน) -->
       <template v-else-if="step === 4">
         <p class="m-0 text-[15px] text-muted-foreground">
-          เลือกหมอให้แต่ละคน — <span class="font-medium text-heading">เลือกหมอแล้วจะเริ่มนวดทันที</span> · ถ้าหมอยังไม่ว่าง กด “เลือกทีหลัง” (ไปเลือกในหน้าคิว)
+          เลือกหมอให้แต่ละคน — <span class="font-medium text-heading">เลือกหมอแล้วจะเริ่มนวดทันที</span> ถ้าหมอยังไม่ว่าง กด “เลือกหมอทีหลัง” แล้วไปเลือกในหน้าคิว
         </p>
         <section v-for="(a, idx) in assigns" :key="idx" class="grid gap-3 rounded-xl border border-border bg-card p-4" :aria-label="`หมอของคนที่ ${idx + 1}`">
           <p class="m-0 text-[15px] font-semibold text-heading">
-            คนที่ {{ idx + 1 }} <span class="font-normal text-muted-foreground">· {{ optionOf(picked[idx]!)?.name }} {{ formatDuration(optionOf(picked[idx]!)?.duration_minutes ?? 0) }}</span>
+            คนที่ {{ idx + 1 }} <span class="font-normal text-muted-foreground">· {{ personService(idx) }}</span>
           </p>
-          <div class="flex flex-wrap gap-2" role="radiogroup" :aria-label="`หมอของคนที่ ${idx + 1}`">
-            <button
-              type="button"
-              role="radio"
-              :aria-checked="a.kind === 'later'"
-              class="h-11 rounded-lg border px-4 text-[15px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-              :class="a.kind === 'later' ? 'border-primary bg-secondary font-medium text-heading' : 'border-border text-muted-foreground hover:text-heading'"
-              @click="chooseTherapist(idx, 'later')"
-            >เลือกทีหลัง</button>
-            <button
-              v-for="t in therapists"
-              :key="t.employee_id"
-              type="button"
-              role="radio"
-              :aria-checked="a.kind === 'staff' && a.employeeId === t.employee_id"
-              :disabled="!!t.busy_queue_number || takenBy(t.employee_id, idx)"
-              class="grid h-11 content-center rounded-lg border px-4 text-left transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed disabled:opacity-45"
-              :class="a.kind === 'staff' && a.employeeId === t.employee_id ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card text-heading hover:border-primary'"
-              @click="chooseTherapist(idx, 'staff', t.employee_id)"
-            >
-              <span class="text-[15px] leading-tight font-medium">{{ t.nickname }}</span>
-              <span class="text-[13px] leading-tight">
-                {{ t.busy_queue_number ? `มีคิว ${formatQueueNumber(t.busy_queue_number)}` : takenBy(t.employee_id, idx) ? 'เลือกให้คนอื่นแล้ว' : t.on_shift ? 'ว่าง' : 'ยังไม่เช็คชื่อ' }}
-              </span>
-            </button>
-            <button
-              type="button"
-              role="radio"
-              :aria-checked="a.kind === 'freelance'"
-              class="h-11 rounded-lg border border-dashed px-4 text-[15px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
-              :class="a.kind === 'freelance' ? 'border-primary bg-secondary font-medium text-heading' : 'border-input text-muted-foreground hover:text-heading'"
-              @click="chooseTherapist(idx, 'freelance')"
-            >+ หมอวิ่ง</button>
+          <div class="grid gap-3" role="radiogroup" :aria-label="`หมอของคนที่ ${idx + 1}`">
+            <!-- หมอในร้าน: การ์ดใหญ่ ชื่อ + จุดสถานะ · ที่เลือก = พื้นน้ำตาลเข้ม + เครื่องหมายถูก -->
+            <div v-if="therapists.length" class="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-4">
+              <button
+                v-for="t in therapists"
+                :key="t.employee_id"
+                type="button"
+                role="radio"
+                :aria-checked="isPicked(a, t)"
+                :disabled="therapistState(t, idx).unavailable"
+                class="flex min-h-16 items-center gap-2 rounded-xl border-2 px-3 py-2.5 text-left transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none disabled:cursor-not-allowed"
+                :class="isPicked(a, t)
+                  ? 'border-primary bg-primary text-primary-foreground shadow-soft'
+                  : therapistState(t, idx).unavailable
+                    ? 'border-transparent bg-muted text-muted-foreground'
+                    : 'border-border bg-background text-heading hover:border-primary/60'"
+                @click="chooseTherapist(idx, 'staff', t.employee_id)"
+              >
+                <span class="grid min-w-0 flex-1 gap-1">
+                  <span class="truncate text-base leading-tight font-semibold">{{ t.nickname }}</span>
+                  <span class="flex items-center gap-1.5 text-[13px] leading-tight">
+                    <span class="size-2 shrink-0 rounded-full" :class="isPicked(a, t) ? 'bg-primary-foreground' : therapistState(t, idx).dot" aria-hidden="true" />
+                    <span class="truncate">{{ therapistState(t, idx).text }}</span>
+                  </span>
+                </span>
+                <Check v-if="isPicked(a, t)" class="size-5 shrink-0" aria-hidden="true" />
+              </button>
+            </div>
+            <!-- ทางเลือกอื่น: แยกจากรายชื่อหมอด้วยเส้นคั่น -->
+            <div class="flex flex-wrap items-center gap-2 border-t border-border pt-3">
+              <span class="mr-1 text-sm text-muted-foreground">หรือ</span>
+              <button
+                type="button"
+                role="radio"
+                :aria-checked="a.kind === 'freelance'"
+                class="flex h-11 items-center gap-1.5 rounded-full border border-dashed px-4 text-[15px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                :class="a.kind === 'freelance' ? 'border-solid border-primary bg-secondary font-medium text-heading' : 'border-input bg-background text-foreground hover:text-heading'"
+                @click="chooseTherapist(idx, 'freelance')"
+              ><Check v-if="a.kind === 'freelance'" class="size-4" aria-hidden="true" /><UserPlus v-else class="size-4" aria-hidden="true" /> หมอวิ่ง</button>
+              <button
+                type="button"
+                role="radio"
+                :aria-checked="a.kind === 'later'"
+                class="flex h-11 items-center gap-1.5 rounded-full border px-4 text-[15px] transition-colors focus-visible:ring-3 focus-visible:ring-ring/50 focus-visible:outline-none"
+                :class="a.kind === 'later' ? 'border-primary bg-secondary font-medium text-heading' : 'border-border bg-background text-foreground hover:text-heading'"
+                @click="chooseTherapist(idx, 'later')"
+              ><Check v-if="a.kind === 'later'" class="size-4" aria-hidden="true" /><Clock v-else class="size-4" aria-hidden="true" /> เลือกหมอทีหลัง</button>
+            </div>
           </div>
           <div v-if="a.kind === 'freelance'" class="grid gap-2 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
             <TextField v-model="a.name" label="ชื่อหมอวิ่ง" maxlength="60" placeholder="ชื่อเล่น" />
@@ -589,13 +669,17 @@ async function submitWalkIn() {
       <div v-if="step > 1" class="fixed inset-x-0 bottom-[calc(4.25rem+env(safe-area-inset-bottom))] z-30 border-t border-border bg-background/95 px-4 py-3 backdrop-blur-sm md:bottom-0 md:pl-[calc(76px+1.5rem)] xl:pl-[calc(var(--sidebar-width)+0.5rem)]">
         <div class="mx-auto flex max-w-4xl items-center justify-between gap-3">
           <span class="text-[15px] text-muted-foreground">
-            <template v-if="picked.length"><span class="num text-heading">{{ picked.length }}</span> คน · รวม <span class="num text-lg font-semibold text-heading">{{ formatBaht(total) }}</span></template>
+            <template v-if="checkinMode"><span class="num text-heading">{{ checkinBooking?.items.length }}</span> คน · {{ customerLabel }}</template>
+            <template v-else-if="picked.length"><span class="num text-heading">{{ picked.length }}</span> คน · รวม <span class="num text-lg font-semibold text-heading">{{ formatBaht(total) }}</span></template>
             <template v-else>ยังไม่ได้เลือกบริการ</template>
           </span>
           <Button v-if="step === 2" size="lg" :disabled="!picked.length" @click="goToTime">ถัดไป <ChevronRight /></Button>
           <Button v-else-if="step === 3" size="lg" :disabled="!startAt" @click="goToTherapist">ถัดไป <ChevronRight /></Button>
+          <Button v-else-if="checkinMode" size="lg" :disabled="!assignsReady || saving" @click="finishCheckin">
+            <Check /> {{ saving ? 'กำลังเช็กอิน…' : assigns.some(starting) ? 'เช็กอิน เริ่มนวด' : 'เช็กอิน' }}
+          </Button>
           <Button v-else size="lg" :disabled="!startAt || !assignsReady || saving" @click="submitWalkIn">
-            <Check /> {{ saving ? 'กำลังสร้างคิว…' : assigns.some((a) => a.kind !== 'later') ? 'ยืนยัน เริ่มนวด' : 'ยืนยัน สร้างคิว' }}
+            <Check /> {{ saving ? 'กำลังสร้างคิว…' : assigns.some(starting) ? 'ยืนยัน เริ่มนวด' : 'ยืนยัน สร้างคิว' }}
           </Button>
         </div>
       </div>

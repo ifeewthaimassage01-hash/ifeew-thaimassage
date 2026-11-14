@@ -182,6 +182,11 @@ const offShift = ref<{ therapist: PosTherapist; text: string } | null>(null)
 // เรียกคิว: เลือกประเภทหมอ — หมอวิ่งกรอกชื่อ + ค่าน้ำมัน (บันทึกเป็นรายจ่ายของร้าน)
 const callKind = ref<'regular' | 'freelance'>('regular')
 const freelance = reactive({ name: '', fuel: false })
+// สลับประเภทหมอ = ล้างสิ่งที่ค้างจากอีกแท็บ: หมอประจำที่รอยืนยัน (ยังไม่เช็คชื่อ) / ชื่อหมอวิ่งที่พิมพ์ไว้
+watch(callKind, (kind) => {
+  offShift.value = null
+  if (kind === 'regular') Object.assign(freelance, { name: '', fuel: false })
+})
 // ค่าน้ำมันต่อครั้ง: เจ้าของร้านตั้งที่ “ตั้งค่าบริษัท” (company_settings.freelance_fuel_amount)
 const fuelSetting = ref(0)
 async function loadFuelSetting() {
