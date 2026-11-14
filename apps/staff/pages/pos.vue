@@ -310,6 +310,7 @@ async function submitWalkIn() {
   <div class="mx-auto max-w-4xl">
     <PageHeader v-if="screen === 'home'" title="หน้าร้าน" description="กด “รับลูกค้าใหม่” เมื่อลูกค้าเดินเข้าร้าน หรือ “ลูกค้าที่จองไว้” เพื่อเช็กอิน" />
     <h1 v-else class="sr-only">หน้าร้าน {{ activeBranch?.name }}</h1>
+    <PendingSlipBanner v-if="screen === 'home'" />
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-4" />

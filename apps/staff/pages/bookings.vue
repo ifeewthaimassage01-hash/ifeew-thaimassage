@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// การจองของสาขา (รายวัน): สร้างการจองให้ลูกค้า, ตรวจสลิปมัดจำ, ยกเลิก, ไม่มาตามนัด, คืนมัดจำ (OWNER)
+// การจองของสาขา: "ทั้งหมด" (ตั้งแต่วันนี้ + สลิปรอตรวจทุกวัน จัดกลุ่มตามวัน) หรือ "รายวัน"
+// สร้างการจองให้ลูกค้า, ตรวจสลิปมัดจำ, ยกเลิก, ไม่มาตามนัด, คืนมัดจำ (OWNER)
 import { CalendarPlus, ChevronLeft, ChevronRight, Copy, EllipsisVertical, NotebookPen, ReceiptText, Search, UserPlus, X } from '@lucide/vue'
 import {
   addDays,
@@ -28,10 +29,15 @@ const config = useRuntimeConfig()
 const { activeBranch, company, isOwner } = useAccess()
 const { run } = useStepUp()
 
+const scope = ref<'all' | 'day'>('all')
 const date = ref(bangkokToday())
 const rows = ref<StaffBookingRow[]>([])
+/** สลิปรอตรวจทุกวัน (แสดงแถบแจ้งแม้กำลังดูรายวันอยู่) */
+const reviewTotal = ref(0)
 const loading = ref(false)
-const statusFilter = ref<'ALL' | 'ACTIVE' | 'REVIEW'>('ACTIVE')
+// มาจากแถบสลิปรอตรวจในหน้าอื่น (?show=review) → เปิดรายการรอตรวจทั้งหมดเลย
+const route = useRoute()
+const statusFilter = ref<'ALL' | 'ACTIVE' | 'REVIEW'>(route.query.show === 'review' ? 'REVIEW' : 'ACTIVE')
 const message = ref<{ type: 'success' | 'error' | 'info'; text: string } | null>(null)
 const ok = (text: string) => (message.value = { type: 'success', text })
 const fail = (e: unknown, fallback?: string) => (message.value = { type: 'error', text: errorText(e, fallback) })
@@ -45,13 +51,25 @@ const visible = computed(() =>
 )
 const reviewCount = computed(() => rows.value.filter((r) => r.deposit_status === 'PENDING_REVIEW').length)
 
+const countReview = (list: StaffBookingRow[]) => list.filter((r) => r.deposit_status === 'PENDING_REVIEW').length
+
 async function load() {
   if (!activeBranch.value) return
+  const branchId = activeBranch.value.branch_id
   loading.value = true
   try {
-    rows.value = (await must(
-      supabase.rpc('staff_bookings', { p_branch_id: activeBranch.value.branch_id, p_date: date.value }),
-    )) as unknown as StaffBookingRow[]
+    const upcoming = () => must(supabase.rpc('staff_bookings_upcoming', { p_branch_id: branchId })) as Promise<unknown> as Promise<StaffBookingRow[]>
+    if (scope.value === 'all') {
+      rows.value = await upcoming()
+      reviewTotal.value = countReview(rows.value)
+    } else {
+      const [day, all] = await Promise.all([
+        must(supabase.rpc('staff_bookings', { p_branch_id: branchId, p_date: date.value })) as Promise<unknown> as Promise<StaffBookingRow[]>,
+        upcoming(),
+      ])
+      rows.value = day
+      reviewTotal.value = countReview(all)
+    }
   } catch (e) {
     fail(e, 'โหลดการจองไม่สำเร็จ')
   } finally {
@@ -59,7 +77,32 @@ async function load() {
   }
 }
 
-watch([date, () => activeBranch.value?.branch_id], load, { immediate: true })
+watch([scope, date, () => activeBranch.value?.branch_id], load, { immediate: true })
+
+function showReview() {
+  scope.value = 'all'
+  statusFilter.value = 'REVIEW'
+}
+
+// "ทั้งหมด": จัดกลุ่มตามวันนัด (เวลาไทย) · "รายวัน": กลุ่มเดียว
+const dayOf = (iso: string) => new Date(iso).toLocaleDateString('en-CA', { timeZone: 'Asia/Bangkok' })
+const dayLabel = (d: string) => {
+  const today = bangkokToday()
+  if (d === today) return 'วันนี้'
+  if (d === addDays(today, 1)) return 'พรุ่งนี้'
+  const text = new Date(`${d}T12:00:00+07:00`).toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'short', timeZone: 'Asia/Bangkok' })
+  return d < today ? `${text} (ผ่านมาแล้ว)` : text
+}
+const groups = computed(() => {
+  if (scope.value === 'day') return [{ key: date.value, label: '', rows: visible.value }]
+  const map = new Map<string, StaffBookingRow[]>()
+  for (const r of visible.value) {
+    const d = dayOf(r.starts_at)
+    if (!map.has(d)) map.set(d, [])
+    map.get(d)!.push(r)
+  }
+  return [...map.entries()].map(([d, list]) => ({ key: d, label: dayLabel(d), rows: list }))
+})
 
 // สีของสถานะการจอง (Badge variant ตาม DESIGN.md: Success = ยืนยัน/เสร็จ, Danger = ยกเลิก/ไม่มา)
 type StatusVariant = 'success' | 'danger' | 'pending' | 'neutral' | 'default'
@@ -298,35 +341,42 @@ async function submitCreate() {
 
 <template>
   <div class="mx-auto max-w-4xl">
-    <PageHeader title="การจอง" description="นัดของลูกค้าในแต่ละวัน · กด ⋯ ที่รายการเพื่อยกเลิกหรือเพิ่มหมายเหตุ">
+    <PageHeader title="การจอง" description="ตรวจสลิปมัดจำและจัดการนัดของลูกค้า กด ⋯ ที่รายการเพื่อยกเลิกหรือเพิ่มหมายเหตุ">
       <template #actions><Button @click="openCreate"><CalendarPlus /> สร้างการจอง</Button></template>
     </PageHeader>
 
-    <div class="mb-6 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
-        <Button variant="ghost" size="icon-sm" aria-label="วันก่อน" @click="date = addDays(date, -1)"><ChevronLeft /></Button>
-        <TextField v-model="date" type="date" aria-label="วันที่" class="num w-44 [&_input]:h-9 [&_input]:border-0" />
-        <Button variant="ghost" size="icon-sm" aria-label="วันถัดไป" @click="date = addDays(date, 1)"><ChevronRight /></Button>
-        <Button variant="ghost" size="sm" @click="date = bangkokToday()">วันนี้</Button>
-      </div>
-      <div class="flex flex-wrap items-center gap-2">
-        <SegmentedControl
-          v-model="statusFilter"
-          :items="[{ value: 'ACTIVE', label: 'นัดที่ยังไม่จบ' }, { value: 'REVIEW', label: reviewCount ? `รอตรวจสลิป (${reviewCount})` : 'รอตรวจสลิป' }, { value: 'ALL', label: 'ทั้งหมด' }]"
-          label="กรองสถานะ"
-        />
-      </div>
-    </div>
+    <!-- สลิปรอตรวจ: เห็นทันทีไม่ว่ากำลังดูวันไหน กดแล้วไปที่รายการรอตรวจทั้งหมด -->
+    <PendingSlipBanner v-if="!(scope === 'all' && statusFilter === 'REVIEW')" :count="reviewTotal" @open="showReview" />
+
+    <FilterPanel label="ตัวกรองการจอง">
+      <FilterRow label="ช่วง">
+        <SegmentedControl v-model="scope" :items="[{ value: 'all', label: 'ทั้งหมด' }, { value: 'day', label: 'รายวัน' }]" label="ช่วงของการจอง" />
+      </FilterRow>
+      <FilterRow v-if="scope === 'day'" label="วันที่">
+        <div class="flex w-full items-center gap-1 rounded-lg border border-border bg-background p-1 sm:w-auto">
+          <Button variant="ghost" size="icon-sm" aria-label="วันก่อน" @click="date = addDays(date, -1)"><ChevronLeft /></Button>
+          <TextField v-model="date" type="date" aria-label="วันที่" class="num min-w-0 flex-1 sm:w-44 sm:flex-none [&_input]:h-9 [&_input]:border-0 [&_input]:bg-transparent pointer-coarse:[&_input]:h-10" />
+          <Button variant="ghost" size="icon-sm" aria-label="วันถัดไป" @click="date = addDays(date, 1)"><ChevronRight /></Button>
+        </div>
+        <Button v-if="date !== bangkokToday()" variant="ghost" size="sm" @click="date = bangkokToday()">วันนี้</Button>
+      </FilterRow>
+      <FilterRow label="แสดง">
+        <SegmentedControl v-model="statusFilter" :items="[{ value: 'ACTIVE', label: 'นัดที่ยังไม่จบ' }, { value: 'REVIEW', label: reviewCount ? `รอตรวจสลิป (${reviewCount})` : 'รอตรวจสลิป' }, { value: 'ALL', label: 'ทั้งหมด' }]" label="กรองสถานะ" fill />
+      </FilterRow>
+    </FilterPanel>
 
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
     <LoadingBar v-if="loading" class="mb-3" />
-    <EmptyState v-else-if="!visible.length" :title="statusFilter === 'REVIEW' ? 'ไม่มีสลิปรอตรวจ' : 'ไม่มีการจองในวันนี้'">
+    <EmptyState v-else-if="!visible.length" :title="statusFilter === 'REVIEW' ? 'ไม่มีสลิปรอตรวจ' : scope === 'all' ? 'ยังไม่มีการจองที่กำลังจะมาถึง' : 'ไม่มีการจองในวันนี้'">
       <Button variant="outline" @click="openCreate"><CalendarPlus /> สร้างการจอง</Button>
     </EmptyState>
 
     <!-- แต่ละการจอง: เวลา · ชื่อ · บริการ · สถานะ — ปุ่มหลักเฉพาะเมื่อมีงานต้องทำ (ตรวจสลิป) งานอื่นอยู่ในเมนู ⋯ -->
-    <ul v-if="visible.length" class="m-0 grid list-none gap-2 p-0">
-      <li v-for="r in visible" :key="r.booking_id" class="flex flex-wrap items-start gap-4 rounded-xl border border-border bg-card px-4 py-3.5">
+    <div v-if="visible.length" class="grid gap-6">
+    <section v-for="g in groups" :key="g.key" :aria-label="g.label || undefined">
+    <h2 v-if="g.label" class="m-0 mb-2 px-1 text-sm font-semibold text-heading">{{ g.label }} <span class="num font-normal text-muted-foreground">({{ g.rows.length }})</span></h2>
+    <ul class="m-0 grid list-none gap-2 p-0">
+      <li v-for="r in g.rows" :key="r.booking_id" class="flex flex-wrap items-start gap-4 rounded-xl border border-border bg-card px-4 py-3.5">
         <span class="num shrink-0 rounded-lg bg-secondary px-3 py-1.5 text-lg font-semibold text-heading">{{ bangkokTime(r.starts_at) }}</span>
 
         <div class="min-w-0 flex-1">
@@ -369,6 +419,8 @@ async function submitCreate() {
         </div>
       </li>
     </ul>
+    </section>
+    </div>
 
     <!-- ตรวจสลิป -->
     <Dialog v-model:open="slipDialog">

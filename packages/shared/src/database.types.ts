@@ -1145,6 +1145,7 @@ export type Database = {
         Returns: Json
       }
       staff_bookings: { Args: { p_branch_id: string; p_date: string }; Returns: Json }
+      staff_bookings_upcoming: { Args: { p_branch_id: string }; Returns: Json }
       review_deposit: { Args: { p_deposit_id: string; p_approve: boolean; p_note: string | null }; Returns: undefined }
       staff_cancel_booking: { Args: { p_booking_id: string; p_reason: string; p_force_refund?: boolean }; Returns: undefined }
       mark_no_show: { Args: { p_booking_id: string }; Returns: undefined }
