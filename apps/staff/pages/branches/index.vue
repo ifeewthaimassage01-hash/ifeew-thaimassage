@@ -154,13 +154,13 @@ onMounted(load)
     <div class="grid items-start gap-4 md:grid-cols-2">
       <Card v-for="b in branches" :key="b.id" class="gap-0 overflow-hidden py-0">
         <div class="aspect-[16/6] overflow-hidden bg-secondary">
-          <img v-if="b.image_path" :src="imageUrl(b.image_path) ?? undefined" :alt="`รูปสาขา ${b.name}`" class="size-full object-cover" loading="lazy">
+          <img decoding="async" v-if="b.image_path" :src="imageUrl(b.image_path) ?? undefined" :alt="`รูปสาขา ${b.name}`" class="size-full object-cover" loading="lazy">
           <div v-else class="grid size-full place-items-center gap-1 text-[13px] text-muted-foreground"><MapPin class="size-7 text-brand-accent" :stroke-width="1.5" aria-hidden="true" /></div>
         </div>
         <div class="flex items-start justify-between gap-3 p-5">
           <div class="min-w-0">
             <p class="m-0 text-sm text-muted-foreground"><span class="num">{{ b.code }}</span></p>
-            <h2 class="m-0 text-[17px] font-semibold">{{ b.name }}</h2>
+            <h2 class="m-0 text-title font-semibold">{{ b.name }}</h2>
             <p class="m-0 mt-1 text-[15px] text-muted-foreground">{{ b.address || 'ยังไม่ระบุที่อยู่' }}</p>
             <p v-if="b.phone" class="num m-0 text-[15px] text-muted-foreground">{{ b.phone }}</p>
           </div>

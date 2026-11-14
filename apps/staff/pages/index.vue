@@ -62,7 +62,7 @@ watch(
   },
   { immediate: true },
 )
-useIntervalFn(loadSummary, 30_000)
+useLiveInterval(loadSummary, 30_000)
 onBeforeUnmount(() => {
   unsubscribe()
   if (timer) clearTimeout(timer)

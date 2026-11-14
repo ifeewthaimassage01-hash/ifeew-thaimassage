@@ -346,7 +346,7 @@ async function removeCategory(c: Category) {
               loading="lazy"
               class="size-16 shrink-0 rounded-lg border border-border object-cover"
             >
-            <span v-else class="grid size-16 shrink-0 place-items-center rounded-lg border border-dashed border-input bg-muted text-center text-[11px] leading-tight text-muted-foreground">
+            <span v-else class="grid size-16 shrink-0 place-items-center rounded-lg border border-dashed border-input bg-muted text-center text-[13px] leading-tight text-muted-foreground">
               <ImageIcon class="mx-auto size-5 text-muted-soft" />ไม่มีรูป
             </span>
             <div class="grid min-w-0 flex-1 content-start gap-1">
@@ -363,7 +363,7 @@ async function removeCategory(c: Category) {
 
           <table v-if="activeOptions(s.id).length" class="mx-4 mb-3 w-[calc(100%-2rem)] border-collapse text-[15px]">
             <thead>
-              <tr class="text-[12px] text-muted-foreground">
+              <tr class="text-[13px] text-muted-foreground">
                 <th scope="col" class="pb-1 text-left font-medium">เวลา</th>
                 <th scope="col" class="pb-1 text-right font-medium">ราคา</th>
                 <th scope="col" class="pb-1 text-right font-medium">ค่าแรงหมอ</th>

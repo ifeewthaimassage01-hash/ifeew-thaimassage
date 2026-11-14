@@ -129,7 +129,7 @@ const cellTitle = (r: AttendanceRow) =>
               class="min-w-12 px-1 py-2 text-center font-normal"
               :class="[d.weekend ? 'bg-muted/60' : '', d.date === today ? 'text-primary' : 'text-muted-foreground']"
             >
-              <span class="block text-[11px]">{{ d.weekday }}</span>
+              <span class="block text-[13px]">{{ d.weekday }}</span>
               <span class="num block font-medium" :class="d.date === today ? 'text-primary' : 'text-heading'">{{ d.day }}</span>
             </th>
           </tr>
@@ -141,7 +141,7 @@ const cellTitle = (r: AttendanceRow) =>
             <td v-for="d in days" :key="d.date" class="px-1 py-1.5 text-center" :class="d.weekend ? 'bg-muted/60' : ''">
               <span
                 v-if="byEmp.get(p.id)?.get(d.date)"
-                class="num inline-block rounded-md bg-success-soft px-1.5 py-0.5 text-[12px] font-medium text-success-ink"
+                class="num inline-block rounded-md bg-success-soft px-1.5 py-0.5 text-[13px] font-medium text-success-ink"
                 :title="cellTitle(byEmp.get(p.id)!.get(d.date)!)"
               >{{ bangkokTime(byEmp.get(p.id)!.get(d.date)!.clock_in_at!) }}</span>
               <span v-else class="text-muted-soft" aria-label="ไม่ได้มา">·</span>

@@ -48,7 +48,7 @@ async function load() {
 }
 watch([() => props.branchId, period], load, { immediate: true })
 watch(() => props.tick, load) // realtime จากแดชบอร์ด (คิว/บิลเปลี่ยน)
-useIntervalFn(load, 60_000)
+useLiveInterval(load, 60_000)
 
 const n = (v: unknown) => Number(v) || 0
 const expenseLines = computed(() => {
@@ -95,16 +95,16 @@ const periodLabel = computed(() => ({ today: 'วันนี้', '7d': '7 ว�
     <div v-else-if="data" class="grid grid-cols-2 gap-3 lg:grid-cols-4" :class="loading ? 'opacity-60 transition-opacity' : ''">
       <!-- รายได้ -->
       <div class="grid content-start gap-1 rounded-lg bg-muted/60 p-4">
-        <span class="flex items-center gap-2 text-[14px] text-muted-foreground"><TrendingUp class="size-4 text-brand-accent" /> รายได้</span>
+        <span class="flex items-center gap-2 text-sm text-muted-foreground"><TrendingUp class="size-4 text-brand-accent" /> รายได้</span>
         <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ formatBaht(n(data.revenue)) }}</span>
-        <span class="text-[12px] text-muted-foreground">รับเงินสุทธิ (หักคืนเงิน)</span>
+        <span class="text-[13px] text-muted-foreground">รับเงินสุทธิ (หักคืนเงิน)</span>
       </div>
 
       <!-- รายจ่าย -->
       <div class="grid content-start gap-1 rounded-lg bg-muted/60 p-4">
-        <span class="flex items-center gap-2 text-[14px] text-muted-foreground"><ReceiptText class="size-4 text-brand-accent" /> รายจ่าย</span>
+        <span class="flex items-center gap-2 text-sm text-muted-foreground"><ReceiptText class="size-4 text-brand-accent" /> รายจ่าย</span>
         <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ formatBaht(n(data.total_expenses)) }}</span>
-        <dl class="m-0 mt-1 grid gap-0.5 text-[12px]">
+        <dl class="m-0 mt-1 grid gap-0.5 text-[13px]">
           <div v-for="l in expenseLines" :key="l.label" class="flex justify-between gap-2">
             <dt class="text-muted-foreground">{{ l.label }}</dt><dd class="num m-0 text-foreground">{{ formatBaht(l.value) }}</dd>
           </div>
@@ -113,18 +113,18 @@ const periodLabel = computed(() => ({ today: 'วันนี้', '7d': '7 ว�
 
       <!-- ยอดสุทธิ -->
       <div class="grid content-start gap-1 rounded-lg p-4" :class="n(data.net) < 0 ? 'bg-danger-soft' : 'bg-success-soft'">
-        <span class="flex items-center gap-2 text-[14px] text-muted-foreground"><HandCoins class="size-4 text-brand-accent" /> ยอดสุทธิ</span>
+        <span class="flex items-center gap-2 text-sm text-muted-foreground"><HandCoins class="size-4 text-brand-accent" /> ยอดสุทธิ</span>
         <span class="num text-[24px] leading-tight sm:text-[26px]" :class="n(data.net) < 0 ? 'text-danger-ink' : 'text-success-ink'">
           {{ n(data.net) < 0 ? '−' : '' }}{{ formatBaht(Math.abs(n(data.net))) }}
         </span>
-        <span class="text-[12px] text-muted-foreground">รายได้ − รายจ่ายทั้งหมด</span>
+        <span class="text-[13px] text-muted-foreground">รายได้ − รายจ่ายทั้งหมด</span>
       </div>
 
       <!-- ลูกค้าแยกตามประเภทหมอ -->
       <div class="grid content-start gap-1 rounded-lg bg-muted/60 p-4">
-        <span class="flex items-center gap-2 text-[14px] text-muted-foreground"><Users class="size-4 text-brand-accent" /> ลูกค้าที่ใช้บริการ</span>
-        <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ n(data.customers?.total) }} <span class="text-[14px] text-muted-foreground">คน</span></span>
-        <dl class="m-0 mt-1 grid gap-0.5 text-[12px]">
+        <span class="flex items-center gap-2 text-sm text-muted-foreground"><Users class="size-4 text-brand-accent" /> ลูกค้าที่ใช้บริการ</span>
+        <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ n(data.customers?.total) }} <span class="text-sm text-muted-foreground">คน</span></span>
+        <dl class="m-0 mt-1 grid gap-0.5 text-[13px]">
           <div v-for="c in customerLines" :key="c.key" class="flex justify-between gap-2">
             <dt class="text-muted-foreground">{{ c.label }}</dt><dd class="num m-0 text-foreground">{{ c.n }}</dd>
           </div>

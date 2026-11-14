@@ -501,7 +501,7 @@ watch(companyId, loadAll)
                 <span v-else class="num">{{ i + 1 }}</span>
               </span>
               <span class="grid min-w-0 flex-1 gap-0.5 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-baseline sm:gap-4">
-                <span class="text-[17px] font-semibold" :class="s.state === 'locked' ? 'text-muted-foreground' : 'text-heading'">{{ s.title }}</span>
+                <span class="text-title font-semibold" :class="s.state === 'locked' ? 'text-muted-foreground' : 'text-heading'">{{ s.title }}</span>
                 <span class="truncate text-sm" :class="s.state === 'done' ? 'text-success-ink' : 'text-muted-foreground'">{{ s.summary }}</span>
               </span>
               <ChevronDown v-if="s.state !== 'locked'" class="size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none" :class="activeStep === i ? 'rotate-180' : ''" aria-hidden="true" />
@@ -597,8 +597,8 @@ watch(companyId, loadAll)
                           <span class="text-sm text-muted-foreground">{{ g.branch_name ? `สาขา${g.branch_name}` : 'ทุกสาขา' }}</span>
                         </div>
                         <div class="-ml-2 flex gap-1 sm:ml-0">
-                          <Button variant="ghost" size="sm" class="h-10 sm:h-8" :disabled="testing === g.group_id" @click="testGroup(g)"><Send /> ส่งทดสอบ</Button>
-                          <Button variant="ghost" size="sm" class="h-10 text-danger-ink sm:h-8" @click="unlink(g)">หยุดส่ง</Button>
+                          <Button variant="ghost" size="sm" :disabled="testing === g.group_id" @click="testGroup(g)"><Send /> ส่งทดสอบ</Button>
+                          <Button variant="ghost" size="sm" class="text-danger-ink" @click="unlink(g)">หยุดส่ง</Button>
                         </div>
                       </li>
                     </ul>
@@ -686,7 +686,7 @@ watch(companyId, loadAll)
                 <span v-else class="grid size-9 shrink-0 place-items-center rounded-full bg-card text-sm font-semibold text-heading" aria-hidden="true">{{ (account?.name ?? 'L').slice(0, 1) }}</span>
                 <div class="grid min-w-0 gap-1">
                   <span class="text-xs text-muted-foreground">{{ account?.name ?? 'LINE OA ของร้าน' }}</span>
-                  <p class="m-0 rounded-[18px] rounded-tl-md bg-card px-3.5 py-2.5 text-[14px] leading-relaxed text-foreground shadow-[0_1px_2px_rgba(81,67,55,.06)]">
+                  <p class="m-0 rounded-[18px] rounded-tl-md bg-card px-3.5 py-2.5 text-sm leading-relaxed text-foreground shadow-[0_1px_2px_rgba(81,67,55,.06)]">
                     <template v-for="(l, k) in previewLines" :key="k">
                       <span v-if="l.link" class="break-all text-primary underline underline-offset-2">{{ l.text }}</span>
                       <template v-else>{{ l.text }}</template>

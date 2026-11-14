@@ -50,7 +50,7 @@ defineProps<{
         <li v-for="r in dash.resources" :key="r.resource_type_id" class="flex items-center gap-3 border-b border-border/70 py-2.5">
           <span class="grid size-8 shrink-0 place-items-center rounded-full bg-muted text-brand-accent" aria-hidden="true"><BedDouble class="size-4" :stroke-width="1.6" /></span>
           <span class="min-w-0 flex-1">
-            <span class="block truncate text-[14px] text-heading">{{ r.name }}</span>
+            <span class="block truncate text-sm text-heading">{{ r.name }}</span>
             <span class="mt-1 block h-1.5 overflow-hidden rounded-full bg-muted" role="img" :aria-label="`ใช้อยู่ ${r.in_use} จาก ${r.total}`">
               <span class="block h-full rounded-full bg-brand-accent" :style="{ width: `${r.total ? Math.min(100, (r.in_use / r.total) * 100) : 0}%` }" />
             </span>

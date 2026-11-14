@@ -25,7 +25,7 @@ async function loadFinance() {
 }
 // โหลดยอดใหม่ทุกครั้งที่กระดานคิวเปลี่ยน (Realtime) และสำรองทุก 30 วินาที
 watch(() => [board.value, activeBranch.value?.branch_id], loadFinance, { immediate: true })
-useIntervalFn(loadFinance, 30_000)
+useLiveInterval(loadFinance, 30_000)
 
 type Invoice = FinanceBoard['invoices'][number]
 type RowStatus = InvoiceStatus | 'NOT_ISSUED'
@@ -147,7 +147,7 @@ const itemChip = (i: Item) =>
             <span class="min-w-0 truncate text-foreground">
               {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}<span v-if="i.therapist" class="text-muted-foreground"> · {{ i.therapist.nickname }}</span>
             </span>
-            <span class="rounded-full px-2 py-0.5 text-[12px] font-medium" :class="itemChip(i).cls">{{ itemChip(i).label }}</span>
+            <span class="rounded-full px-2 py-0.5 text-[13px] font-medium" :class="itemChip(i).cls">{{ itemChip(i).label }}</span>
           </li>
         </ul>
         <footer class="flex items-center justify-end border-t border-border bg-muted/40 px-3 py-2">

@@ -6,10 +6,10 @@ import type { StaffBookingRow } from '@ifeew/shared'
 const props = defineProps<{ rows: StaffBookingRow[] }>()
 
 const GROUPS = [
-  { key: 'pending', label: 'รอยืนยัน', color: '#e2c9ad', statuses: ['PENDING'] },
-  { key: 'confirmed', label: 'ยืนยันแล้ว', color: '#b38b67', statuses: ['CONFIRMED'] },
-  { key: 'done', label: 'มาแล้ว/เสร็จ', color: '#6e4f37', statuses: ['CHECKED_IN', 'COMPLETED'] },
-  { key: 'cancelled', label: 'ยกเลิก/ไม่มา', color: '#d9d4ce', statuses: ['CANCELLED', 'NO_SHOW', 'EXPIRED'] },
+  { key: 'pending', label: 'รอยืนยัน', color: 'var(--chart-1)', statuses: ['PENDING'] },
+  { key: 'confirmed', label: 'ยืนยันแล้ว', color: 'var(--chart-2)', statuses: ['CONFIRMED'] },
+  { key: 'done', label: 'มาแล้ว/เสร็จ', color: 'var(--chart-3)', statuses: ['CHECKED_IN', 'COMPLETED'] },
+  { key: 'cancelled', label: 'ยกเลิก/ไม่มา', color: 'var(--chart-4)', statuses: ['CANCELLED', 'NO_SHOW', 'EXPIRED'] },
 ] as const
 
 const counts = computed(() => GROUPS.map((g) => ({ ...g, n: props.rows.filter((r) => (g.statuses as readonly string[]).includes(r.status)).length })))
@@ -112,7 +112,7 @@ const peak = computed(() => series.value.reduce((a, b) => (b.n > a.n ? b : a), s
         <path :d="area" fill="var(--brand-accent)" fill-opacity="0.08" />
         <path :d="path" fill="none" stroke="var(--brand-accent)" stroke-width="2" stroke-linejoin="round" stroke-linecap="round" vector-effect="non-scaling-stroke" />
         <template v-for="(p, i) in series" :key="p.hour">
-          <text v-if="i % 3 === 0" :x="x(i)" :y="H - 4" text-anchor="middle" class="num fill-muted-foreground text-[11px]">{{ String(p.hour).padStart(2, '0') }}</text>
+          <text v-if="i % 3 === 0" :x="x(i)" :y="H - 4" text-anchor="middle" class="num fill-muted-foreground text-xs">{{ String(p.hour).padStart(2, '0') }}</text>
         </template>
         <g v-if="hover !== null">
           <line :x1="x(hover)" :x2="x(hover)" :y1="PAD.t" :y2="H - PAD.b" stroke="var(--muted-soft)" stroke-width="1" stroke-dasharray="3 3" vector-effect="non-scaling-stroke" />
@@ -121,7 +121,7 @@ const peak = computed(() => series.value.reduce((a, b) => (b.n > a.n ? b : a), s
       </svg>
       <div
         v-if="hover !== null"
-        class="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-border bg-card px-2 py-1 text-[12px] whitespace-nowrap text-heading shadow-soft"
+        class="pointer-events-none absolute top-0 -translate-x-1/2 rounded-md border border-border bg-card px-2 py-1 text-[13px] whitespace-nowrap text-heading shadow-soft"
         :style="{ left: `${(x(hover) / W) * 100}%` }"
       >
         <span class="num">{{ hh(series[hover]!.hour) }}</span> · <span class="num font-medium">{{ series[hover]!.n }}</span> นัด

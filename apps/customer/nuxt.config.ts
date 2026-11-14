@@ -22,6 +22,8 @@ export default defineNuxtConfig({
         { rel: 'icon', type: 'image/png', sizes: '64x64', href: '/favicon.png' },
         { rel: 'apple-touch-icon', href: '/icons/icon-192.png' },
         { rel: 'manifest', href: '/manifest.webmanifest' },
+        // ฟอนต์ serif ของ wordmark/hero (เฉพาะแอปลูกค้า) — ฟอนต์หลักโหลดจาก packages/ui
+        { rel: 'stylesheet', href: 'https://fonts.googleapis.com/css2?family=Cormorant+Garamond:wght@600;700&family=Noto+Serif+Thai:wght@500;600&display=swap' },
       ],
     },
   },

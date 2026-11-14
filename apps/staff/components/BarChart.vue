@@ -75,7 +75,7 @@ function barPath(i: number, v: number): string {
           <line v-for="t in ticks" :key="t" :x1="PAD.left" :x2="W - PAD.right" :y1="y(t)" :y2="y(t)"
             stroke="var(--border)" stroke-width="1" />
           <text v-for="t in ticks" :key="'l' + t" :x="PAD.left - 8" :y="y(t) + 4" text-anchor="end"
-            class="num text-[11px]" fill="var(--muted-foreground)">{{ format(t) }}</text>
+            class="num text-xs" fill="var(--muted-foreground)">{{ format(t) }}</text>
         </g>
         <path v-for="(p, i) in points" :key="p.label" :d="barPath(i, p.value)"
           :style="{ fill: 'var(--primary)', opacity: hover === null || hover === i ? 1 : 0.4 }" />
@@ -84,7 +84,7 @@ function barPath(i: number, v: number): string {
           fill="transparent" @mouseenter="hover = i" @touchstart.passive="hover = i" />
         <template v-for="(p, i) in points" :key="'x' + p.label">
           <text v-if="i % (labelEvery ?? 1) === 0 || i === points.length - 1" :x="PAD.left + i * slot + slot / 2" :y="H - 8"
-            text-anchor="middle" class="text-[11px]" fill="var(--muted-foreground)">{{ p.label }}</text>
+            text-anchor="middle" class="text-xs" fill="var(--muted-foreground)">{{ p.label }}</text>
         </template>
       </svg>
       <div v-if="hover !== null && points[hover]"

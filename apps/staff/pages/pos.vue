@@ -324,7 +324,7 @@ async function submitWalkIn() {
         >
           <span class="grid size-11 shrink-0 place-items-center rounded-full bg-white/20"><UserPlus class="size-5" /></span>
           <span class="min-w-0 flex-1">
-            <span class="block text-[17px] font-semibold">รับลูกค้าใหม่</span>
+            <span class="block text-title font-semibold">รับลูกค้าใหม่</span>
             <span class="block text-sm opacity-90">ลูกค้าเดินเข้าร้าน ไม่ได้จอง</span>
           </span>
           <ChevronRight class="size-5 shrink-0 opacity-80" />
@@ -336,7 +336,7 @@ async function submitWalkIn() {
         >
           <span class="grid size-11 shrink-0 place-items-center rounded-full bg-secondary text-primary"><CalendarCheck class="size-5" /></span>
           <span class="min-w-0 flex-1">
-            <span class="block text-[17px] font-semibold text-heading">ลูกค้าที่จองไว้</span>
+            <span class="block text-title font-semibold text-heading">ลูกค้าที่จองไว้</span>
             <span class="block text-sm text-muted-foreground">รอเช็กอิน <span class="num font-medium text-heading">{{ awaiting.length }}</span> คน</span>
           </span>
           <ChevronRight class="size-5 shrink-0 text-muted-soft" />
@@ -373,7 +373,7 @@ async function submitWalkIn() {
               <span class="min-w-0 truncate text-foreground">
                 {{ i.service_name }} {{ formatDuration(i.duration_minutes) }}<span v-if="i.therapist" class="text-muted-foreground"> · {{ i.therapist.nickname }}</span>
               </span>
-              <span class="rounded-full px-2 py-0.5 text-[12px] font-medium" :class="itemChip(i).cls">{{ itemChip(i).label }}</span>
+              <span class="rounded-full px-2 py-0.5 text-[13px] font-medium" :class="itemChip(i).cls">{{ itemChip(i).label }}</span>
             </li>
           </ul>
           <footer class="flex items-center justify-between gap-2 border-t border-border bg-muted/40 px-3 py-2">
@@ -530,7 +530,7 @@ async function submitWalkIn() {
               @click="chooseTherapist(idx, 'staff', t.employee_id)"
             >
               <span class="text-[15px] leading-tight font-medium">{{ t.nickname }}</span>
-              <span class="text-[11px] leading-tight opacity-80">
+              <span class="text-[13px] leading-tight">
                 {{ t.busy_queue_number ? `มีคิว ${formatQueueNumber(t.busy_queue_number)}` : takenBy(t.employee_id, idx) ? 'เลือกให้คนอื่นแล้ว' : t.on_shift ? 'ว่าง' : 'ยังไม่เช็คชื่อ' }}
               </span>
             </button>

@@ -41,7 +41,7 @@ const isActive = (i: (typeof items)[number]) =>
             <component :is="item.icon" :class="isActive(item) ? 'size-[22px]' : 'size-5'" :stroke-width="isActive(item) ? 2 : 1.75" />
           </span>
           <span
-            class="max-w-full truncate text-[12px] leading-none transition-all duration-300"
+            class="max-w-full truncate text-xs leading-none transition-all duration-300"
             :class="isActive(item) ? '-mt-3 font-medium text-primary' : ''"
           >{{ item.label }}</span>
         </NuxtLink>

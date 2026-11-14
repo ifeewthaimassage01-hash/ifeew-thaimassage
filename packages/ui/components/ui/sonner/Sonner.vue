@@ -17,7 +17,8 @@ const toastOptions = computed<ToasterProps["toastOptions"]>(() => ({
   ...props.toastOptions,
   classes: {
     // แยกจากพื้นหลังครีมให้ชัด: พื้นสีอ่อนตามประเภท + ขอบหนาสีเข้ม + เงาลึก · ปุ่มปิดอยู่มุมขวาในกรอบ
-    toast: "!rounded-xl !border-2 !shadow-[0_12px_32px_-10px_rgb(74_55_40/0.45)] !text-[15px] !gap-3 !py-3.5 !pl-4 !pr-11",
+    // vue-sonner ตั้ง font-family เป็น system-ui เอง → ภาษาไทยไปใช้ฟอนต์ของเครื่อง (Windows: Leelawadee/Tahoma) ไม่ตรงกับทั้งแอป
+    toast: "!font-sans !rounded-xl !border-2 !shadow-[0_12px_32px_-10px_rgb(74_55_40/0.45)] !text-[15px] !gap-3 !py-3.5 !pl-4 !pr-11",
     title: "!font-semibold !leading-snug",
     description: "!opacity-80",
     success: "!bg-success-soft !border-success-ink/45 !text-success-ink [&_[data-icon]]:!text-success-ink",

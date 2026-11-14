@@ -395,7 +395,7 @@ onMounted(load)
               <TableCell>
                 <div class="flex items-center gap-3">
                   <span class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary font-semibold text-heading">
-                    <img v-if="item.photo_path && photoUrls[item.photo_path]" :src="photoUrls[item.photo_path]" :alt="item.nickname" class="size-full object-cover">
+                    <img loading="lazy" decoding="async" v-if="item.photo_path && photoUrls[item.photo_path]" :src="photoUrls[item.photo_path]" :alt="item.nickname" class="size-full object-cover">
                     <template v-else>{{ item.nickname.slice(0, 1) }}</template>
                   </span>
                   <span>

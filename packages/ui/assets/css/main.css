@@ -59,6 +59,12 @@
   /* เงานุ่มแบบกระจาย (ภาพอ้างอิง) */
   --soft-shadow: 0 4px 20px rgba(111, 83, 57, 0.055);
 
+  /* กราฟ: ลำดับขั้นสถานะการจอง อ่อน→เข้ม + เทาอุ่นสำหรับยกเลิก (ผ่านการตรวจตาบอดสีแล้ว) */
+  --chart-1: #e2c9ad;
+  --chart-2: #b38b67;
+  --chart-3: #6e4f37;
+  --chart-4: #d9d4ce;
+
   --radius: 1rem; /* การ์ด 16px */
   --sidebar-width: 232px;
 }
@@ -67,6 +73,9 @@
   --font-sans: 'DM Sans', 'Noto Sans Thai', system-ui, sans-serif;
   --font-display: 'Cormorant Garamond', 'Noto Serif Thai', Georgia, serif; /* หัวเรื่องใหญ่/โลโก้ (หน้าลูกค้า) */
   --shadow-soft: var(--soft-shadow);
+  /* หัวการ์ด/ขั้นตอนที่เด่นกว่า title ปกติ (DESIGN.md: title-lg 17px) */
+  --text-title: 1.0625rem;
+  --text-title--line-height: 1.4;
 
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -136,6 +145,15 @@
   ::placeholder {
     color: var(--muted-foreground);
     opacity: 1;
+  }
+  /* พื้นผิวของเบราว์เซอร์ใช้โทนเดียวกับระบบ (ค่าเริ่มต้นเป็นน้ำเงิน/เทา) */
+  ::selection {
+    background: var(--secondary);
+    color: var(--heading);
+  }
+  html {
+    scrollbar-color: var(--muted-soft) transparent;
+    accent-color: var(--primary);
   }
 }
 
@@ -224,11 +242,38 @@
   }
 }
 
+/*
+ * ลดการเคลื่อนไหว: ตัด "การเคลื่อนที่" (เลื่อน ย่อ/ขยาย หมุน เบลอ) แต่คงการจางเข้า-ออกสั้น ๆ
+ * เพื่อให้ยังเห็นว่าอะไรเปิด/ปิด/เปลี่ยน (dialog, เมนู, แถบบันทึก) แทนการโผล่ทันทีแบบไม่มีสัญญาณ
+ * อยู่นอก @layer เพื่อชนะ utility ของ tw-animate (zoom-in-95, slide-in-from-*)
+ */
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,
   *::after {
-    animation-duration: 0.01ms !important;
-    transition-duration: 0.01ms !important;
+    --tw-enter-scale: 1;
+    --tw-exit-scale: 1;
+    --tw-enter-translate-x: 0;
+    --tw-enter-translate-y: 0;
+    --tw-exit-translate-x: 0;
+    --tw-exit-translate-y: 0;
+    --tw-enter-rotate: 0;
+    --tw-exit-rotate: 0;
+    --tw-enter-blur: 0;
+    --tw-exit-blur: 0;
+    transition-property: color, background-color, border-color, outline-color, text-decoration-color, fill, stroke, opacity, box-shadow !important;
+    transition-duration: 120ms !important;
+    scroll-behavior: auto !important;
+  }
+  /* วนซ้ำไม่รู้จบ (สปินเนอร์ โครงโหลด) หยุดนิ่ง · ปุ่มไม่ยุบตอนกด */
+  .animate-spin,
+  .animate-pulse,
+  .animate-ping,
+  .animate-bounce {
+    animation: none !important;
+  }
+  button:active,
+  [data-slot='button']:active {
+    scale: none !important;
   }
 }

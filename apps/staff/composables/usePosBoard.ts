@@ -70,7 +70,7 @@ export function usePosBoard() {
   )
 
   // สำรองกรณี Realtime หลุด: โหลดใหม่ทุก 60 วินาที
-  useIntervalFn(load, 60_000)
+  useLiveInterval(load, 60_000)
 
   onBeforeUnmount(() => {
     unsubscribe()

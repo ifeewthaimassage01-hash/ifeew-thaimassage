@@ -95,7 +95,7 @@ const ok = (text: string) => (message.value = { type: 'success', text })
 const fail = (e: unknown) => (message.value = { type: 'error', text: errorText(e) })
 
 const now = ref(Date.now())
-useIntervalFn(() => (now.value = Date.now()), 30_000)
+useLiveInterval(() => (now.value = Date.now()), 30_000)
 
 const rows = computed<Row[]>(() =>
   (board.value?.orders ?? []).flatMap((o) => o.items.map((i) => ({ ...i, order: o }))),
@@ -520,7 +520,7 @@ async function submitClock(pin: string) {
             <!-- กล่องรวม (มือถือ): ป้ายสถานะ -->
             <span
               v-if="c.key === 'active'"
-              class="shrink-0 rounded-full px-2 py-0.5 text-[12px] font-medium"
+              class="shrink-0 rounded-full px-2 py-0.5 text-[13px] font-medium"
               :class="isWaiting(r.queue_status) ? 'bg-pending-soft text-pending-ink' : 'bg-success-soft text-success-ink'"
             >{{ isWaiting(r.queue_status) ? 'รอเรียก' : 'กำลังนวด' }}</span>
             <!-- เมนูรอง: งานที่ไม่ได้ทำบ่อย -->

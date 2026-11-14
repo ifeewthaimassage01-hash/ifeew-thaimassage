@@ -50,7 +50,7 @@ const laneStyle = (lane: number, lanes: number) => ({
 
 // เส้นเวลาปัจจุบัน
 const now = ref(Date.now())
-useIntervalFn(() => (now.value = Date.now()), 60_000)
+useLiveInterval(() => (now.value = Date.now()), 60_000)
 const nowTop = computed(() => {
   if (props.date !== bangkokToday(new Date(now.value))) return null
   const m = minuteOfDay(new Date(now.value).toISOString())
@@ -70,14 +70,14 @@ const dot = (s: StaffBookingRow['status']) => (s === 'PENDING' ? 'bg-brand-accen
   <div class="scrollbar-hidden overflow-x-auto">
     <!-- หัวคอลัมน์ของช่อง (ภาพอ้างอิง) -->
     <div class="mb-2 flex h-8 min-w-[244px] rounded-lg bg-muted" :style="{ marginLeft: `${GUTTER}px` }" aria-hidden="true">
-      <span v-for="l in placed.lanes" :key="`head-${l}`" class="flex flex-1 items-center justify-center gap-1.5 text-[12px] text-muted-foreground">
+      <span v-for="l in placed.lanes" :key="`head-${l}`" class="flex flex-1 items-center justify-center gap-1.5 text-xs text-muted-foreground">
         <User class="size-3.5" :stroke-width="1.6" /> {{ l }}
       </span>
     </div>
     <div class="relative min-w-[300px]" :style="{ height: `${(hours.length - 1) * HOUR_PX + 12}px` }">
       <!-- เส้นชั่วโมง + ป้ายเวลา -->
       <div v-for="(h, i) in hours" :key="h" class="absolute inset-x-0 flex items-center" :style="{ top: `${i * HOUR_PX}px` }">
-        <span class="num w-14 shrink-0 -translate-y-px pr-3 text-right text-[12px] text-muted-foreground">{{ String(h).padStart(2, '0') }}:00</span>
+        <span class="num w-14 shrink-0 -translate-y-px pr-3 text-right text-xs text-muted-foreground">{{ String(h).padStart(2, '0') }}:00</span>
         <span class="h-px flex-1 bg-border/80" />
       </div>
       <!-- เส้นแบ่งช่อง -->
@@ -94,7 +94,7 @@ const dot = (s: StaffBookingRow['status']) => (s === 'PENDING' ? 'bg-brand-accen
         v-for="it in placed.items"
         :key="it.row.booking_id"
         to="/bookings"
-        class="absolute flex flex-col justify-center overflow-hidden rounded-lg border px-2.5 py-1 text-[12px] leading-[1.25] text-heading no-underline shadow-soft transition-transform hover:-translate-y-px"
+        class="absolute flex flex-col justify-center overflow-hidden rounded-lg border px-2.5 py-1 text-xs leading-[1.25] text-heading no-underline shadow-soft transition-transform hover:-translate-y-px"
         :class="tone(it.row.status)"
         :style="{ top: `${top(it.start) + 2}px`, height: `${Math.max(26, top(it.end) - top(it.start) - 4)}px`, ...laneStyle(it.lane, placed.lanes) }"
         :aria-label="`${bangkokTime(it.row.starts_at)} ${it.row.customer_name} ${bookingStatusLabels[it.row.status]}`"

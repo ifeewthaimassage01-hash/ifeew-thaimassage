@@ -23,7 +23,7 @@ async function logout(reason?: string) {
 function checkWorkDay() {
   if (user.value && loginExpired()) logout('day_end')
 }
-useIntervalFn(checkWorkDay, 30_000)
+useLiveInterval(checkWorkDay, 30_000)
 useEventListener(document, 'visibilitychange', () => {
   if (document.visibilityState === 'visible') checkWorkDay()
 })
@@ -109,7 +109,7 @@ const roleLabel = computed(() => (isOwner.value ? 'เจ้าของร้�
                   <span class="grid size-9 place-items-center rounded-full bg-secondary text-sm font-semibold">{{ initials }}</span>
                   <span class="hidden text-left lg:block">
                     <span class="block max-w-36 truncate text-sm leading-tight font-medium">{{ displayName }}</span>
-                    <span class="block text-[12px] leading-tight text-muted-foreground">{{ roleLabel }}</span>
+                    <span class="block text-[13px] leading-tight text-muted-foreground">{{ roleLabel }}</span>
                   </span>
                   <ChevronDown class="hidden size-4 text-muted-foreground lg:block" />
                 </button>

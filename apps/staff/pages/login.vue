@@ -96,7 +96,7 @@ async function refreshQuietly() {
     // เงียบไว้ — รอบถัดไปจะลองใหม่ (ข้อผิดพลาดตอนเลือกสาขาจะแสดงตามปกติ)
   }
 }
-useIntervalFn(refreshQuietly, 30_000)
+useLiveInterval(refreshQuietly, 30_000)
 const visibility = useDocumentVisibility()
 watch(visibility, (v) => v === 'visible' && refreshQuietly())
 
