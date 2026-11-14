@@ -217,7 +217,14 @@ async function submitVoid() {
       p_invoice_id: id, p_reason: voidReason.value.trim(), p_idempotency_key: voidKey,
     })))) as unknown as InvoiceView
     voidDialog.value = false
-    ok('ยกเลิกบิลแล้ว ออกบิลใหม่ได้ด้วยปุ่ม “ออกบิลใหม่”')
+    // ทุกคิวจบแล้ว → ระบบยกเลิกรายการกลุ่มนี้ด้วย (หายจาก "ยังไม่จ่าย") → กลับหน้าร้าน
+    const { data: order } = await supabase.from('service_orders').select('status').eq('id', orderId.value).maybeSingle()
+    if (order?.status === 'CANCELLED') {
+      ok('ยกเลิกบิลและรายการนี้แล้ว')
+      await navigateTo('/pos')
+      return
+    }
+    ok('ยกเลิกบิลแล้ว ยังมีคิวที่ยังไม่เสร็จ ออกบิลใหม่ได้ด้วยปุ่ม “ออกบิลใหม่”')
   } catch (e) {
     fail(e)
   } finally {
@@ -422,7 +429,7 @@ async function submitRefund() {
       <DialogContent class="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>ยกเลิกบิล</DialogTitle>
-          <DialogDescription>ถ้ารับเงินแล้ว ต้องให้เจ้าของร้านยืนยันตัวตน และเงินต้องอยู่ในกะที่ยังเปิด (นอกนั้นใช้คืนเงิน)</DialogDescription>
+          <DialogDescription>รายการลูกค้ากลุ่มนี้จะถูกยกเลิกและหายจาก “ยังไม่จ่าย” (ไม่เก็บเงิน · ไม่คิดค่ามือ) · ถ้ารับเงินแล้ว ต้องให้เจ้าของร้านยืนยันตัวตน</DialogDescription>
         </DialogHeader>
         <TextareaField v-model="voidReason" label="เหตุผล" hint="บังคับ" rows="2" />
         <DialogFooter class="gap-2">
