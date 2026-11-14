@@ -1,8 +1,21 @@
 <script setup lang="ts">
 // ลูกค้า (Guest ทั้งหมด): ค้นหาด้วยเบอร์เต็ม (ผลปิดบัง) -> เปิดดูรายละเอียด (บันทึก audit) -> แก้ไข / จับคู่
 // OWNER: คำขอลบข้อมูล (PDPA)
-import { Link2, Search, UserPlus } from '@lucide/vue'
-import { personNameSchema, reasonSchema, thaiPhoneSchema, type CustomerDetail, type Tables } from '@ifeew/shared'
+import { CalendarClock, Link2, MapPin, Search, UserPlus, Users } from '@lucide/vue'
+import {
+  bangkokDateLong,
+  bangkokTime,
+  bookingStatusLabels,
+  depositStatusLabels,
+  formatBaht,
+  formatDuration,
+  personNameSchema,
+  reasonSchema,
+  thaiPhoneSchema,
+  type BookingStatus,
+  type CustomerDetail,
+  type Tables,
+} from '@ifeew/shared'
 
 
 
@@ -65,6 +78,27 @@ watch(
 const selected = ref<CustomerDetail | null>(null)
 const editForm = reactive({ first_name: '', last_name: '', phone: '', email: '', staff_note: '' })
 const saving = ref(false)
+
+// ประวัติการจอง: สีป้ายสถานะ + แยกนัดที่จะถึง / ที่ผ่านมา
+const bookingTone: Record<BookingStatus, string> = {
+  PENDING: 'bg-pending-soft text-pending-ink',
+  CONFIRMED: 'bg-success-soft text-success-ink',
+  CHECKED_IN: 'bg-success-soft text-success-ink',
+  COMPLETED: 'bg-secondary text-heading',
+  CANCELLED: 'bg-danger-soft text-danger-ink',
+  NO_SHOW: 'bg-danger-soft text-danger-ink',
+  EXPIRED: 'bg-muted text-muted-foreground',
+}
+const isUpcoming = (b: CustomerDetail['bookings'][number]) =>
+  ['PENDING', 'CONFIRMED', 'CHECKED_IN'].includes(b.status) && new Date(b.ends_at).getTime() > Date.now()
+const upcomingBookings = computed(() => (selected.value?.bookings ?? []).filter(isUpcoming).reverse())
+const pastBookings = computed(() => (selected.value?.bookings ?? []).filter((b) => !isUpcoming(b)))
+const bookingGroups = computed(() =>
+  [
+    { key: 'upcoming', label: 'นัดที่จะถึง', items: upcomingBookings.value },
+    { key: 'past', label: 'ที่ผ่านมา', items: pastBookings.value },
+  ].filter((g) => g.items.length),
+)
 
 async function open(row: SearchRow) {
   try {
@@ -295,7 +329,8 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
           </ul>
         </SectionCard>
 
-        <SectionCard v-if="selected" :title="`${selected.first_name} ${selected.last_name}`.trim()"
+        <div v-if="selected" class="grid gap-6">
+        <SectionCard :title="`${selected.first_name} ${selected.last_name}`.trim()"
           description="แก้ชื่อ เบอร์โทร อีเมล และหมายเหตุของลูกค้าได้">
           <form class="grid gap-4" @submit.prevent="saveCustomer">
             <div class="grid gap-4 sm:grid-cols-2">
@@ -313,6 +348,50 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
             </div>
           </form>
         </SectionCard>
+
+        <!-- ประวัติการจอง -->
+        <SectionCard title="การจอง" :description="selected.bookings.length ? `${selected.bookings.length} รายการ${selected.bookings.length >= 50 ? ' (ล่าสุด 50)' : ''}` : undefined" flush>
+          <EmptyState v-if="!selected.bookings.length" compact title="ยังไม่มีการจอง" class="m-5" />
+          <div v-else class="grid">
+            <section v-for="g in bookingGroups" :key="g.key">
+              <h3 class="m-0 border-b border-border bg-muted/50 px-5 py-2 text-sm font-medium text-muted-foreground">
+                {{ g.label }} <span class="num">· {{ g.items.length }}</span>
+              </h3>
+              <ul class="m-0 grid list-none p-0">
+                <li v-for="b in g.items" :key="b.booking_id" class="grid gap-2 border-b border-border px-5 py-4 last:border-0">
+                  <div class="flex flex-wrap items-start justify-between gap-2">
+                    <p class="m-0 flex items-center gap-2 font-semibold text-heading">
+                      <CalendarClock class="size-4 shrink-0 text-brand-accent" aria-hidden="true" />
+                      <span>{{ bangkokDateLong(b.starts_at) }} · <span class="num">{{ bangkokTime(b.starts_at) }}–{{ bangkokTime(b.ends_at) }} น.</span></span>
+                    </p>
+                    <span class="shrink-0 rounded-full px-2.5 py-0.5 text-[13px] font-medium" :class="bookingTone[b.status]">{{ bookingStatusLabels[b.status] }}</span>
+                  </div>
+                  <p class="m-0 flex flex-wrap items-center gap-x-3 gap-y-1 text-sm text-muted-foreground">
+                    <span class="flex items-center gap-1"><MapPin class="size-3.5" aria-hidden="true" />{{ b.branch_name }}</span>
+                    <span class="flex items-center gap-1"><Users class="size-3.5" aria-hidden="true" /><span class="num">{{ b.items_count }}</span> คน</span>
+                    <span>{{ b.channel === 'ONLINE' ? 'จองออนไลน์' : 'ร้านจองให้' }}</span>
+                    <span v-if="b.booking_code" class="num">{{ b.booking_code }}</span>
+                  </p>
+                  <ol class="m-0 grid list-none gap-1 rounded-lg bg-muted/60 p-3 text-[15px]">
+                    <li v-for="(it, idx) in b.items" :key="idx" class="grid grid-cols-[3.5rem_minmax(0,1fr)_auto] items-baseline gap-2">
+                      <span class="text-sm text-muted-foreground">คนที่ {{ idx + 1 }}</span>
+                      <span class="min-w-0 text-heading">{{ it.service_name }} <span class="text-muted-foreground">{{ formatDuration(it.duration_minutes) }}</span></span>
+                      <span class="num text-right text-heading">{{ formatBaht(Number(it.price)) }}</span>
+                    </li>
+                  </ol>
+                  <div class="flex flex-wrap items-center justify-between gap-2 text-sm">
+                    <span class="text-muted-foreground">
+                      {{ depositStatusLabels[b.deposit_status] }}<template v-if="Number(b.deposit_required) > 0"> · <span class="num">{{ formatBaht(Number(b.deposit_required)) }}</span></template>
+                    </span>
+                    <span class="font-medium text-heading">รวม <span class="num">{{ formatBaht(Number(b.total_amount)) }}</span></span>
+                  </div>
+                  <p v-if="b.customer_note" class="m-0 text-sm"><span class="text-muted-foreground">หมายเหตุลูกค้า:</span> {{ b.customer_note }}</p>
+                </li>
+              </ul>
+            </section>
+          </div>
+        </SectionCard>
+        </div>
         <EmptyState v-else-if="results.length" compact title="เลือกลูกค้าเพื่อดูรายละเอียด" />
       </div>
     </template>

@@ -132,6 +132,25 @@ export interface CustomerDetail {
   merged_into_id: string | null
   created_at: string
   marketing_consent: boolean | null
+  /** ประวัติการจอง ล่าสุดก่อน (สูงสุด 50) */
+  bookings: CustomerBooking[]
+}
+
+export interface CustomerBooking {
+  booking_id: string
+  booking_code: string | null
+  channel: 'ONLINE' | 'STAFF'
+  status: BookingStatus
+  starts_at: string
+  ends_at: string
+  items_count: number
+  total_amount: number
+  deposit_required: number
+  deposit_status: DepositStatus
+  customer_note: string | null
+  created_at: string
+  branch_name: string
+  items: Array<{ service_name: string; duration_minutes: number; price: number }>
 }
 
 export const employeeCodeSchema = z
