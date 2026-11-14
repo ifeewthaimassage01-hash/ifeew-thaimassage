@@ -128,7 +128,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
     <div class="grid gap-6">
       <SectionCard title="ประเภทหมอและยอดประกัน" :description="`${employees.length} คน`" flush>
         <div class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>หมอ</TableHead><TableHead>ประเภท</TableHead><TableHead class="text-right">ประกันมือ/วัน</TableHead>
@@ -173,7 +173,7 @@ const time = (iso: string | null) => (iso ? bangkokTime(iso) : '-')
         </div>
         <LoadingBar v-if="loading" />
         <div class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>วันที่</TableHead><TableHead>หมอ</TableHead><TableHead>เข้างาน</TableHead>

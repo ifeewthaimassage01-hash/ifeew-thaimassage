@@ -118,7 +118,7 @@ function exportCsv() {
     <div v-if="tab === 'finance' && report" class="grid gap-6">
       <SectionCard flush>
         <div class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>งวด</TableHead><TableHead>สาขา</TableHead>

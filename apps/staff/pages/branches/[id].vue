@@ -139,7 +139,7 @@ onMounted(load)
           <Button type="submit" :disabled="savingHoliday"><Plus /> เพิ่ม</Button>
         </form>
         <div class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>วันที่</TableHead><TableHead>ชื่อ</TableHead><TableHead>เวลา</TableHead><TableHead>สถานะ</TableHead>

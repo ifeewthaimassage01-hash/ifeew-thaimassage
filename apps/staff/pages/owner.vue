@@ -82,7 +82,7 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
 
       <SectionCard title="เทียบสาขา (เดือนนี้)" flush>
         <div class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>สาขา</TableHead>

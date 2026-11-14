@@ -55,7 +55,7 @@ watch([branchId, from, to, () => company.value?.company_id], load, { immediate: 
 
     <SectionCard flush>
       <div class="overflow-x-auto">
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow class="hover:bg-transparent">
               <TableHead>หมอ</TableHead>

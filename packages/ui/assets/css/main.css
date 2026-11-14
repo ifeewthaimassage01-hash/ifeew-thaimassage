@@ -153,6 +153,77 @@
   font-variant-numeric: tabular-nums;
 }
 
+/*
+ * <Table stack> บนจอแคบ: แต่ละแถวเป็นการ์ด (ป้ายซ้าย · ค่าขวา) แทนตารางเลื่อนข้าง
+ * อยู่นอก @layer เพื่อชนะ utility ของ TableCell (px-4 whitespace-nowrap ฯลฯ) · ช่องที่ซ่อนด้วย .hidden ยังซ่อน
+ */
+@media (max-width: 639.98px) {
+  table[data-stack] > thead {
+    display: none;
+  }
+  table[data-stack],
+  table[data-stack] > tbody,
+  table[data-stack] > tfoot {
+    display: block;
+    width: 100%;
+  }
+  table[data-stack] > tbody > tr,
+  table[data-stack] > tfoot > tr {
+    display: grid;
+    gap: 0.5rem;
+    padding: 0.875rem 1rem;
+  }
+  table[data-stack] td:not(.hidden),
+  table[data-stack] th:not(.hidden) {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    min-width: 0;
+    padding: 0;
+    height: auto;
+    white-space: normal;
+    text-align: right;
+    overflow-wrap: anywhere;
+  }
+  table[data-stack] td[data-label]:not([data-label=''])::before,
+  table[data-stack] th[data-label]:not([data-label=''])::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    max-width: 45%;
+    color: var(--muted-foreground);
+    font-size: 13px;
+    font-weight: 400;
+    text-align: left;
+  }
+  /* ช่องแรก = หัวการ์ด (แถวรวมใน tfoot ด้วย) */
+  table[data-stack] > :is(tbody, tfoot) > tr > :first-child {
+    justify-content: flex-start;
+    text-align: left;
+    font-size: 15px;
+  }
+  table[data-stack] > :is(tbody, tfoot) > tr > :first-child::before {
+    content: none;
+  }
+  /* ช่องที่ไม่ต้องแสดงบนจอแคบ: <TableCell data-stack-hide> */
+  table[data-stack] [data-stack-hide] {
+    display: none !important;
+  }
+  /* ช่องปุ่ม (หัวคอลัมน์ว่าง/sr-only) ชิดซ้าย ใต้ข้อมูล */
+  table[data-stack] td[data-label=''] {
+    justify-content: flex-start;
+    flex-wrap: wrap;
+    text-align: left;
+  }
+  table[data-stack] td[data-label='']:not(:first-child) > :first-child {
+    margin-left: -0.5rem;
+  }
+  table[data-stack] [data-full] {
+    display: block;
+    text-align: center;
+  }
+}
+
 @media (prefers-reduced-motion: reduce) {
   *,
   *::before,

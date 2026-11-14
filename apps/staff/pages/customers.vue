@@ -398,7 +398,7 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
 
     <SectionCard v-else title="คำขอลบข้อมูล (PDPA)" flush>
       <div class="overflow-x-auto">
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow class="hover:bg-transparent">
               <TableHead>วันที่ขอ</TableHead><TableHead>ลูกค้า</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>

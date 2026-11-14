@@ -415,7 +415,7 @@ async function removeCategory(c: Category) {
     <!-- หมวดหมู่ -->
     <SectionCard v-else flush>
       <div class="overflow-x-auto">
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow class="hover:bg-transparent">
               <TableHead class="w-20">ลำดับ</TableHead><TableHead>ชื่อ</TableHead><TableHead>รายละเอียด</TableHead><TableHead>สถานะ</TableHead>
@@ -424,7 +424,7 @@ async function removeCategory(c: Category) {
           </TableHeader>
           <TableBody>
             <TableRow v-for="c in categories" :key="c.id" :class="c.is_active ? '' : 'text-muted-foreground'">
-              <TableCell class="num">{{ c.sort_order }}</TableCell>
+              <TableCell class="num" data-stack-hide>{{ c.sort_order }}</TableCell>
               <TableCell class="font-medium text-heading">{{ c.name }}</TableCell>
               <TableCell class="max-w-80 truncate">{{ c.description || '—' }}</TableCell>
               <TableCell><Badge :variant="c.is_active ? 'success' : 'neutral'" dot>{{ c.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}</Badge></TableCell>
@@ -536,7 +536,7 @@ async function removeCategory(c: Category) {
               {{ formatDuration(o.duration_minutes) }} <Badge v-if="!o.is_active" variant="neutral" class="ml-1">ปิดแล้ว</Badge>
             </h3>
             <div class="overflow-x-auto rounded-lg border border-border">
-              <Table>
+              <Table stack>
                 <TableHeader>
                   <TableRow class="hover:bg-transparent">
                     <TableHead>มีผลตั้งแต่</TableHead><TableHead>ถึง</TableHead><TableHead class="text-right">ราคา</TableHead>

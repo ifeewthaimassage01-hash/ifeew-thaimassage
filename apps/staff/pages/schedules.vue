@@ -189,9 +189,9 @@ async function copyPreviousWeek() {
     </PageHeader>
 
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <div class="flex items-center gap-1 rounded-lg border border-border bg-card p-1">
+      <div class="flex w-full items-center gap-1 rounded-lg border border-border bg-card p-1 sm:w-auto">
         <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ก่อน" @click="monday = addDays(monday, -7)"><ChevronLeft /></Button>
-        <span class="num min-w-[220px] px-2 text-center text-[15px] font-medium text-heading">{{ weekLabel }}</span>
+        <span class="num min-w-0 flex-1 truncate px-1 text-center text-[15px] font-medium text-heading sm:min-w-[220px] sm:px-2">{{ weekLabel }}</span>
         <Button variant="ghost" size="icon-sm" aria-label="สัปดาห์ถัดไป" @click="monday = addDays(monday, 7)"><ChevronRight /></Button>
         <Button variant="ghost" size="sm" @click="monday = mondayOf(bangkokToday())">สัปดาห์นี้</Button>
       </div>

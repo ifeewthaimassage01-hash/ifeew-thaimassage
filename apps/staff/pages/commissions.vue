@@ -133,7 +133,7 @@ watch(() => company.value?.company_id, async (id) => {
 
         <template v-if="draft">
           <div class="overflow-x-auto">
-            <Table>
+            <Table stack>
               <TableHeader>
                 <TableRow class="hover:bg-transparent">
                   <TableHead>หมอ</TableHead><TableHead class="text-right">ค่ามือ</TableHead><TableHead class="text-right">ประกันมือ</TableHead>
@@ -184,7 +184,7 @@ watch(() => company.value?.company_id, async (id) => {
         </template>
         <LoadingBar v-if="loading" />
         <div v-if="data" class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>หมอ</TableHead><TableHead class="text-right">ค่ามือ</TableHead><TableHead class="text-right">ประกันมือ</TableHead>

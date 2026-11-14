@@ -154,7 +154,7 @@ onMounted(() => {
       <SectionCard title="เครื่องที่ผูกไว้" :description="`${devices.length} เครื่อง`" flush>
         <LoadingBar v-if="loading" />
         <div class="overflow-x-auto">
-          <Table>
+          <Table stack>
             <TableHeader>
               <TableRow class="hover:bg-transparent">
                 <TableHead>ชื่อเครื่อง</TableHead><TableHead>สาขา</TableHead><TableHead>สถานะ</TableHead>

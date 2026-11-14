@@ -383,7 +383,7 @@ onMounted(load)
       <template #actions><SwitchField v-model="showResigned" label="แสดงผู้ลาออก" class="gap-3" /></template>
       <LoadingBar v-if="loading" />
       <div class="overflow-x-auto">
-        <Table>
+        <Table stack>
           <TableHeader>
             <TableRow class="hover:bg-transparent">
               <TableHead>พนักงาน</TableHead><TableHead>สาขา</TableHead><TableHead>เริ่มงาน</TableHead><TableHead>สถานะ</TableHead>
@@ -549,7 +549,7 @@ onMounted(load)
         </DialogHeader>
         <div class="-mx-6 overflow-auto px-6">
           <div class="overflow-x-auto rounded-lg border border-border">
-            <Table>
+            <Table stack>
               <TableHeader>
                 <TableRow class="hover:bg-transparent">
                   <TableHead>มีผล</TableHead><TableHead>จาก</TableHead><TableHead>ไป</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
