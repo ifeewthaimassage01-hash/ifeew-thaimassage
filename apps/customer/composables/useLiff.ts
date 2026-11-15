@@ -34,6 +34,15 @@ const REMEMBER_KEY = 'ifeew.line-login'
 const SDK_URL = 'https://static.line-scdn.net/liff/edge/2/sdk.js'
 let configP: Promise<LinePublicConfig | null> | null = null
 let sdkP: Promise<LiffSdk | null> | null = null
+/** เหตุผลที่เริ่ม LIFF ไม่สำเร็จครั้งล่าสุด (แสดงให้ผู้ใช้/ร้านรู้ว่าติดตรงไหน) */
+let lastInitError = ''
+
+function describeInitError(e: unknown): string {
+  const err = e as { code?: string; message?: string } | null
+  const where = typeof location !== 'undefined' ? location.origin : ''
+  if (where.includes('localhost') || where.includes('127.0.0.1')) return `ทดสอบบน ${where} ไม่ได้ ต้องเปิดจากโดเมนที่ตั้งเป็น Endpoint URL ของ LIFF`
+  return [err?.code, err?.message].filter(Boolean).join(': ') || 'ไม่ทราบสาเหตุ'
+}
 
 function loadSdk(): Promise<LiffSdk | null> {
   const w = window as unknown as { liff?: LiffSdk }
@@ -102,11 +111,18 @@ export function useLiff() {
         const cfg = await config()
         if (!cfg?.liff_id) return null
         const liff = await loadSdk()
-        if (!liff) return null
+        if (!liff) {
+          lastInitError = 'โหลด LINE SDK ไม่สำเร็จ (เครือข่ายหรือตัวบล็อกโฆษณา)'
+          sdkP = null // ให้ลองใหม่ได้ตอนกดอีกครั้ง
+          return null
+        }
         await liff.init({ liffId: cfg.liff_id })
+        lastInitError = ''
         return liff
       } catch (e) {
         console.warn('LIFF init failed', e)
+        lastInitError = describeInitError(e)
+        sdkP = null // ให้ลองใหม่ได้ตอนกดอีกครั้ง
         return null
       }
     })()
@@ -155,7 +171,7 @@ export function useLiff() {
   /** ไปหน้าเข้าสู่ระบบ LINE แล้วกลับมาที่ redirectPath (ค่าเริ่มต้น = หน้าปัจจุบัน) */
   async function login(redirectPath?: string) {
     const liff = await sdk()
-    if (!liff) throw new Error('ยังเข้าสู่ระบบด้วย LINE ไม่ได้ในตอนนี้ กรุณาลองใหม่ภายหลัง')
+    if (!liff) throw new Error(`เข้าสู่ระบบด้วย LINE ไม่สำเร็จ${lastInitError ? ` (${lastInitError})` : ''}`)
     if (freshToken(liff)) {
       await refreshState(liff)
       return
@@ -185,7 +201,7 @@ export function useLiff() {
   /** ปุ่ม "เชื่อม LINE" ของการจองหนึ่งรายการ: ได้ token ทันทีถ้าเข้าสู่ระบบอยู่ ไม่งั้นพาไปเข้าสู่ระบบ */
   async function loginOrToken(redirectPath: string): Promise<string | null> {
     const liff = await sdk()
-    if (!liff) throw new Error('ยังใช้ LINE ไม่ได้ในตอนนี้ กรุณาลองใหม่ภายหลัง')
+    if (!liff) throw new Error(`เชื่อม LINE ไม่สำเร็จ${lastInitError ? ` (${lastInitError})` : ''}`)
     const token = freshToken(liff)
     if (token) {
       await refreshState(liff)

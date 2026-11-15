@@ -195,7 +195,7 @@ onMounted(load)
             <TextField v-model="branchForm.sort_order" label="ลำดับการแสดง" numeric="integer" />
           </div>
           <TextField v-model="branchForm.address" label="ที่อยู่" />
-          <TextField v-model="branchForm.map_url" label="ลิงก์แผนที่" placeholder="https://..." />
+          <TextField v-model="branchForm.map_url" label="ลิงก์ Google Maps" placeholder="https://maps.app.goo.gl/..." hint="เปิด Google Maps ค้นหาร้าน กด “แชร์” แล้วคัดลอกลิงก์มาวาง · ลูกค้ากด “แผนที่” แล้วนำทางมาได้เลย" inputmode="url" />
           <div class="grid gap-2">
             <Label for="branch-image">รูปสาขา</Label>
             <div class="flex flex-wrap items-start gap-3">
