@@ -2,9 +2,9 @@
 // body: { company_id, action: 'check' | 'setup_webhook' | 'test_group', group_id? }
 // - check:         ตรวจ token (ชื่อบอท/basic ID) · สถานะ webhook · โควตาข้อความเดือนนี้
 // - setup_webhook: ตั้ง Webhook URL ของ channel ให้อัตโนมัติ แล้วให้ LINE ยิงทดสอบ (ตรวจ Channel secret ไปในตัว)
-// - test_group:    ส่งข้อความทดสอบเข้ากลุ่มที่เชื่อมไว้
+// - test_group:    ส่งการ์ดตัวอย่างเข้ากลุ่มที่เชื่อมไว้
 import { adminClient, json, preflight, userClient, UUID_RE } from '../_shared/http.ts'
-import { lineGet, linePush, lineSecret, lineSend } from '../_shared/line.ts'
+import { lineGet, linePushMessage, lineSecret, lineSend, sampleStaffMessage } from '../_shared/line.ts'
 
 Deno.serve(async (req) => {
   const early = preflight(req)
@@ -88,10 +88,13 @@ Deno.serve(async (req) => {
     // test_group
     const groupId = String(body.group_id ?? '')
     const { data: groups } = await user.rpc('line_groups_list', { p_company_id: companyId })
-    if (!((groups ?? []) as Array<{ group_id: string }>).some((g) => g.group_id === groupId)) {
+    const group = ((groups ?? []) as Array<{ group_id: string; branch_name: string | null }>).find((g) => g.group_id === groupId)
+    if (!group) {
       return json(req, 404, { error_code: 'NOT_FOUND', message: 'ไม่พบกลุ่มนี้' })
     }
-    const status = await linePush(token, groupId, '🔔 ทดสอบการแจ้งเตือนจากระบบร้าน\nถ้าเห็นข้อความนี้ แปลว่ากลุ่มนี้พร้อมรับแจ้งเตือนแล้ว')
+    // ส่งการ์ดตัวอย่างแบบที่กลุ่มจะได้รับจริง (การ์ดไม่ผ่าน → ข้อความธรรมดา)
+    const staffUrl = (settings as { staff_url?: string | null } | null)?.staff_url ?? null
+    const status = await linePushMessage(token, groupId, sampleStaffMessage(group.branch_name, staffUrl))
     return json(req, 200, { ok: status === 200, status })
   } catch (e) {
     console.error('line-admin', e)

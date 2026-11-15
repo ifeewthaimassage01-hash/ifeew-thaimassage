@@ -45,13 +45,31 @@ interface LineGroup {
   linked_at: string
 }
 
-const EVENTS = [
-  { key: 'NEW_BOOKING', label: 'มีการจองใหม่', hint: 'การจองที่ต้องมัดจำ ส่งตอนลูกค้าส่งสลิป' },
-  { key: 'DEPOSIT_SLIP', label: 'ลูกค้าส่งสลิปมัดจำ', hint: 'พร้อมรายละเอียดการจอง รอพนักงานตรวจ' },
-  { key: 'BOOKING_CANCELLED', label: 'ลูกค้ายกเลิกการจอง', hint: 'ยกเลิกเองจากลิงก์ติดตาม' },
-  { key: 'WALK_IN', label: 'รับลูกค้าหน้าร้าน', hint: 'เกิดบ่อย ใช้โควตามาก' },
-  { key: 'SERVICE_DONE', label: 'บริการเสร็จ', hint: 'เกิดบ่อย ใช้โควตามาก' },
+// เหตุการณ์ที่ส่งเข้ากลุ่ม แบ่งเป็นหมวด · สลิปแยก "ยังไม่ตรวจ" กับ "ตรวจแล้ว" ให้ชัด (migration 070)
+const EVENT_GROUPS = [
+  {
+    label: 'การจอง',
+    events: [
+      { key: 'NEW_BOOKING', label: 'จองใหม่ (ไม่ต้องมัดจำ)', hint: 'แจ้งทันทีเมื่อลูกค้าจอง', badge: null },
+      { key: 'BOOKING_CANCELLED', label: 'ลูกค้ายกเลิกการจอง', hint: 'ยกเลิกเองจากลิงก์ติดตาม', badge: null },
+    ],
+  },
+  {
+    label: 'สลิปมัดจำ',
+    events: [
+      { key: 'DEPOSIT_SLIP', label: 'สลิปรอตรวจ', hint: 'ลูกค้าโอนแล้ว ยังไม่มีใครตรวจ (พร้อมรายละเอียดการจอง)', badge: 'pending' },
+      { key: 'DEPOSIT_REVIEWED', label: 'ตรวจสลิปแล้ว', hint: 'ผ่านหรือไม่ผ่าน และใครตรวจ คนอื่นจะได้ไม่ตรวจซ้ำ', badge: 'success' },
+    ],
+  },
+  {
+    label: 'หน้าร้าน',
+    events: [
+      { key: 'WALK_IN', label: 'รับลูกค้าหน้าร้าน', hint: 'เกิดบ่อย ใช้โควตามาก', badge: null },
+      { key: 'SERVICE_DONE', label: 'บริการเสร็จ', hint: 'เกิดบ่อย ใช้โควตามาก', badge: null },
+    ],
+  },
 ] as const
+const EVENTS = EVENT_GROUPS.flatMap((g) => [...g.events])
 type EventKey = (typeof EVENTS)[number]['key']
 const REMINDER_ITEMS = [
   { value: 30, title: '30 นาที' },
@@ -381,7 +399,8 @@ const previewText = computed<string | null>(() => {
     if (!e) return null
     const lines: Record<EventKey, [string, string, string]> = {
       NEW_BOOKING: ['การจองใหม่', `คุณสมใจ · ${sampleShort} น. · 2 คน · ฿900`, '/bookings'],
-      DEPOSIT_SLIP: ['จองใหม่ + สลิปมัดจำ', `คุณสมใจ · ${sampleShort} น. · 2 คน · ฿900 · มัดจำ ฿200 รอตรวจสลิป`, '/bookings'],
+      DEPOSIT_SLIP: ['จองใหม่ · สลิปรอตรวจ', `คุณสมใจ · ${sampleShort} น. · 2 คน · ฿900 · มัดจำ ฿200 รอตรวจสลิป`, '/bookings'],
+      DEPOSIT_REVIEWED: ['สลิปผ่าน · ยืนยันการจองแล้ว', `คุณสมใจ · นัด ${sampleShort} น. · มัดจำ ฿200 · ตรวจโดย แตน`, '/bookings'],
       BOOKING_CANCELLED: ['ลูกค้ายกเลิกการจอง', `คุณสมใจ · นัด ${sampleShort} น.`, '/bookings'],
       WALK_IN: ['รับลูกค้าหน้าร้าน', '1 คน · นวดไทย 60 นาที', '/queue'],
       SERVICE_DONE: ['บริการเสร็จแล้ว', 'คิว 012 · นวดไทย 60 นาที · หมอแนน · รอชำระเงิน', '/payments'],
@@ -414,8 +433,6 @@ const previewWhen = computed(() =>
       ? 'ส่งทันทีหลังลูกค้าจองผ่าน LINE'
       : `ส่งก่อนถึงนัด ${reminderLabel.value}`,
 )
-// แยกบรรทัดที่เป็นลิงก์ ให้แสดงเหมือนลิงก์ใน LINE
-const previewLines = computed(() => (previewText.value ?? '').split('\n').map((l) => ({ text: l, link: /https?:\/\//.test(l) })))
 
 // ---------------------------------------------------------------- ตัวช่วย
 const fmt = (v: string) => new Date(v).toLocaleString('th-TH', { timeZone: 'Asia/Bangkok', dateStyle: 'medium', timeStyle: 'short' })
@@ -651,11 +668,20 @@ watch(companyId, loadAll)
             <fieldset class="m-0 grid gap-3 border-0 p-0" @focusin="preview = 'group'">
               <legend class="mb-1 p-0 font-semibold text-heading">ถึงกลุ่มพนักงาน</legend>
               <p class="m-0 -mt-1 text-sm text-muted-foreground">นับโควตาตามจำนวนคนในกลุ่ม ส่งเข้ากลุ่ม 5 คนนับเป็น 5 ข้อความ</p>
-              <div class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
-                <CheckboxField v-for="e in EVENTS" :key="e.key" v-model="cfg.events[e.key]">
-                  <span class="text-heading">{{ e.label }}</span>
-                  <span class="block text-sm text-muted-foreground">{{ e.hint }}</span>
-                </CheckboxField>
+              <div class="grid gap-4">
+                <div v-for="g in EVENT_GROUPS" :key="g.label" class="grid gap-2.5">
+                  <span class="text-[13px] font-medium text-muted-foreground">{{ g.label }}</span>
+                  <div class="grid gap-x-6 gap-y-3 sm:grid-cols-2">
+                    <CheckboxField v-for="e in g.events" :key="e.key" v-model="cfg.events[e.key]">
+                      <span class="flex flex-wrap items-center gap-2 text-heading">
+                        {{ e.label }}
+                        <Badge v-if="e.badge === 'pending'" variant="pending" dot>ยังไม่ตรวจ</Badge>
+                        <Badge v-else-if="e.badge === 'success'" variant="success" dot>ตรวจแล้ว</Badge>
+                      </span>
+                      <span class="block text-sm text-muted-foreground">{{ e.hint }}</span>
+                    </CheckboxField>
+                  </div>
+                </div>
               </div>
             </fieldset>
 
@@ -686,13 +712,13 @@ watch(companyId, loadAll)
                 <span v-else class="grid size-9 shrink-0 place-items-center rounded-full bg-card text-sm font-semibold text-heading" aria-hidden="true">{{ (account?.name ?? 'L').slice(0, 1) }}</span>
                 <div class="grid min-w-0 gap-1">
                   <span class="text-xs text-muted-foreground">{{ account?.name ?? 'LINE OA ของร้าน' }}</span>
-                  <p class="m-0 rounded-[18px] rounded-tl-md bg-card px-3.5 py-2.5 text-sm leading-relaxed text-foreground shadow-[0_1px_2px_rgba(81,67,55,.06)]">
-                    <template v-for="(l, k) in previewLines" :key="k">
-                      <span v-if="l.link" class="break-all text-primary underline underline-offset-2">{{ l.text }}</span>
-                      <template v-else>{{ l.text }}</template>
-                      <br v-if="k < previewLines.length - 1" />
-                    </template>
-                  </p>
+                  <LineCardPreview
+                    :kind="preview"
+                    :event="firstEvent"
+                    :branch="sampleBranch"
+                    :staff-url="cfg.staff_url.trim()"
+                    :site-url="baseCustomerUrl"
+                  />
                 </div>
               </div>
               <p v-else class="m-0 mt-10 text-center text-[15px] text-muted-foreground">{{ previewEmpty }}</p>

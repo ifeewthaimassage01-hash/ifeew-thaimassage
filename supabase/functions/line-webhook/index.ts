@@ -5,7 +5,7 @@
 // - พิมพ์ "ยกเลิกเชื่อมร้าน" / บอทออกจากกลุ่ม → เลิกส่งแจ้งเตือนเข้ากลุ่มนี้
 // การตอบกลับ (reply) ฟรี ไม่นับโควตา · ตอบ 200 เสมอเมื่อลายเซ็นถูก (LINE จะไม่ส่งซ้ำ)
 import { adminClient, rateLimit, UUID_RE } from '../_shared/http.ts'
-import { lineGroupName, lineReply, lineSecret, lineSignatureOk } from '../_shared/line.ts'
+import { lineGroupName, lineReply, lineSecret, lineSignatureOk, noticeMessage } from '../_shared/line.ts'
 
 interface LineEvent {
   type: string
@@ -18,8 +18,9 @@ const LINK_RE = /^(?:เชื่อมร้าน|link)\s*([A-Za-z2-9]{6})$/i
 const UNLINK_RE = /^(?:ยกเลิกเชื่อมร้าน|unlink)$/i
 
 const EVENT_LABELS: Record<string, string> = {
-  NEW_BOOKING: 'มีการจองใหม่',
-  DEPOSIT_SLIP: 'ลูกค้าส่งสลิปมัดจำ',
+  NEW_BOOKING: 'จองใหม่ (ไม่ต้องมัดจำ)',
+  DEPOSIT_SLIP: 'สลิปมัดจำรอตรวจ',
+  DEPOSIT_REVIEWED: 'ตรวจสลิปแล้ว',
   BOOKING_CANCELLED: 'ลูกค้ายกเลิกการจอง',
   WALK_IN: 'รับลูกค้าหน้าร้าน',
   SERVICE_DONE: 'บริการเสร็จ',
@@ -54,11 +55,16 @@ Deno.serve(async (req) => {
   for (const ev of events) {
     try {
       const groupId = ev.source?.type === 'group' ? ev.source.groupId ?? '' : ''
-      const reply = (text: string) => lineReply(token, ev.replyToken ?? '', text)
+      // ตอบกลับเป็นการ์ด (การตอบกลับไม่นับโควตา) · การ์ดไม่ผ่าน → lineReply ส่งข้อความธรรมดาแทน
+      const reply = (m: Parameters<typeof lineReply>[2]) => lineReply(token, ev.replyToken ?? '', m)
 
       if (ev.type === 'join' && groupId) {
         await reply(
-          'สวัสดีครับ 🙏\nเชื่อมกลุ่มนี้กับระบบร้านเพื่อรับแจ้งเตือน:\n1. เจ้าของร้านเปิดแอปพนักงาน → LINE OA → สร้างรหัส\n2. พิมพ์ในกลุ่มนี้ว่า  เชื่อมร้าน รหัส  เช่น  เชื่อมร้าน ABC123',
+          noticeMessage('สวัสดีครับ เชื่อมกลุ่มนี้กับระบบร้าน: สร้างรหัสในแอปพนักงาน แล้วพิมพ์ เชื่อมร้าน รหัส', {
+            title: 'สวัสดีครับ 🙏',
+            sub: 'เชื่อมกลุ่มนี้เพื่อรับแจ้งเตือนจากร้าน',
+            lines: ['1. เจ้าของร้านเปิดแอปพนักงาน → LINE OA → สร้างรหัส', '2. พิมพ์ในกลุ่มนี้ว่า “เชื่อมร้าน รหัส”', 'เช่น เชื่อมร้าน ABC123'],
+          }),
         )
         continue
       }
@@ -73,14 +79,22 @@ Deno.serve(async (req) => {
 
       if (UNLINK_RE.test(text)) {
         await admin.rpc('line_group_left', { p_group_id: groupId })
-        await reply('เลิกส่งแจ้งเตือนเข้ากลุ่มนี้แล้ว')
+        await reply(
+          noticeMessage('เลิกส่งแจ้งเตือนเข้ากลุ่มนี้แล้ว', {
+            title: 'เลิกส่งแจ้งเตือนแล้ว',
+            tone: 'beige',
+            lines: ['กลุ่มนี้จะไม่ได้รับแจ้งเตือนจากร้านอีก', 'เชื่อมใหม่ได้ด้วยรหัสจากแอปพนักงาน'],
+          }),
+        )
         continue
       }
 
       const m = LINK_RE.exec(text)
       if (!m) continue
       if (!(await rateLimit(admin, `line-link:${groupId}`, 10, 600))) {
-        await reply('ลองหลายครั้งเกินไป กรุณารอ 10 นาทีแล้วลองใหม่')
+        await reply(
+          noticeMessage('ลองหลายครั้งเกินไป กรุณารอ 10 นาทีแล้วลองใหม่', { title: 'ลองหลายครั้งเกินไป', tone: 'pending', lines: ['กรุณารอ 10 นาทีแล้วลองใหม่'] }),
+        )
         continue
       }
       const name = await lineGroupName(token, groupId)
@@ -93,12 +107,27 @@ Deno.serve(async (req) => {
       if (error) throw error
       const linked = data as { company_name: string; branch_name: string | null; events: string[] | null } | null
       const events = (linked?.events ?? []).map((e) => EVENT_LABELS[e] ?? e)
-      await reply(
-        linked
-          ? `✅ เชื่อมกลุ่มนี้กับ ${linked.company_name}${linked.branch_name ? ` (${linked.branch_name.startsWith('สาขา') ? '' : 'สาขา'}${linked.branch_name})` : ' (ทุกสาขา)'} แล้ว` +
-              (events.length ? `\nจะแจ้งเตือนเมื่อ: ${events.join(' · ')}` : '\nตอนนี้ยังไม่ได้เลือกเหตุการณ์ที่จะแจ้งเตือน (ตั้งได้ในแอปพนักงาน)')
-          : 'รหัสไม่ถูกต้องหรือหมดอายุแล้ว (ใช้ได้ 30 นาที ครั้งเดียว) กรุณาสร้างรหัสใหม่ในแอปพนักงาน',
-      )
+      if (linked) {
+        const where = linked.branch_name ? `${linked.branch_name.startsWith('สาขา') ? '' : 'สาขา'}${linked.branch_name}` : 'ทุกสาขา'
+        await reply(
+          noticeMessage(`✅ เชื่อมกลุ่มนี้กับ ${linked.company_name} (${where}) แล้ว`, {
+            title: '✅ เชื่อมกลุ่มแล้ว',
+            sub: `${linked.company_name} · ${where}`,
+            tone: 'success',
+            lines: events.length
+              ? ['จะแจ้งเตือนในกลุ่มนี้เมื่อ', ...events.map((e) => `• ${e}`)]
+              : ['ยังไม่ได้เลือกเหตุการณ์ที่จะแจ้งเตือน', 'ตั้งได้ในแอปพนักงาน → LINE OA'],
+          }),
+        )
+      } else {
+        await reply(
+          noticeMessage('รหัสไม่ถูกต้องหรือหมดอายุแล้ว กรุณาสร้างรหัสใหม่ในแอปพนักงาน', {
+            title: 'รหัสไม่ถูกต้อง',
+            tone: 'danger',
+            lines: ['รหัสไม่ถูกต้องหรือหมดอายุแล้ว (ใช้ได้ 30 นาที ครั้งเดียว)', 'กรุณาสร้างรหัสใหม่ในแอปพนักงาน'],
+          }),
+        )
+      }
     } catch (e) {
       console.error('line-webhook event', ev.type, e)
     }

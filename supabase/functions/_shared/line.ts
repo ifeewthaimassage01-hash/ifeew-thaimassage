@@ -5,6 +5,8 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { buildLineMessage, type FlexData } from './lineFlex.ts'
 
 export type { FlexData } from './lineFlex.ts'
+export { noticeMessage, sampleStaffMessage } from './lineFlex.ts'
+type LineMessage = Record<string, unknown>
 
 const API = 'https://api.line.me'
 
@@ -57,13 +59,29 @@ export async function linePush(token: string, to: string, text: string, flex?: F
 }
 
 /** ตอบกลับข้อความ (ฟรี ไม่นับโควตา) ด้วย replyToken จาก webhook */
-export async function lineReply(token: string, replyToken: string, text: string): Promise<void> {
+export async function lineReply(token: string, replyToken: string, message: string | LineMessage): Promise<void> {
   if (!replyToken) return
+  const msg: LineMessage = typeof message === 'string' ? { type: 'text', text: message.slice(0, 5000) } : message
   const res = await lineFetch(token, '/v2/bot/message/reply', {
     method: 'POST',
-    body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: text.slice(0, 5000) }] }),
+    body: JSON.stringify({ replyToken, messages: [msg] }),
   })
-  if (!res.ok) console.error('line reply', res.status, await res.text().catch(() => ''))
+  if (res.ok) return
+  console.error('line reply', msg.type, res.status, await res.text().catch(() => ''))
+  // การ์ดไม่ผ่าน → ส่งข้อความธรรมดาแทน (replyToken ยังใช้ได้เพราะครั้งแรกไม่สำเร็จ)
+  if (res.status === 400 && msg.type === 'flex') {
+    await lineFetch(token, '/v2/bot/message/reply', {
+      method: 'POST',
+      body: JSON.stringify({ replyToken, messages: [{ type: 'text', text: String(msg.altText ?? '').slice(0, 5000) || ' ' }] }),
+    })
+  }
+}
+
+/** ส่ง push ข้อความสำเร็จรูป (เช่น การ์ดจาก noticeMessage) · การ์ดไม่ผ่าน → ส่ง altText เป็นข้อความธรรมดา */
+export async function linePushMessage(token: string, to: string, message: LineMessage): Promise<number> {
+  const status = await pushOnce(token, to, message)
+  if (status === 400 && message.type === 'flex') return await pushOnce(token, to, { type: 'text', text: String(message.altText ?? '').slice(0, 5000) || ' ' })
+  return status
 }
 
 export async function lineGroupName(token: string, groupId: string): Promise<string | null> {

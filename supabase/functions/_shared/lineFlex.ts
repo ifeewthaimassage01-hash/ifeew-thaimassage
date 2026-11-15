@@ -46,6 +46,9 @@ export type FlexData =
       link: string | null
       booking: FlexBooking | null
       slip_amount: number | null
+      /** DEPOSIT_REVIEWED: "ตรวจโดย …" / "ตรวจอัตโนมัติ" และผลตรวจ */
+      review?: string | null
+      review_ok?: boolean | null
     }
 
 type Json = Record<string, unknown>
@@ -167,6 +170,9 @@ function staffBubble(d: Extract<FlexData, { kind: 'staff' }>): Json {
         { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: itemRows(b) },
         sep(),
         row(`รวม ${b.people} คน`, baht(b.total), { weight: 'bold' }),
+        ...(d.event === 'DEPOSIT_REVIEWED'
+          ? [row(d.review_ok ? 'มัดจำ' : 'ยอดในสลิป', baht(d.slip_amount), { color: d.review_ok ? TONES.success.fg : TONES.danger.fg, weight: 'bold' }), ...(d.review ? [text(d.review, { color: DRIFT, size: 'xs' })] : [])]
+          : []),
         ...(d.event === 'DEPOSIT_SLIP' ? [row('โอนมัดจำ', `${baht(d.slip_amount)} รอตรวจ`, { color: TONES.pending.fg, weight: 'bold' })] : []),
         ...(d.event === 'NEW_BOOKING' && Number(b.deposit_required) > 0 ? [row('มัดจำ', baht(b.deposit_required))] : []),
       ]
@@ -174,10 +180,67 @@ function staffBubble(d: Extract<FlexData, { kind: 'staff' }>): Json {
   return {
     type: 'bubble',
     size: 'kilo',
-    header: header(title ?? d.title, branch ?? null, STAFF_TONE[d.event] ?? 'beige'),
+    header: header(title ?? d.title, branch ?? null, d.event === 'DEPOSIT_REVIEWED' ? (d.review_ok ? 'success' : 'danger') : STAFF_TONE[d.event] ?? 'beige'),
     body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', backgroundColor: LINEN, contents: body },
     ...(isUri(d.link) ? { footer: { type: 'box', layout: 'vertical', paddingAll: '10px', contents: [button('เปิดในระบบ', d.link, true)] } } : {}),
   }
+}
+
+/** การ์ดประกาศสั้น (ข้อความตอบกลับของบอท / ทดสอบ) */
+export function noticeMessage(
+  altText: string,
+  o: { title: string; sub?: string; lines: string[]; tone?: keyof typeof TONES; button?: { label: string; uri: string } },
+): Json {
+  return {
+    type: 'flex',
+    altText: altText.replace(/\s+/g, ' ').slice(0, 400),
+    contents: {
+      type: 'bubble',
+      size: 'kilo',
+      header: header(o.title, o.sub ?? null, o.tone ?? 'teak'),
+      body: {
+        type: 'box',
+        layout: 'vertical',
+        spacing: 'sm',
+        paddingAll: '14px',
+        backgroundColor: LINEN,
+        contents: o.lines.map((l) => text(l)),
+      },
+      ...(o.button && isUri(o.button.uri)
+        ? { footer: { type: 'box', layout: 'vertical', paddingAll: '10px', contents: [button(o.button.label, o.button.uri, true)] } }
+        : {}),
+    },
+  }
+}
+
+/** การ์ดตัวอย่างที่กลุ่มพนักงานจะได้รับ (ปุ่ม "ส่งทดสอบ") */
+export function sampleStaffMessage(branchName: string | null, staffUrl: string | null): Json {
+  const today = new Date(Date.now() + 7 * 3600_000)
+  const dd = `${String(today.getUTCDate()).padStart(2, '0')}/${String(today.getUTCMonth() + 1).padStart(2, '0')}`
+  return buildLineMessage(`🔔 ทดสอบการแจ้งเตือน · ถ้าเห็นข้อความนี้ กลุ่มนี้พร้อมรับแจ้งเตือนแล้ว`, {
+    kind: 'staff',
+    event: 'NEW_BOOKING',
+    title: `ทดสอบการแจ้งเตือน${branchName ? ` · ${branchName}` : ''}`,
+    body: '',
+    link: staffUrl ? `${staffUrl.replace(/\/+$/, '')}/bookings` : null,
+    slip_amount: null,
+    booking: {
+      customer_name: 'ตัวอย่าง',
+      branch_name: branchName ?? '',
+      branch_phone: null,
+      map_url: null,
+      booking_code: null,
+      date_label: 'วันนี้',
+      time_label: '14:00–15:00 น.',
+      short_label: `${dd} 14:00 น.`,
+      people: 1,
+      total: 400,
+      deposit_required: 0,
+      deposit_status: 'NOT_REQUIRED',
+      hold_until: null,
+      items: [{ name: 'นวดไทย', minutes: 60 }],
+    },
+  })
 }
 
 /** สร้างข้อความ LINE: การ์ดถ้าข้อมูลพอ ไม่งั้นข้อความธรรมดา */
