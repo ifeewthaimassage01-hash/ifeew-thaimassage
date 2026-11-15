@@ -26,6 +26,8 @@ export interface BranchStaffList {
   branches: LoginBranch[]
   branch?: { company_id: string; branch_id: string; branch_name: string; idle_lock_minutes: number }
   staff?: DeviceStaff[]
+  /** ล็อกพื้นที่ร้านของสาขาที่เลือก */
+  location_lock?: { enabled: boolean; gps: boolean }
 }
 
 interface PinLoginResponse {
@@ -95,12 +97,18 @@ export function useStaffDevice() {
   }
 
   /** พนักงาน: PIN ของสาขาที่เลือกจาก dropdown */
-  async function branchPinLogin(branchId: string, userId: string, pin: string): Promise<PinLoginResponse> {
+  async function branchPinLogin(
+    branchId: string,
+    userId: string,
+    pin: string,
+    location?: { lat: number; lng: number; accuracy: number } | null,
+  ): Promise<PinLoginResponse> {
     const res = await call<PinLoginResponse>('staff-pin-login', {
       company_code: config.public.companyCode,
       branch_id: branchId,
       user_id: userId,
       pin,
+      ...(location ? { location } : {}),
     })
     const { error } = await supabase.auth.setSession({
       access_token: res.session.access_token,

@@ -26,11 +26,31 @@ interface Claim {
 const reply = (status: number, body: unknown = {}) =>
   new Response(JSON.stringify(body), { status, headers: { 'Content-Type': 'application/json' } })
 
+// สลิปที่ผ่านแล้ว: แนบรูปสลิปในการ์ดกลุ่ม (bucket booking-slips เป็น private → signed URL อายุ 30 วัน)
+const SLIP_URL_TTL = 30 * 24 * 60 * 60
+async function attachSlip(admin: ReturnType<typeof adminClient>, claim: Claim): Promise<void> {
+  const f = claim.line_flex
+  if (f?.kind !== 'staff' || f.event !== 'DEPOSIT_REVIEWED' || !f.review_ok) return
+  const depositId = claim.tag.replace(/^deposit_reviewed-/, '')
+  if (!UUID_RE.test(depositId)) return
+  try {
+    const { data } = await admin.from('booking_deposits').select('slip_path').eq('id', depositId).maybeSingle()
+    const path = (data as { slip_path: string | null } | null)?.slip_path
+    if (!path) return
+    const { data: signed, error } = await admin.storage.from('booking-slips').createSignedUrl(path, SLIP_URL_TTL)
+    if (error) throw error
+    f.slip_url = signed?.signedUrl ?? null
+  } catch (e) {
+    console.error('push-dispatch slip url', (e as Error).message) // ไม่มีรูปก็ยังส่งการ์ดได้
+  }
+}
+
 async function sendLine(admin: ReturnType<typeof adminClient>, claim: Claim): Promise<number> {
   const to = claim.line_to ?? []
   if (!to.length || !claim.line_text) return 0
   const token = (await lineSecret(admin, { companyId: claim.company_id }))?.access_token
   if (!token) return 0
+  await attachSlip(admin, claim)
   const gone: string[] = []
   let sent = 0
   await Promise.all(

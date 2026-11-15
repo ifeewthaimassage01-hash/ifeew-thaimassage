@@ -228,6 +228,8 @@ export const staffLoginErrors: Record<string, string> = {
   PIN_LOCKED: 'PIN ถูกล็อกชั่วคราว กรุณารอแล้วลองใหม่ หรือติดต่อเจ้าของร้าน',
   RATE_LIMITED: 'ลองหลายครั้งเกินไป กรุณารอสักครู่',
   INVALID_BODY: 'ข้อมูลไม่ถูกต้อง',
+  OUTSIDE_SHOP: 'เข้าระบบได้เฉพาะในร้าน · ตำแหน่งของเครื่องนี้อยู่นอกพื้นที่ร้าน',
+  LOCATION_REQUIRED: 'เข้าระบบได้เฉพาะในร้าน · กรุณาอนุญาตให้เบราว์เซอร์เข้าถึงตำแหน่ง แล้วลองใหม่',
   INTERNAL_ERROR: 'ระบบขัดข้อง กรุณาลองใหม่',
 }
 
@@ -493,6 +495,18 @@ export interface TherapistSummaryRow {
   off_shift_count: number
   handover_count: number
   fee_estimate: number
+  tips: number
+  pay_total: number
+}
+
+/** ค่าแรงรายวันของหมอหนึ่งคน (therapist_pay_daily) */
+export interface TherapistPayDay {
+  date: string
+  services: number
+  fee: number
+  tips: number
+  total: number
+  jobs: Array<{ time: string | null; service_name: string; minutes: number; fee: number; handover: boolean }>
 }
 
 export interface StaffDashboard {

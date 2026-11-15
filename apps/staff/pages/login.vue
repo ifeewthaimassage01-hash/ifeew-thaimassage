@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { toast } from 'vue-sonner'
+import { LocateFixed, MapPin, MapPinOff } from '@lucide/vue'
 import { bangkokTime } from '@ifeew/shared'
 import type { DeviceStaff, LoginBranch } from '~/composables/useStaffDevice'
 
@@ -63,6 +64,7 @@ async function loadStaff() {
     const res = await listBranchStaff(id)
     if (branchId.value !== id) return // เปลี่ยนสาขาระหว่างโหลด
     staff.value = res.staff ?? []
+    lock.value = res.location_lock ?? null
   } catch (e) {
     const err = errorMessage(e)
     listError.value = err.message
@@ -90,6 +92,7 @@ async function refreshQuietly() {
     const res = await listBranchStaff(id)
     if (branchId.value === id && !selected.value) {
       staff.value = res.staff ?? []
+      lock.value = res.location_lock ?? null
       listError.value = null
     }
   } catch {
@@ -128,13 +131,64 @@ function notifyCheckedIn(att: { nickname: string; clock_in_at: string } | null) 
   }, 300)
 }
 
+// ล็อกพื้นที่ร้าน: สาขาที่เปิดล็อกไว้ ส่งตำแหน่ง GPS ไปกับ PIN (server ตรวจรัศมี)
+const lock = ref<{ enabled: boolean; gps: boolean } | null>(null)
+type Pos = { lat: number; lng: number; accuracy: number }
+// ขั้นขอตำแหน่งในหน้ากรอก PIN: idle → locating → ok / denied (ปิดสิทธิ์) / error (หาไม่เจอ)
+const geo = reactive({ status: 'idle' as 'idle' | 'locating' | 'ok' | 'denied' | 'error', pos: null as Pos | null, at: 0 })
+const needLocation = computed(() => !!lock.value?.enabled && !geo.pos)
+
+function currentPosition(): Promise<Pos | null> {
+  if (!import.meta.client || !('geolocation' in navigator)) {
+    geo.status = 'error'
+    return Promise.resolve(null)
+  }
+  geo.status = 'locating'
+  return new Promise((resolve) => {
+    navigator.geolocation.getCurrentPosition(
+      (p) => {
+        const pos = { lat: p.coords.latitude, lng: p.coords.longitude, accuracy: p.coords.accuracy }
+        Object.assign(geo, { status: 'ok', pos, at: Date.now() })
+        resolve(pos)
+      },
+      (err) => {
+        // หาไม่ได้ → กลับไปขั้นขอตำแหน่ง
+        Object.assign(geo, { status: err.code === err.PERMISSION_DENIED ? 'denied' : 'error', pos: null, at: 0 })
+        resolve(null)
+      },
+      { enableHighAccuracy: true, timeout: 15_000, maximumAge: 30_000 },
+    )
+  })
+}
+
+// เปิดหน้ากรอก PIN: เคยอนุญาตแล้ว → หาตำแหน่งให้เลย ไม่ต้องกดปุ่ม
+watch(selected, async (s) => {
+  Object.assign(geo, { status: 'idle', pos: null, at: 0 })
+  if (!s || !lock.value?.enabled || !import.meta.client) return
+  try {
+    const perm = await navigator.permissions?.query({ name: 'geolocation' as PermissionName })
+    if (perm?.state === 'granted') await currentPosition()
+    else if (perm?.state === 'denied') geo.status = 'denied'
+  } catch {
+    // เบราว์เซอร์ที่ไม่มี permissions API → รอให้กดปุ่ม
+  }
+})
+
+/** ตำแหน่งที่จะส่งไปกับ PIN · เก่ากว่า 2 นาทีหาใหม่ */
+async function positionForLogin(): Promise<Pos | null> {
+  if (!lock.value?.enabled) return null
+  if (geo.pos && Date.now() - geo.at < 120_000) return geo.pos
+  return await currentPosition()
+}
+
 async function submitPin(pin: string) {
   if (!selected.value || !branchId.value) return
   pinLoading.value = true
   pinError.value = null
   try {
     clearAccess()
-    const res = await branchPinLogin(branchId.value, selected.value.user_id, pin)
+    const location = await positionForLogin()
+    const res = await branchPinLogin(branchId.value, selected.value.user_id, pin, location)
     markLogin()
     const attendance = await clockInToday(res.branch_id)
     await navigateTo('/')
@@ -255,9 +309,48 @@ onMounted(reload)
       <DialogContent class="sm:max-w-sm" @interact-outside.prevent>
         <DialogHeader>
           <DialogTitle>สวัสดี {{ selected?.display_name }}</DialogTitle>
-          <DialogDescription>กรอก PIN 6 หลัก</DialogDescription>
+          <DialogDescription>{{ needLocation ? 'สาขานี้เข้าระบบได้เฉพาะในร้าน' : 'กรอก PIN 6 หลัก' }}</DialogDescription>
         </DialogHeader>
-        <PinPad v-if="selected" ref="pinPad" :loading="pinLoading" :error="pinError" @submit="submitPin" />
+
+        <!-- ขั้นที่ 1: ขอตำแหน่ง (เฉพาะสาขาที่เปิดล็อกพื้นที่) -->
+        <div v-if="needLocation" class="grid justify-items-center gap-4 py-2 text-center" aria-live="polite">
+          <span
+            class="grid size-16 place-items-center rounded-full"
+            :class="geo.status === 'denied' || geo.status === 'error' ? 'bg-danger-soft text-danger-ink' : 'bg-secondary text-primary'"
+            aria-hidden="true"
+          >
+            <MapPinOff v-if="geo.status === 'denied'" class="size-8" />
+            <MapPin v-else class="size-8" :class="geo.status === 'locating' ? 'animate-pulse' : ''" />
+          </span>
+          <div class="grid gap-1">
+            <p class="m-0 text-base font-semibold text-heading">
+              {{
+                geo.status === 'locating' ? 'กำลังหาตำแหน่ง…'
+                : geo.status === 'denied' ? 'ยังไม่ได้อนุญาตให้ใช้ตำแหน่ง'
+                  : geo.status === 'error' ? 'หาตำแหน่งไม่เจอ'
+                    : 'ขอใช้ตำแหน่งของเครื่อง'
+              }}
+            </p>
+            <p class="m-0 text-sm text-muted-foreground">
+              {{
+                geo.status === 'denied' ? 'เปิดสิทธิ์ตำแหน่งในการตั้งค่าเบราว์เซอร์ (กดไอคอนข้างช่อง URL → ตำแหน่ง → อนุญาต) แล้วกดลองใหม่'
+                : geo.status === 'error' ? 'เปิด GPS / Location ของเครื่อง แล้วกดลองใหม่'
+                  : 'เพื่อยืนยันว่าอยู่ในร้าน · กดปุ่มแล้วเลือก “อนุญาต”'
+              }}
+            </p>
+          </div>
+          <Button size="lg" class="w-full" :disabled="geo.status === 'locating'" @click="currentPosition()">
+            <LocateFixed /> {{ geo.status === 'locating' ? 'กำลังหาตำแหน่ง…' : geo.status === 'idle' ? 'อนุญาตใช้ตำแหน่ง' : 'ลองใหม่' }}
+          </Button>
+        </div>
+
+        <!-- ขั้นที่ 2: PIN -->
+        <template v-else-if="selected">
+          <p v-if="lock?.enabled && geo.pos" class="m-0 flex items-center justify-center gap-1.5 text-sm text-success-ink">
+            <MapPin class="size-4" aria-hidden="true" /> ได้ตำแหน่งแล้ว · กรอก PIN เพื่อเข้าระบบ
+          </p>
+          <PinPad ref="pinPad" :loading="pinLoading" :error="pinError" @submit="submitPin" />
+        </template>
       </DialogContent>
     </Dialog>
   </div>

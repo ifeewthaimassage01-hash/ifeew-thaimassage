@@ -1,5 +1,5 @@
 <script setup lang="ts">
-// OWNER: เวลาทำการรายวันและวันหยุดของสาขา
+// OWNER: เวลาทำการรายวัน วันหยุด และล็อกพื้นที่เข้าระบบของสาขา
 import { Plus } from '@lucide/vue'
 import { isoDowLabels, type Tables } from '@ifeew/shared'
 
@@ -13,6 +13,7 @@ const supabase = useSupabaseClient()
 const branchId = computed(() => String(route.params.id))
 
 const branchName = ref('')
+const companyId = ref('')
 const hours = ref<Array<{ id: string; iso_dow: number; is_closed: boolean; opens_at: string; closes_at: string }>>([])
 const holidays = ref<Holiday[]>([])
 const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
@@ -30,6 +31,7 @@ async function load() {
     supabase.from('branch_holidays').select('*').eq('branch_id', branchId.value).order('holiday_date', { ascending: false }),
   ])
   branchName.value = b.data?.name ?? ''
+  companyId.value = b.data?.company_id ?? ''
   hours.value = ((h.data ?? []) as Hours[]).map((r) => ({
     id: r.id, iso_dow: r.iso_dow, is_closed: r.is_closed, opens_at: hhmm(r.opens_at), closes_at: hhmm(r.closes_at),
   }))
@@ -163,6 +165,8 @@ onMounted(load)
           </Table>
         </div>
       </SectionCard>
+
+      <BranchLoginLock v-if="companyId" :branch-id="branchId" :company-id="companyId" />
     </div>
   </div>
 </template>

@@ -2,7 +2,7 @@
 // body: { company_code, branch_id? }
 // หน้า login (ไม่ต้องใช้เครื่องที่ผูก — migration 030)
 //   ไม่ส่ง branch_id → { branches }
-//   ส่ง branch_id    → { branches, branch, staff } (รูปพนักงานเป็น signed URL อายุ 1 ชม.)
+//   ส่ง branch_id    → { branches, branch, location_lock, staff } (รูปพนักงานเป็น signed URL อายุ 1 ชม.)
 import { adminClient, clientIp, json, preflight, rateLimit, UUID_RE } from '../_shared/http.ts'
 
 const CODE_RE = /^[A-Za-z0-9]{2,10}$/
@@ -32,7 +32,10 @@ Deno.serve(async (req) => {
     if (brErr) throw brErr
     if (!branchId) return json(req, 200, { branches: branches ?? [] })
 
-    const { data, error } = await admin.rpc('login_list_branch_staff', { p_company_code: companyCode, p_branch_id: branchId })
+    const [{ data, error }, { data: lock }] = await Promise.all([
+      admin.rpc('login_list_branch_staff', { p_company_code: companyCode, p_branch_id: branchId }),
+      admin.rpc('login_branch_lock_hint', { p_company_code: companyCode, p_branch_id: branchId }),
+    ])
     if (error) throw error
     if (!data?.ok) return json(req, 404, { error_code: data?.error_code ?? 'BRANCH_INVALID' })
 
@@ -49,6 +52,8 @@ Deno.serve(async (req) => {
     return json(req, 200, {
       branches: branches ?? [],
       branch: data.branch,
+      /** ล็อกพื้นที่: enabled = ต้องอยู่ในร้าน (หน้า login ขอตำแหน่ง GPS ก่อนส่ง PIN) */
+      location_lock: lock ?? { enabled: false, gps: false },
       staff: staff.map(({ photo_path, ...s }) => ({ ...s, photo_url: photo_path ? urls.get(photo_path) ?? null : null })),
     })
   } catch (e) {

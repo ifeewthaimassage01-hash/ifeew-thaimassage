@@ -49,6 +49,8 @@ export type FlexData =
       /** DEPOSIT_REVIEWED: "ตรวจโดย …" / "ตรวจอัตโนมัติ" และผลตรวจ */
       review?: string | null
       review_ok?: boolean | null
+      /** สลิปที่ผ่านแล้ว: signed URL ของรูป (JPG/PNG แสดงในการ์ด · แบบอื่นเป็นปุ่ม "ดูรูปสลิป") — push-dispatch ใส่ให้ */
+      slip_url?: string | null
     }
 
 type Json = Record<string, unknown>
@@ -177,12 +179,31 @@ function staffBubble(d: Extract<FlexData, { kind: 'staff' }>): Json {
         ...(d.event === 'NEW_BOOKING' && Number(b.deposit_required) > 0 ? [row('มัดจำ', baht(b.deposit_required))] : []),
       ]
     : [text(d.body, { color: INK })]
+  // รูปสลิป: LINE แสดงในการ์ดได้เฉพาะ JPG/PNG (ไม่เกิน 10 MB) · แตะรูปเพื่อเปิดเต็มจอ
+  const slip = d.slip_url && d.slip_url.length <= 1000 && d.slip_url.startsWith('https://') ? d.slip_url : null
+  const slipInCard = !!slip && /\.(jpe?g|png)(\?|$)/i.test(slip)
+  if (slip && slipInCard) {
+    body.push({
+      type: 'image',
+      url: slip,
+      size: 'full',
+      aspectMode: 'fit',
+      aspectRatio: '3:4',
+      backgroundColor: '#FFFFFF',
+      margin: 'md',
+      action: { type: 'uri', label: 'ดูรูปสลิป', uri: slip },
+    })
+  }
+  const footer: Json[] = [
+    ...(isUri(d.link) ? [button('เปิดในระบบ', d.link, true)] : []),
+    ...(slip && !slipInCard ? [button('ดูรูปสลิป', slip)] : []),
+  ]
   return {
     type: 'bubble',
     size: 'kilo',
     header: header(title ?? d.title, branch ?? null, d.event === 'DEPOSIT_REVIEWED' ? (d.review_ok ? 'success' : 'danger') : STAFF_TONE[d.event] ?? 'beige'),
     body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', backgroundColor: LINEN, contents: body },
-    ...(isUri(d.link) ? { footer: { type: 'box', layout: 'vertical', paddingAll: '10px', contents: [button('เปิดในระบบ', d.link, true)] } } : {}),
+    ...(footer.length ? { footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '10px', contents: footer } } : {}),
   }
 }
 

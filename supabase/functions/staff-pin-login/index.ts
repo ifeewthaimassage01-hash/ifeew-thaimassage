@@ -2,6 +2,8 @@
 // body: { device_token, user_id, pin }                       — เครื่องที่ผูก
 //    or: { company_code, branch_id, user_id, pin }          — เลือกสาขาจากหน้า login (migration 030)
 // 1) Rate limit ต่อ IP / เครื่อง / พนักงาน
+// 1.5) ล็อกพื้นที่ร้าน (branch_login_locks): GPS ต้องอยู่ในรัศมีจากร้าน
+//      ไม่ส่งตำแหน่ง = 403 LOCATION_REQUIRED · อยู่นอกรัศมี = 403 OUTSIDE_SHOP (ยังไม่ตรวจ PIN)
 // 2) public.device_verify_staff_pin ตรวจเครื่อง + สิทธิ์สาขา + PIN (+ นับครั้งผิด/ล็อก + audit)
 // 3) ผ่านแล้วออก Supabase session ของพนักงานด้วย magic link ที่ verify ฝั่ง server (ไม่ส่งอีเมล)
 import {
@@ -15,6 +17,7 @@ import {
   sha256Hex,
   UUID_RE,
 } from '../_shared/http.ts'
+import { type LocationRule, locationOk, parseLocation } from '../_shared/location.ts'
 
 const PIN_RE = /^[0-9]{6}$/
 const CODE_RE = /^[A-Za-z0-9]{2,10}$/
@@ -23,7 +26,7 @@ Deno.serve(async (req) => {
   const early = preflight(req)
   if (early) return early
 
-  let body: { device_token?: unknown; company_code?: unknown; branch_id?: unknown; user_id?: unknown; pin?: unknown }
+  let body: { device_token?: unknown; company_code?: unknown; branch_id?: unknown; user_id?: unknown; pin?: unknown; location?: unknown }
   try {
     body = await req.json()
   } catch {
@@ -54,6 +57,22 @@ Deno.serve(async (req) => {
       (await rateLimit(admin, `pin:${sourceKey}`, 30, 300)) &&
       (await rateLimit(admin, `pin:user:${userId}`, 10, 300))
     if (!allowed) return json(req, 429, { error_code: 'RATE_LIMITED' })
+
+    // ล็อกพื้นที่ (เลือกสาขาจากหน้า login เท่านั้น — เครื่องที่เจ้าของผูกไว้กับสาขาถือว่าอยู่ในร้าน · เจ้าของร้านไม่ถูกล็อก)
+    if (branchMode) {
+      const { data: rule, error: ruleErr } = await admin.rpc('login_location_rule', {
+        p_company_code: companyCode,
+        p_branch_id: branchId,
+        p_user_id: userId,
+      })
+      if (ruleErr) throw ruleErr
+      if (rule) {
+        const loc = parseLocation(body.location)
+        if (!locationOk(rule as LocationRule, loc)) {
+          return json(req, 403, { error_code: loc ? 'OUTSIDE_SHOP' : 'LOCATION_REQUIRED' })
+        }
+      }
+    }
 
     const { data: verdict, error: verifyErr } = branchMode
       ? await admin.rpc('branch_verify_staff_pin', {

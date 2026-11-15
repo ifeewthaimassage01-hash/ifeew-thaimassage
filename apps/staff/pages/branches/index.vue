@@ -168,7 +168,7 @@ onMounted(load)
         </div>
         <div class="flex flex-wrap gap-2 border-t border-border px-5 py-3">
           <Button variant="outline" size="sm" @click="openEdit(b)"><Pencil /> แก้ไข</Button>
-          <Button as-child variant="ghost" size="sm"><NuxtLink :to="`/branches/${b.id}`"><Clock /> เวลาทำการและวันหยุด</NuxtLink></Button>
+          <Button as-child variant="ghost" size="sm"><NuxtLink :to="`/branches/${b.id}`"><Clock /> เวลาทำการ · พื้นที่เข้าระบบ</NuxtLink></Button>
           <Button
             v-if="branches.length > 1"
             variant="ghost"

@@ -60,7 +60,6 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
             v-for="a in [
               { to: '/expenses', label: 'คำขอยกเลิกรายจ่าย', value: String(dash.actions.expense_void_requests), alert: !!dash.actions.expense_void_requests },
               { to: '/reports/finance', label: 'รายจ่ายสูงเดือนนี้', value: String(dash.actions.large_expenses_month), alert: false },
-              { to: '/commissions', label: 'ค่ามือค้างจ่าย', value: baht(dash.actions.unpaid_commission), alert: false },
               { to: '/bookings', label: 'มัดจำรอคืน', value: String(dash.actions.deposits_to_refund), alert: !!dash.actions.deposits_to_refund },
             ]"
             :key="a.label"

@@ -85,6 +85,9 @@ const compact = computed(() => props.kind === 'group')
         <template v-if="kind === 'group' && event === 'DEPOSIT_REVIEWED'">
           <div class="flex justify-between gap-3 font-bold text-success-ink"><span class="font-normal text-muted-foreground">มัดจำ</span><span class="num">฿200</span></div>
           <span class="text-xs text-muted-foreground">ตรวจโดย แตน</span>
+          <div class="mt-1 grid aspect-[3/4] place-items-center rounded-md border border-dashed border-border bg-white text-xs text-muted-foreground">
+            รูปสลิป (แตะเพื่อดูเต็มจอ)
+          </div>
         </template>
         <template v-if="kind === 'confirm'">
           <div class="flex justify-between gap-3 text-xs text-muted-foreground"><span>รหัสการจอง</span><span class="num">BKG-IFEEW-0001</span></div>

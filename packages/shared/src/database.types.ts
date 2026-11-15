@@ -286,6 +286,33 @@ export type Database = {
         }
         Relationships: []
       }
+      branch_login_locks: {
+        Row: {
+          branch_id: string
+          company_id: string
+          enabled: boolean
+          latitude: number | null
+          longitude: number | null
+          radius_m: number
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          branch_id: string
+          company_id: string
+          enabled?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          radius_m?: number
+        }
+        Update: {
+          enabled?: boolean
+          latitude?: number | null
+          longitude?: number | null
+          radius_m?: number
+        }
+        Relationships: []
+      }
       employees: {
         Row: Stamp & {
           employment_type: 'REGULAR'
@@ -1218,6 +1245,10 @@ export type Database = {
       my_work_history: { Args: { p_from: string; p_to: string }; Returns: Json }
       therapist_work_summary: {
         Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }
+        Returns: Json
+      }
+      therapist_pay_daily: {
+        Args: { p_company_id: string; p_branch_id: string | null; p_employee_id: string; p_from: string; p_to: string }
         Returns: Json
       }
       staff_dashboard: { Args: { p_branch_id: string }; Returns: Json }

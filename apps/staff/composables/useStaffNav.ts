@@ -3,7 +3,6 @@ import {
   BedDouble,
   Building2,
   CalendarCheck,
-  ChartBar,
   ChartColumn,
   FileChartColumn,
   HandCoins,
@@ -79,8 +78,7 @@ export function useStaffNav() {
       items: [
         { to: '/owner', label: 'ภาพรวมทุกสาขา', icon: ChartColumn },
         { to: '/reports/finance', label: 'รายงานการเงิน', icon: FileChartColumn },
-        { to: '/reports/therapists', label: 'สรุปงานหมอ', icon: ChartBar },
-        { to: '/commissions', label: 'ค่ามือหมอ', icon: HandCoins },
+        { to: '/reports/therapists', label: 'ค่าแรงหมอ', icon: HandCoins },
       ],
     },
     {
