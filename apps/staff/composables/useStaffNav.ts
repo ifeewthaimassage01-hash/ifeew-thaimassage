@@ -5,7 +5,6 @@ import {
   CalendarCheck,
   ChartColumn,
   FileChartColumn,
-  HandCoins,
   LayoutDashboard,
   ListOrdered,
   MessageCircle,
@@ -61,7 +60,7 @@ export function useStaffNav() {
         { to: '/queue', label: 'คิว', icon: ListOrdered },
         { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
         { to: '/customers', label: 'ลูกค้า', icon: Users },
-        { to: '/attendance', label: 'เข้างาน/ประกันมือ', icon: UserCheck },
+        { to: '/reports/therapists', label: 'ข้อมูลหมอ', icon: UserCheck },
       ],
     },
     {
@@ -75,7 +74,6 @@ export function useStaffNav() {
       items: [
         { to: '/owner', label: 'ภาพรวมทุกสาขา', icon: ChartColumn },
         { to: '/reports/finance', label: 'รายงานการเงิน', icon: FileChartColumn },
-        { to: '/reports/therapists', label: 'ค่าแรงหมอ', icon: HandCoins },
       ],
     },
     {

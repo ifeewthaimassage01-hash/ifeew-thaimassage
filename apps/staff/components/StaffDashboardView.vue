@@ -1,6 +1,6 @@
 <script setup lang="ts">
 // เนื้อหาแดชบอร์ดสาขา — รับข้อมูลทาง props (pages/index.vue เป็นคนโหลด)
-//   คิวของฉัน (ถ้ามี) → สรุปการเงิน → ค่าแรงหมอ (เจ้าของร้าน) → เตียงและอุปกรณ์ตอนนี้
+//   หัว (ชื่อสาขา + วันที่) → คิวของฉัน (ถ้ามี) → สรุปการเงิน → ค่าแรงหมอ (เจ้าของร้าน) | เตียงและอุปกรณ์ตอนนี้ (จอใหญ่อยู่คู่กัน)
 import { formatDuration, formatQueueNumber, queueStatusLabels, type StaffDashboard } from '@ifeew/shared'
 
 defineProps<{
@@ -12,11 +12,17 @@ defineProps<{
   /** เพิ่มขึ้นเมื่อมีการเปลี่ยนแปลงแบบ realtime → การ์ดสรุปการเงินโหลดใหม่ */
   moneyTick?: number
 }>()
+
+// วันที่ของวันทำการ (เวลาไทย) เช่น วันอาทิตย์ที่ 15 พฤศจิกายน 2569
+const todayLabel = new Date().toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric', timeZone: 'Asia/Bangkok' })
 </script>
 
 <template>
-  <div class="grid grid-cols-1 gap-5">
-    <h1 class="sr-only">แดชบอร์ด {{ branchName }}</h1>
+  <div class="grid grid-cols-1 gap-4 sm:gap-5">
+    <header class="grid gap-0.5">
+      <h1 class="m-0 text-2xl leading-tight font-semibold md:text-[28px]">{{ branchName ?? 'แดชบอร์ด' }}</h1>
+      <p class="m-0 text-[15px] text-muted-foreground">{{ todayLabel }}</p>
+    </header>
 
     <Alert v-if="error" variant="destructive"><AlertDescription>{{ error }}</AlertDescription></Alert>
 
@@ -40,10 +46,10 @@ defineProps<{
     <!-- สรุปการเงิน (เจ้าของร้าน) -->
     <DashboardMoneySummary v-if="isOwner && branchId" :branch-id="branchId" :tick="moneyTick" />
 
-    <!-- ค่าแรงหมอ (เจ้าของร้าน) -->
-    <DashboardTherapistPay v-if="isOwner && branchId" :branch-id="branchId" :tick="moneyTick" />
-
-    <!-- เตียงและอุปกรณ์ -->
-    <ResourceGrid v-if="dash || !error" :resources="dash?.resources ?? null" :loading="!dash" />
+    <!-- จอใหญ่: ค่าแรงหมอ (เจ้าของร้าน) คู่กับ เตียงและอุปกรณ์ -->
+    <div class="grid items-start gap-4 sm:gap-5 xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
+      <DashboardTherapistPay v-if="isOwner && branchId" :branch-id="branchId" :tick="moneyTick" />
+      <ResourceGrid v-if="dash || !error" :resources="dash?.resources ?? null" :loading="!dash" />
+    </div>
   </div>
 </template>

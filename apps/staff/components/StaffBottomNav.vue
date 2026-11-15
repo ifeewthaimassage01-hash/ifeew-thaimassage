@@ -3,7 +3,7 @@ import type { Component } from 'vue'
 import { CalendarCheck, LayoutDashboard, ListOrdered, ReceiptText, Store } from '@lucide/vue'
 
 // แถบเมนูล่างสำหรับมือถือ (<768) — ทางลัดงานประจำวันที่ใช้บ่อย
-//   เจ้าของร้าน 6 ช่อง (มีแดชบอร์ด) · พนักงาน 5 ช่อง ไม่มีแดชบอร์ด (หน้า / พาไปหน้าร้าน)
+//   เจ้าของร้าน 5 ช่อง (มีแดชบอร์ด) · พนักงาน 4 ช่อง ไม่มีแดชบอร์ด (หน้า / พาไปหน้าร้าน)
 const route = useRoute()
 const { isOwner } = useAccess()
 
@@ -20,6 +20,9 @@ const items = computed<Item[]>(() =>
     : [...daily, expenses],
 )
 
+// จำนวนช่องเท่าจำนวนเมนูเสมอ (เขียนชื่อคลาสเต็มให้ Tailwind หาเจอ)
+const COLS: Record<number, string> = { 3: 'grid-cols-3', 4: 'grid-cols-4', 5: 'grid-cols-5', 6: 'grid-cols-6' }
+
 const isActive = (i: Item) =>
   i.exact ? route.path === i.to : [i.to, ...(i.also ?? [])].some((p) => route.path === p || route.path.startsWith(`${p}/`))
 </script>
@@ -30,7 +33,7 @@ const isActive = (i: Item) =>
     aria-label="เมนูลัด"
     class="fixed inset-x-0 bottom-0 z-40 rounded-t-3xl bg-card pb-[env(safe-area-inset-bottom)] shadow-[0_-6px_24px_-8px_rgb(74_55_40/0.18)] md:hidden"
   >
-    <ul class="m-0 grid h-[68px] list-none p-0" :class="items.length > 5 ? 'grid-cols-6' : 'grid-cols-5'">
+    <ul class="m-0 grid h-[68px] list-none p-0" :class="COLS[items.length] ?? 'grid-cols-6'">
       <li v-for="item in items" :key="item.to" class="min-w-0">
         <NuxtLink
           :to="item.to"

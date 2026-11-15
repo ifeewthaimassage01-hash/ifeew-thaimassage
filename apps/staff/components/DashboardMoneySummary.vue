@@ -1,7 +1,7 @@
 <script setup lang="ts">
 // สรุปการเงินของสาขา (OWNER): รายได้ · รายจ่าย (รวมค่าแรง/ค่าน้ำมันหมอวิ่ง) · ยอดสุทธิ · ลูกค้าแยกตามประเภทหมอ
 // ข้อมูลจาก RPC branch_money_summary (migration 045) — สูตรรายได้/รายจ่ายเดียวกับหน้ารายงานการเงิน
-import { HandCoins, ReceiptText, TrendingUp, Users } from '@lucide/vue'
+import { ReceiptText, TrendingUp, Users, Wallet } from '@lucide/vue'
 import { addDays, bangkokToday, formatBaht } from '@ifeew/shared'
 
 interface MoneySummary {
@@ -69,19 +69,46 @@ const customerLines = computed(() => {
     { key: 'WALK_IN', label: 'หมอวิ่ง', n: n(c?.WALK_IN) },
   ]
 })
-const periodLabel = computed(() => ({ today: 'วันนี้', '7d': '7 วันล่าสุด', month: 'เดือนนี้' })[period.value])
+// ช่องสรุป: รายได้ · รายจ่าย (แยกเฉพาะที่มียอด) · ยอดสุทธิ (เขียว/แดง + ข้อความ) · ลูกค้า
+const tiles = computed(() => {
+  const d = data.value
+  if (!d) return []
+  const net = n(d.net)
+  return [
+    {
+      key: 'revenue', label: 'รายได้', icon: TrendingUp, value: formatBaht(n(d.revenue)),
+      note: 'รับเงินสุทธิ หักคืนเงินแล้ว', lines: [], box: 'border-border bg-muted/40', ink: 'text-heading',
+    },
+    {
+      key: 'expenses', label: 'รายจ่าย', icon: ReceiptText, value: formatBaht(n(d.total_expenses)),
+      note: expenseLines.value.some((l) => l.value) ? '' : 'ยังไม่มีรายจ่าย',
+      lines: expenseLines.value.filter((l) => l.value).map((l) => ({ label: l.label, value: formatBaht(l.value) })),
+      box: 'border-border bg-muted/40', ink: 'text-heading',
+    },
+    {
+      key: 'net', label: 'ยอดสุทธิ', icon: Wallet, value: `${net < 0 ? '−' : ''}${formatBaht(Math.abs(net))}`,
+      note: net < 0 ? 'รายจ่ายมากกว่ารายได้' : 'รายได้ − รายจ่าย', noteInk: net < 0 ? 'text-danger-ink' : 'text-success-ink',
+      lines: [],
+      box: net < 0 ? 'border-danger/30 bg-danger-soft/60' : 'border-success/30 bg-success-soft/60',
+      ink: net < 0 ? 'text-danger-ink' : 'text-success-ink',
+    },
+    {
+      key: 'customers', label: 'ลูกค้าที่ใช้บริการ', icon: Users, value: `${n(d.customers?.total)} คน`, note: '',
+      lines: customerLines.value.map((c) => ({ label: c.label, value: `${c.n} คน` })),
+      box: 'border-border bg-muted/40', ink: 'text-heading',
+    },
+  ] as Array<{ key: string; label: string; icon: unknown; value: string; note: string; noteInk?: string; lines: Array<{ label: string; value: string }>; box: string; ink: string }>
+})
+const periodLabel = computed(() => ({ today: 'วันนี้', '7d': ' 7 วันล่าสุด', month: 'เดือนนี้' })[period.value])
 </script>
 
 <template>
   <section class="rounded-xl border border-border bg-card p-4 shadow-soft sm:p-5" aria-labelledby="money-h">
     <div class="mb-4 flex flex-wrap items-center justify-between gap-3">
-      <h2 id="money-h" class="m-0 text-[15px] font-semibold">
-        สรุปการเงิน<span class="font-normal text-muted-foreground"> · {{ periodLabel }}</span>
-      </h2>
+      <h2 id="money-h" class="m-0 text-[15px] font-semibold">สรุปการเงิน{{ periodLabel }}</h2>
+      <!-- มือถือ: เต็มแถว ปุ่มแบ่งเท่ากัน กดด้วยนิ้วโป้งได้ง่าย -->
       <SegmentedControl
-        :fill="false"
         v-model="period"
-        size="sm"
         :items="[{ value: 'today', label: 'วันนี้' }, { value: '7d', label: '7 วัน' }, { value: 'month', label: 'เดือนนี้' }]"
         label="ช่วงเวลา"
       />
@@ -89,48 +116,29 @@ const periodLabel = computed(() => ({ today: 'วันนี้', '7d': '7 ว�
 
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
 
-    <div v-if="!data && loading" class="grid grid-cols-2 gap-3 lg:grid-cols-4">
+    <div v-if="!data && loading" class="grid grid-cols-2 gap-2.5 lg:grid-cols-4">
       <Skeleton v-for="i in 4" :key="i" class="h-32 rounded-lg" />
     </div>
 
-    <div v-else-if="data" class="grid grid-cols-2 gap-3 lg:grid-cols-4" :class="loading ? 'opacity-60 transition-opacity' : ''">
-      <!-- รายได้ -->
-      <div class="grid content-start gap-1 rounded-lg bg-muted/60 p-4">
-        <span class="flex items-center gap-2 text-sm text-muted-foreground"><TrendingUp class="size-4 text-brand-accent" /> รายได้</span>
-        <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ formatBaht(n(data.revenue)) }}</span>
-        <span class="text-[13px] text-muted-foreground">รับเงินสุทธิ (หักคืนเงิน)</span>
-      </div>
-
-      <!-- รายจ่าย -->
-      <div class="grid content-start gap-1 rounded-lg bg-muted/60 p-4">
-        <span class="flex items-center gap-2 text-sm text-muted-foreground"><ReceiptText class="size-4 text-brand-accent" /> รายจ่าย</span>
-        <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ formatBaht(n(data.total_expenses)) }}</span>
-        <dl class="m-0 mt-1 grid gap-0.5 text-[13px]">
-          <div v-for="l in expenseLines" :key="l.label" class="flex justify-between gap-2">
-            <dt class="text-muted-foreground">{{ l.label }}</dt><dd class="num m-0 text-foreground">{{ formatBaht(l.value) }}</dd>
-          </div>
-        </dl>
-      </div>
-
-      <!-- ยอดสุทธิ -->
-      <div class="grid content-start gap-1 rounded-lg p-4" :class="n(data.net) < 0 ? 'bg-danger-soft' : 'bg-success-soft'">
-        <span class="flex items-center gap-2 text-sm text-muted-foreground"><HandCoins class="size-4 text-brand-accent" /> ยอดสุทธิ</span>
-        <span class="num text-[24px] leading-tight sm:text-[26px]" :class="n(data.net) < 0 ? 'text-danger-ink' : 'text-success-ink'">
-          {{ n(data.net) < 0 ? '−' : '' }}{{ formatBaht(Math.abs(n(data.net))) }}
+    <!-- ช่องแบบเดียวกับเตียงและอุปกรณ์: มือถือ 2×2 · จอใหญ่ 4 ช่อง -->
+    <ul
+      v-else-if="data"
+      class="m-0 grid list-none grid-cols-2 gap-2.5 p-0 lg:grid-cols-4"
+      :class="loading ? 'opacity-60 transition-opacity' : ''"
+      aria-live="polite"
+    >
+      <li v-for="t in tiles" :key="t.key" class="grid content-start gap-1.5 rounded-lg border p-3" :class="t.box">
+        <span class="flex items-center gap-2">
+          <span class="grid size-7 shrink-0 place-items-center rounded-full bg-card text-brand-accent" aria-hidden="true"><component :is="t.icon" class="size-4" :stroke-width="1.6" /></span>
+          <span class="min-w-0 truncate text-sm font-medium text-heading">{{ t.label }}</span>
         </span>
-        <span class="text-[13px] text-muted-foreground">รายได้ − รายจ่ายทั้งหมด</span>
-      </div>
-
-      <!-- ลูกค้าแยกตามประเภทหมอ -->
-      <div class="grid content-start gap-1 rounded-lg bg-muted/60 p-4">
-        <span class="flex items-center gap-2 text-sm text-muted-foreground"><Users class="size-4 text-brand-accent" /> ลูกค้าที่ใช้บริการ</span>
-        <span class="num text-[24px] leading-tight text-heading sm:text-[26px]">{{ n(data.customers?.total) }} <span class="text-sm text-muted-foreground">คน</span></span>
-        <dl class="m-0 mt-1 grid gap-0.5 text-[13px]">
-          <div v-for="c in customerLines" :key="c.key" class="flex justify-between gap-2">
-            <dt class="text-muted-foreground">{{ c.label }}</dt><dd class="num m-0 text-foreground">{{ c.n }}</dd>
+        <span class="num text-2xl leading-tight font-semibold" :class="t.ink">{{ t.value }}</span>
+        <span v-if="t.note" class="text-[13px]" :class="t.noteInk ?? 'text-muted-foreground'">{{ t.note }}</span>
+        <dl v-if="t.lines.length" class="m-0 grid gap-0.5 text-[13px]">
+          <div v-for="l in t.lines" :key="l.label" class="flex justify-between gap-2">
+            <dt class="min-w-0 truncate text-muted-foreground">{{ l.label }}</dt><dd class="num m-0 shrink-0 text-foreground">{{ l.value }}</dd>
           </div>
         </dl>
-      </div>
-    </div>
-  </section>
+      </li>
+    </ul>  </section>
 </template>

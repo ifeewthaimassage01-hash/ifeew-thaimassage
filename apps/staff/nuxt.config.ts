@@ -10,7 +10,7 @@ export default defineNuxtConfig({
 
   // หน้าเดิมที่ย้ายไปรวมกับหน้าอื่น
   routeRules: {
-    '/guarantees': { redirect: '/attendance?tab=guarantee' },
+    '/guarantees': { redirect: '/reports/therapists?tab=guarantee' },
   },
   devtools: { enabled: true },
 

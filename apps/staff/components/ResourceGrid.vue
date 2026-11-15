@@ -13,11 +13,11 @@ const free = (r: StaffDashboard['resources'][number]) => Math.max(0, r.total - r
   <section class="rounded-xl border border-border bg-card p-4 shadow-soft sm:p-5" aria-labelledby="res-grid-h">
     <h2 id="res-grid-h" class="m-0 mb-3 text-[15px] font-semibold">เตียงและอุปกรณ์ตอนนี้</h2>
 
-    <div v-if="!resources && loading" class="grid grid-cols-[repeat(auto-fill,minmax(min(9.5rem,100%),1fr))] gap-2.5">
+    <div v-if="!resources && loading" class="grid grid-cols-[repeat(auto-fill,minmax(min(8.25rem,100%),1fr))] gap-2.5">
       <Skeleton v-for="n in 3" :key="n" class="h-[6.5rem] rounded-lg" />
     </div>
     <p v-else-if="!resources?.length" class="m-0 py-4 text-center text-sm text-muted-foreground">ยังไม่ได้ตั้งค่าเตียงและอุปกรณ์</p>
-    <ul v-else class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(9.5rem,100%),1fr))] gap-2.5 p-0">
+    <ul v-else class="m-0 grid list-none grid-cols-[repeat(auto-fill,minmax(min(8.25rem,100%),1fr))] gap-2.5 p-0">
       <li
         v-for="r in resources"
         :key="r.resource_type_id"
