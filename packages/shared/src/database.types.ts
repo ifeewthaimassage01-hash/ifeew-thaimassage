@@ -1247,6 +1247,19 @@ export type Database = {
         Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }
         Returns: Json
       }
+      pos_invoice_therapists: { Args: { p_invoice_id: string }; Returns: Json }
+      pos_record_payment_tips: {
+        Args: {
+          p_invoice_id: string
+          p_method: string
+          p_amount: number
+          p_slip_check_id: string | null
+          p_manual_reason: string | null
+          p_tips: Json
+          p_idempotency_key: string
+        }
+        Returns: Json
+      }
       therapist_pay_daily: {
         Args: { p_company_id: string; p_branch_id: string | null; p_employee_id: string; p_from: string; p_to: string }
         Returns: Json

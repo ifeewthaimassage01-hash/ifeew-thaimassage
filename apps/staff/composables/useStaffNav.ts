@@ -17,7 +17,6 @@ import {
   UserCog,
   UserCheck,
   Users,
-  Wallet,
 } from '@lucide/vue'
 
 export interface StaffNavItem {
@@ -46,7 +45,6 @@ export function useStaffNav() {
       label: 'งานประจำวัน',
       items: [
         { to: '/pos', label: 'หน้าร้าน (POS)', icon: Store },
-        { to: '/payments', label: 'ชำระเงิน', icon: Wallet },
         { to: '/queue', label: 'คิว', icon: ListOrdered },
         { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
       ],
@@ -60,7 +58,6 @@ export function useStaffNav() {
       items: [
         { to: '/', label: 'แดชบอร์ด', icon: LayoutDashboard, exact: true },
         { to: '/pos', label: 'หน้าร้าน (POS)', icon: Store },
-        { to: '/payments', label: 'ชำระเงิน', icon: Wallet },
         { to: '/queue', label: 'คิว', icon: ListOrdered },
         { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
         { to: '/customers', label: 'ลูกค้า', icon: Users },
@@ -108,7 +105,7 @@ export function useStaffNav() {
         return [{ label: g.label }, { label: item.label, to: detail ? item.to : undefined }, ...(detail ? [{ label: 'รายละเอียด' }] : [])]
       }
     }
-    if (route.path.startsWith('/checkout')) return [{ label: 'งานประจำวัน' }, { label: 'ชำระเงิน', to: '/payments' }, { label: 'รายละเอียด' }]
+    if (route.path.startsWith('/checkout')) return [{ label: 'งานประจำวัน' }, { label: 'คิว', to: '/queue' }, { label: 'ชำระเงิน' }]
     return [{ label: 'แดชบอร์ด' }]
   })
 

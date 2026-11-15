@@ -56,7 +56,7 @@ const expenseLines = computed(() => {
   if (!d) return []
   return [
     { label: 'รายจ่ายร้าน', value: n(d.expenses) },
-    { label: 'ค่ามือหมอพนักงาน', value: n(d.commission) },
+    { label: 'ค่าแรงหมอ', value: n(d.commission) },
     { label: 'ค่าแรงหมอวิ่ง', value: n(d.freelance_fee) },
     { label: 'ค่าน้ำมันหมอวิ่ง', value: n(d.freelance_fuel) },
   ]

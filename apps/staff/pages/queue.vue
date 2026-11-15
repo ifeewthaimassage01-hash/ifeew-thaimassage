@@ -2,7 +2,7 @@
 // คิววันนี้ของสาขา (Realtime): เรียกคิว/เลือกหมอ, หมอรับคิว, เริ่ม-จบบริการ, ยกเลิก
 // มือถือ: แท็บ รอเรียก / กำลังให้บริการ / เสร็จ-ยกเลิก · จอใหญ่แสดงครบทุกคอลัมน์
 // Phase 6: เปลี่ยนหมอระหว่างบริการ, ต่อเวลา, ย้อนเริ่ม/จบ (15 นาที), หมอกดคิวด้วย PIN โดยไม่ต้อง logout หน้าร้าน
-import { CircleCheck, Clock, EllipsisVertical, HandHeart, Hourglass, KeyRound, Users } from '@lucide/vue'
+import { Banknote, CircleCheck, Clock, EllipsisVertical, HandHeart, Hourglass, KeyRound, Users } from '@lucide/vue'
 import {
   QUEUE_OVERDUE_MINUTES,
   QUEUE_UNDO_MINUTES,
@@ -17,6 +17,7 @@ import {
   type PosTherapist,
   type QueueStatus,
   type Database,
+  type FinanceBoard,
 } from '@ifeew/shared'
 
 
@@ -36,7 +37,7 @@ const isDesktop = useMediaQuery('(min-width: 1024px)')
 const panels = computed(() => {
   if (isDesktop.value) return columns
   if (mobileTab.value === 'done') return [columns[2]!]
-  return [{ key: 'active', title: 'คิวตอนนี้', statuses: [...columns[0]!.statuses, ...columns[1]!.statuses] }]
+  return [{ key: 'active' as const, title: 'คิวตอนนี้' }]
 })
 // รวมกลุ่ม: ย้ายคิวทั้งออเดอร์ไปอยู่กับออเดอร์อื่นของวันนี้ (pos_merge_orders — migration 049)
 const activeItems = (o: PosOrder) => o.items.filter((i) => i.queue_status !== 'CANCELLED')
@@ -72,9 +73,9 @@ async function merge(r: Row, target: PosOrder) {
 }
 
 // จัดกลุ่มคิวในกล่องตามออเดอร์ (มาด้วยกัน) โดยคงลำดับเลขคิว — กลุ่มอยู่ตำแหน่งของคิวแรกในกลุ่ม
-function groupsOf(statuses: QueueStatus[]) {
+function groupsOf(key: ColumnKey) {
   const groups: Array<{ orderId: string; rows: Row[] }> = []
-  for (const r of byColumn(statuses)) {
+  for (const r of byColumn(key)) {
     const g = groups.find((x) => x.orderId === r.order.order_id)
     if (g) g.rows.push(r)
     else groups.push({ orderId: r.order.order_id, rows: [r] })
@@ -84,7 +85,7 @@ function groupsOf(statuses: QueueStatus[]) {
 // สี/ไอคอนของแต่ละคอลัมน์ (โทนเดียวกับพื้นครีม — ใช้สีเฉพาะจุดและป้ายจำนวน)
 function columnTone(key: string) {
   if (key === 'waiting') return { dot: 'bg-brand-accent', pill: 'bg-pending-soft text-pending-ink', icon: Hourglass, empty: 'ไม่มีคิวรอเรียก' }
-  if (key === 'service') return { dot: 'bg-success', pill: 'bg-success-soft text-success-ink', icon: HandHeart, empty: 'ยังไม่มีใครกำลังนวด' }
+  if (key === 'service') return { dot: 'bg-success', pill: 'bg-success-soft text-success-ink', icon: HandHeart, empty: 'ยังไม่มีใครกำลังนวดหรือรอชำระ' }
   if (key === 'done') return { dot: 'bg-muted-soft', pill: 'bg-secondary text-heading', icon: CircleCheck, empty: 'ยังไม่มีคิวที่เสร็จ' }
   return { dot: 'bg-primary', pill: 'bg-secondary text-heading', icon: Hourglass, empty: 'ไม่มีคิวตอนนี้' }
 }
@@ -104,18 +105,50 @@ const rows = computed<Row[]>(() =>
 const route = useRoute()
 const newIds = computed(() => new Set(String(route.query.new ?? '').split(',').filter(Boolean)))
 
-const columns: Array<{ key: string; title: string; statuses: QueueStatus[] }> = [
+// การเก็บเงินอยู่ที่หน้านี้ (เลิกใช้หน้าชำระเงินแยก): นวดเสร็จแต่บิลยังไม่ PAID = "รอชำระเงิน" ค้างในคอลัมน์กำลังให้บริการ
+const finance = ref<FinanceBoard | null>(null)
+async function loadFinance() {
+  if (!activeBranch.value) return
+  const { data } = await supabase.rpc('pos_finance_board', { p_branch_id: activeBranch.value.branch_id })
+  finance.value = (data ?? null) as unknown as FinanceBoard | null
+}
+watch(() => [board.value, activeBranch.value?.branch_id], loadFinance, { immediate: true })
+const paidOrders = computed(() => new Set((finance.value?.invoices ?? []).filter((i) => i.status === 'PAID').map((i) => i.service_order_id)))
+// นวดเสร็จแล้วแต่ยังไม่จ่าย (ออเดอร์ที่ยกเลิกไม่นับ)
+const awaitingPayment = (r: Row) => r.queue_status === 'COMPLETED' && r.order.status !== 'CANCELLED' && !paidOrders.value.has(r.order.order_id)
+// ทิปเงินสดที่ยังไม่จ่ายหมอ (ย้ายมาจากหน้าร้าน)
+async function payOutTips(t: FinanceBoard['unpaid_cash_tips'][number]) {
+  if (!activeBranch.value || !(await confirm({ title: `จ่ายทิปให้ ${t.nickname}?`, description: `จ่ายเงินสด ${formatBaht(Number(t.amount))}`, confirmText: 'จ่ายทิป' }))) return
+  try {
+    await must(supabase.rpc('pos_pay_out_tips', { p_branch_id: activeBranch.value.branch_id, p_employee_id: t.employee_id }))
+    ok(`จ่ายทิปให้ ${t.nickname} แล้ว`)
+    await loadFinance()
+  } catch (e) {
+    fail(e)
+  }
+}
+// บิลค้างจากวันก่อน (ไม่อยู่ในกระดานวันนี้)
+const earlierUnpaid = computed(() => {
+  const today = new Set((board.value?.orders ?? []).map((o) => o.order_id))
+  return (finance.value?.invoices ?? []).filter((i) => !today.has(i.service_order_id) && ['ISSUED', 'PARTIALLY_PAID'].includes(i.status))
+})
+
+type ColumnKey = 'waiting' | 'service' | 'done' | 'active'
+const columns: Array<{ key: ColumnKey; title: string }> = [
   // CALLED/ACCEPTED = คิวที่เรียกแบบเดิม (ก่อน migration 033) แสดงรวมกับรอเรียก
-  { key: 'waiting', title: 'รอเรียก', statuses: ['WAITING', 'CALLED', 'ACCEPTED'] },
-  { key: 'service', title: 'กำลังให้บริการ', statuses: ['IN_SERVICE'] },
-  { key: 'done', title: 'เสร็จ / ยกเลิก', statuses: ['COMPLETED', 'CANCELLED'] },
+  { key: 'waiting', title: 'รอเรียก' },
+  { key: 'service', title: 'กำลังนวด / รอชำระ' },
+  { key: 'done', title: 'เสร็จ / ยกเลิก' },
 ]
-const byColumn = (statuses: QueueStatus[]) =>
+function columnOf(r: Row): Exclude<ColumnKey, 'active'> {
+  if (isWaiting(r.queue_status)) return 'waiting'
+  if (r.queue_status === 'IN_SERVICE' || awaitingPayment(r)) return 'service'
+  return 'done'
+}
+const byColumn = (key: ColumnKey) =>
   rows.value
-    .filter((r) => statuses.includes(r.queue_status))
-    .sort((a, b) =>
-      statuses.includes('COMPLETED') ? b.queue_number - a.queue_number : a.queue_number - b.queue_number,
-    )
+    .filter((r) => (key === 'active' ? columnOf(r) !== 'done' : columnOf(r) === key))
+    .sort((a, b) => (key === 'done' ? b.queue_number - a.queue_number : a.queue_number - b.queue_number))
 
 // มีเมนูรอง (⋯) ไหม — ซ่อนปุ่มเมื่อไม่มีอะไรให้ทำ
 const hasMore = (r: Row) =>
@@ -452,7 +485,7 @@ async function submitClock(pin: string) {
 
 <template>
   <div>
-    <PageHeader title="คิววันนี้" description="กด “เริ่มนวด” เพื่อเลือกหมอ · นวดจบแล้วกด “นวดเสร็จแล้ว”">
+    <PageHeader title="คิววันนี้" description="กด “เริ่มนวด” เพื่อเลือกหมอ · นวดจบแล้วกด “นวดเสร็จแล้ว” แล้วรับเงิน · ยังไม่จ่ายจะค้างไว้ที่ “รอชำระเงิน”">
       <template #actions>
         <Button v-if="device.token.value" variant="outline" @click="openClock"><Clock /> ลงเวลา</Button>
       </template>
@@ -462,12 +495,30 @@ async function submitClock(pin: string) {
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-3" />
 
+    <!-- ทิปเงินสดที่ยังไม่จ่ายหมอ -->
+    <div v-if="finance?.unpaid_cash_tips.length" class="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-pending-soft px-4 py-3">
+      <span class="mr-1 text-[15px] font-medium text-pending-ink">ทิปเงินสดที่ยังไม่จ่ายหมอ:</span>
+      <Button v-for="t in finance.unpaid_cash_tips" :key="t.employee_id" size="sm" variant="outline" @click="payOutTips(t)">
+        จ่าย {{ t.nickname }} <span class="num">{{ formatBaht(Number(t.amount)) }}</span>
+      </Button>
+    </div>
+
+    <!-- บิลค้างชำระจากวันก่อน -->
+    <div v-if="earlierUnpaid.length" class="mb-4 flex flex-wrap items-center gap-2 rounded-xl bg-pending-soft px-4 py-3">
+      <span class="mr-1 text-[15px] font-medium text-pending-ink">ค้างชำระจากวันก่อน:</span>
+      <Button v-for="i in earlierUnpaid" :key="i.invoice_id" as-child size="sm" variant="outline">
+        <NuxtLink :to="`/checkout/${i.service_order_id}`">
+          {{ i.customer_name ?? 'ลูกค้าทั่วไป' }} <span class="num">{{ formatBaht(Number(i.balance)) }}</span>
+        </NuxtLink>
+      </Button>
+    </div>
+
     <!-- มือถือ/แท็บเล็ต: แสดงทีละคอลัมน์เป็นแท็บ (จอใหญ่แสดงครบทุกคอลัมน์) -->
     <SegmentedControl
       v-model="mobileTab"
       :items="[
-        { value: 'active', label: `คิวตอนนี้ (${byColumn(columns[0]!.statuses).length + byColumn(columns[1]!.statuses).length})` },
-        { value: 'done', label: `เสร็จ / ยกเลิก (${byColumn(columns[2]!.statuses).length})` },
+        { value: 'active', label: `คิวตอนนี้ (${byColumn('active').length})` },
+        { value: 'done', label: `เสร็จ / ยกเลิก (${byColumn('done').length})` },
       ]"
       label="สถานะคิว"
       class="mb-4 sm:flex sm:w-full sm:[&>button]:flex-1 lg:hidden"
@@ -484,15 +535,15 @@ async function submitClock(pin: string) {
         <h2 :id="`col-${c.key}`" class="m-0 flex items-center gap-2 px-1 pb-0.5 text-[15px] font-semibold text-heading">
           <span class="size-2.5 shrink-0 rounded-full" :class="columnTone(c.key).dot" aria-hidden="true" />
           {{ c.title }}
-          <span class="num ml-auto min-w-7 rounded-full px-2 py-0.5 text-center text-[13px] font-semibold" :class="columnTone(c.key).pill">{{ byColumn(c.statuses).length }}</span>
+          <span class="num ml-auto min-w-7 rounded-full px-2 py-0.5 text-center text-[13px] font-semibold" :class="columnTone(c.key).pill">{{ byColumn(c.key).length }}</span>
         </h2>
-        <p v-if="!byColumn(c.statuses).length" class="m-0 flex flex-col items-center gap-1.5 rounded-xl bg-card/70 px-3 py-6 text-center text-sm text-muted-foreground">
+        <p v-if="!byColumn(c.key).length" class="m-0 flex flex-col items-center gap-1.5 rounded-xl bg-card/70 px-3 py-6 text-center text-sm text-muted-foreground">
           <component :is="columnTone(c.key).icon" class="size-5 text-muted-soft" aria-hidden="true" />
           {{ columnTone(c.key).empty }}
         </p>
         <!-- คิวที่มาด้วยกัน (ออเดอร์เดียวกัน) อยู่ในกรอบเดียว · มาคนเดียว = การ์ดเดี่ยว -->
         <div
-          v-for="g in groupsOf(c.statuses)"
+          v-for="g in groupsOf(c.key)"
           :key="g.orderId"
           :class="g.rows.length > 1 ? 'grid gap-1.5 rounded-xl border border-dashed border-brand-accent/60 bg-card/40 p-1.5' : 'contents'"
         >
@@ -524,7 +575,11 @@ async function submitClock(pin: string) {
             </div>
             <!-- กล่องรวม (มือถือ): ป้ายสถานะ -->
             <span
-              v-if="c.key === 'active'"
+              v-if="awaitingPayment(r)"
+              class="shrink-0 rounded-full bg-pending-soft px-2 py-0.5 text-[13px] font-medium text-pending-ink"
+            >รอชำระเงิน</span>
+            <span
+              v-else-if="c.key === 'active'"
               class="shrink-0 rounded-full px-2 py-0.5 text-[13px] font-medium"
               :class="isWaiting(r.queue_status) ? 'bg-pending-soft text-pending-ink' : 'bg-success-soft text-success-ink'"
             >{{ isWaiting(r.queue_status) ? 'รอเรียก' : 'กำลังนวด' }}</span>
@@ -558,6 +613,15 @@ async function submitClock(pin: string) {
           </Button>
           <Button v-else-if="r.queue_status === 'IN_SERVICE'" size="sm" variant="secondary" class="w-full" :disabled="busy === r.queue_id" @click="complete(r)">
             นวดเสร็จแล้ว
+          </Button>
+          <!-- นวดเสร็จแต่ยังไม่จ่าย: ทั้งกลุ่มจ่ายบิลเดียว → ปุ่มอยู่ที่คิวสุดท้ายของกลุ่ม -->
+          <Button
+            v-else-if="awaitingPayment(r) && r.queue_id === g.rows[g.rows.length - 1]!.queue_id"
+            as-child
+            size="sm"
+            class="w-full"
+          >
+            <NuxtLink :to="`/checkout/${r.order.order_id}`"><Banknote /> ชำระเงิน{{ g.rows.length > 1 ? ` (${g.rows.length} คน)` : '' }}</NuxtLink>
           </Button>
         </article>
         </div>

@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import type { Component } from 'vue'
-import { CalendarCheck, LayoutDashboard, ListOrdered, ReceiptText, Store, Wallet } from '@lucide/vue'
+import { CalendarCheck, LayoutDashboard, ListOrdered, ReceiptText, Store } from '@lucide/vue'
 
 // แถบเมนูล่างสำหรับมือถือ (<768) — ทางลัดงานประจำวันที่ใช้บ่อย
 //   เจ้าของร้าน 6 ช่อง (มีแดชบอร์ด) · พนักงาน 5 ช่อง ไม่มีแดชบอร์ด (หน้า / พาไปหน้าร้าน)
@@ -10,8 +10,7 @@ const { isOwner } = useAccess()
 type Item = { to: string; label: string; icon: Component; also?: string[]; exact?: boolean }
 const daily: Item[] = [
   { to: '/pos', label: 'หน้าร้าน', icon: Store },
-  { to: '/queue', label: 'คิว', icon: ListOrdered },
-  { to: '/payments', label: 'ชำระเงิน', icon: Wallet, also: ['/checkout'] },
+  { to: '/queue', label: 'คิว', icon: ListOrdered, also: ['/checkout'] },
   { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
 ]
 const expenses: Item = { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText }

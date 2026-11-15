@@ -26,6 +26,7 @@ const totals = computed(() => ({
   services: rows.value.reduce((s, r) => s + r.services, 0),
   minutes: rows.value.reduce((s, r) => s + r.worked_minutes, 0),
   fee: rows.value.reduce((s, r) => s + Number(r.fee_estimate), 0),
+  guarantee: rows.value.reduce((s, r) => s + Number(r.guarantee ?? 0) + Number(r.adjustments ?? 0), 0),
   tips: rows.value.reduce((s, r) => s + Number(r.tips ?? 0), 0),
   pay: rows.value.reduce((s, r) => s + Number(r.pay_total ?? r.fee_estimate), 0),
 }))
@@ -53,7 +54,7 @@ const days = ref<TherapistPayDay[]>([])
 const daysLoading = ref(false)
 const daysError = ref<string | null>(null)
 async function openDays(r: TherapistSummaryRow) {
-  if (!company.value) return
+  if (!company.value || !r.employee_id) return // หมอวิ่งไม่มีรายวัน
   picked.value = r
   days.value = []
   daysError.value = null
@@ -74,7 +75,7 @@ const dayLabel = (d: string) =>
 
 <template>
   <div>
-    <PageHeader title="ค่าแรงหมอ" description="ค่ามือ ทิป และงานของหมอแต่ละคน · แตะชื่อหมอเพื่อดูรายวัน" />
+    <PageHeader title="ค่าแรงหมอ" description="ค่ามือ ประกันมือ ทิป และงานของหมอแต่ละคน · แตะชื่อหมอเพื่อดูรายวัน" />
 
     <FilterPanel label="ตัวกรองค่าแรงหมอ">
       <FilterRow label="สาขา">
@@ -97,6 +98,7 @@ const dayLabel = (d: string) =>
               <TableHead class="text-right">บริการ</TableHead>
               <TableHead class="text-right">เวลาทำงาน</TableHead>
               <TableHead class="text-right">ค่ามือ</TableHead>
+              <TableHead class="text-right">ประกันมือ/ปรับ</TableHead>
               <TableHead class="text-right">ทิป</TableHead>
               <TableHead class="text-right">ค่าแรงรวม</TableHead>
               <TableHead class="text-right">ก่อนเช็คชื่อ</TableHead>
@@ -104,9 +106,10 @@ const dayLabel = (d: string) =>
             </TableRow>
           </TableHeader>
           <TableBody>
-            <TableRow v-for="r in rows" :key="r.employee_id" class="cursor-pointer" @click="openDays(r)">
+            <TableRow v-for="r in rows" :key="r.employee_id ?? `walkin:${r.nickname}`" :class="r.employee_id ? 'cursor-pointer' : ''" @click="openDays(r)">
               <TableCell>
-                <button type="button" class="inline-flex items-center gap-1 text-left" :aria-label="`ดูค่าแรงรายวันของ ${r.nickname}`" @click.stop="openDays(r)">
+                <span v-if="!r.employee_id" class="text-heading">{{ r.nickname }} <Badge variant="outline">หมอวิ่ง</Badge></span>
+                <button v-else type="button" class="inline-flex items-center gap-1 text-left" :aria-label="`ดูค่าแรงรายวันของ ${r.nickname}`" @click.stop="openDays(r)">
                   <span class="text-heading">{{ r.nickname }}</span>
                   <span class="text-sm text-muted-foreground">{{ r.employee_code }}</span>
                   <ChevronRight class="size-4 text-muted-foreground" aria-hidden="true" />
@@ -115,13 +118,14 @@ const dayLabel = (d: string) =>
               <TableCell class="num text-right">{{ r.services }}</TableCell>
               <TableCell class="num text-right">{{ formatDuration(r.worked_minutes) }}</TableCell>
               <TableCell class="num text-right">{{ formatBaht(Number(r.fee_estimate)) }}</TableCell>
+              <TableCell class="num text-right">{{ formatBaht(Number(r.guarantee ?? 0) + Number(r.adjustments ?? 0)) }}</TableCell>
               <TableCell class="num text-right">{{ formatBaht(Number(r.tips ?? 0)) }}</TableCell>
               <TableCell class="num text-right font-semibold text-heading">{{ formatBaht(Number(r.pay_total ?? r.fee_estimate)) }}</TableCell>
               <TableCell class="num text-right">{{ r.off_shift_count }}</TableCell>
               <TableCell class="num text-right">{{ r.handover_count }}</TableCell>
             </TableRow>
             <TableRow v-if="!rows.length" class="hover:bg-transparent">
-              <TableCell colspan="8" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
+              <TableCell colspan="9" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
             </TableRow>
           </TableBody>
           <TableFooter v-if="rows.length">
@@ -130,6 +134,7 @@ const dayLabel = (d: string) =>
               <TableCell class="num text-right font-semibold text-heading">{{ totals.services }}</TableCell>
               <TableCell class="num text-right font-semibold text-heading">{{ formatDuration(totals.minutes) }}</TableCell>
               <TableCell class="num text-right font-semibold text-heading">{{ formatBaht(totals.fee) }}</TableCell>
+              <TableCell class="num text-right font-semibold text-heading">{{ formatBaht(totals.guarantee) }}</TableCell>
               <TableCell class="num text-right font-semibold text-heading">{{ formatBaht(totals.tips) }}</TableCell>
               <TableCell class="num text-right font-semibold text-heading">{{ formatBaht(totals.pay) }}</TableCell>
               <TableCell />
@@ -138,7 +143,7 @@ const dayLabel = (d: string) =>
           </TableFooter>
         </Table>
       </div>
-      <template #footer>ค่ามือคิดจากค่ามือที่ตั้งไว้ต่อบริการ (งานที่ส่งต่อแบ่งตามเวลาที่ทำจริง) · ทิปรวมทุกช่องทาง ไม่นับรายการที่ยกเลิก</template>
+      <template #footer>ค่าแรงรวม = ค่ามือ + เงินเติมประกันมือ + รายการปรับ + ทิป · ค่ามือคิดจากค่ามือที่ตั้งไว้ต่อบริการ (งานที่ส่งต่อแบ่งตามเวลาที่ทำจริง) · ทิปรวมทุกช่องทาง ไม่นับรายการที่ยกเลิก</template>
     </SectionCard>
 
     <Dialog :open="!!picked" @update:open="(v) => !v && (picked = null)">
@@ -162,6 +167,13 @@ const dayLabel = (d: string) =>
               <li v-for="(j, i) in d.jobs" :key="i" class="flex justify-between gap-3">
                 <span><span class="num text-muted-foreground">{{ j.time ?? '–' }}</span> {{ j.service_name }} {{ formatDuration(j.minutes) }}<span v-if="j.handover" class="text-muted-foreground"> · ส่งต่อ</span></span>
                 <span class="num shrink-0">{{ formatBaht(Number(j.fee)) }}</span>
+              </li>
+              <li v-if="Number(d.guarantee) > 0" class="flex justify-between gap-3">
+                <span>ประกันมือ<span v-if="d.guarantee_base" class="text-muted-foreground"> (เติมให้ครบ {{ formatBaht(Number(d.guarantee_base)) }})</span></span>
+                <span class="num shrink-0">{{ formatBaht(Number(d.guarantee)) }}</span>
+              </li>
+              <li v-if="Number(d.adjustments) !== 0" class="flex justify-between gap-3">
+                <span>ปรับ</span><span class="num shrink-0">{{ formatBaht(Number(d.adjustments)) }}</span>
               </li>
               <li v-if="Number(d.tips) > 0" class="flex justify-between gap-3 text-success-ink">
                 <span>ทิป</span><span class="num shrink-0">{{ formatBaht(Number(d.tips)) }}</span>

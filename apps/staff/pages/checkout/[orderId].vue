@@ -1,5 +1,6 @@
 <script setup lang="ts">
-// ชำระเงินของ Order: ออก Invoice ให้อัตโนมัติ (ข้ามขั้นร่าง · หักมัดจำอัตโนมัติ) → รับเงิน (เงินสด / โอน+สลิป — QR รวมกับโอน) + ทิป
+// ชำระเงินของ Order: ออก Invoice ให้อัตโนมัติ (ข้ามขั้นร่าง · หักมัดจำอัตโนมัติ) → รับเงิน (เงินสด / โอน+สลิป — QR รวมกับโอน)
+//   + ทิปแยกรายหมอ (หลายคนในบิลเดียว) ผ่าน pos_record_payment_tips (migration 074)
 // ยกเลิกบิล (Void ต้องมีเหตุผล) / คืนเงิน (OWNER) — ใบเสร็จเก็บในระบบเท่านั้น
 import { ArrowLeft, Banknote, Camera, Check, CircleCheck, QrCode } from '@lucide/vue'
 import {
@@ -117,18 +118,38 @@ async function issue() {
 // ---------------------------------------------------------------------------
 // โอน = รวม QR หน้าร้าน + โอนเข้าบัญชี (บันทึกเป็น BANK_TRANSFER)
 const method = ref<'CASH' | 'BANK_TRANSFER'>('CASH')
-// รับเต็มยอดค้างเสมอ (ไม่มีช่องกรอกยอด/ทิป/เงินทอน)
+// รับเต็มยอดค้างเสมอ (ไม่มีช่องกรอกยอด/เงินทอน) · ทิปแยกรายหมอ บวกเพิ่มจากยอดบิล
 const amount = computed(() => (invoice.value ? Number(invoice.value.balance) : 0))
 const slip = ref<SlipCheck | null>(null)
 const slipUploading = ref(false)
 let payKey = newIdempotencyKey()
 
+// ทิป: หมอที่ทำงานในบิลนี้ แต่ละคนใส่ยอดของตัวเอง (ว่าง/0 = ไม่ได้ทิป)
+const therapists = ref<Array<{ employee_id: string; nickname: string; services: string | null }>>([])
+const tipInput = reactive<Record<string, string | number>>({})
+async function loadTherapists() {
+  if (!invoice.value) return
+  const { data } = await supabase.rpc('pos_invoice_therapists', { p_invoice_id: invoice.value.invoice_id })
+  therapists.value = (data ?? []) as unknown as typeof therapists.value
+}
+watch(() => invoice.value?.invoice_id, loadTherapists)
+const tips = computed(() =>
+  therapists.value
+    .map((t) => ({ employee_id: t.employee_id, amount: Math.round((Number(tipInput[t.employee_id]) || 0) * 100) / 100 }))
+    .filter((t) => t.amount > 0),
+)
+const tipBad = computed(() => therapists.value.some((t) => Number(tipInput[t.employee_id]) < 0))
+const tipTotal = computed(() => tips.value.reduce((s, t) => s + t.amount, 0))
+const grandTotal = computed(() => amount.value + tipTotal.value)
+
 function resetPayment() {
   slip.value = null
   payKey = newIdempotencyKey()
+  for (const k of Object.keys(tipInput)) delete tipInput[k]
 }
 watch(() => invoice.value?.invoice_id, resetPayment)
-watch([method, amount], () => {
+// เปลี่ยนวิธีจ่าย/ยอด/ทิป → สลิปเดิมยอดไม่ตรงแล้ว ต้องถ่ายใหม่
+watch([method, amount, tipTotal], () => {
   slip.value = null
   payKey = newIdempotencyKey()
 })
@@ -143,7 +164,7 @@ async function onSlipSelected(e: Event) {
     const form = new FormData()
     form.append('file', file)
     form.append('invoice_id', invoice.value.invoice_id)
-    form.append('amount', String(amount.value))
+    form.append('amount', String(grandTotal.value))
     slip.value = await callForm<SlipCheck>('pos-payment-slip', form)
   } catch (err) {
     message.value = { type: 'error', text: edgeErrorText(err, 'อัปโหลดสลิปไม่สำเร็จ') }
@@ -153,7 +174,7 @@ async function onSlipSelected(e: Event) {
 }
 
 const canPay = computed(() => {
-  if (!payable.value || !(amount.value > 0)) return false
+  if (!payable.value || !(amount.value > 0) || tipBad.value) return false
   if (method.value === 'CASH') return true
   // โอน/QR: ต้องแนบสลิปก่อน (ไม่ตรวจสลิปอัตโนมัติ)
   return !!slip.value && slip.value.outcome !== 'REJECTED'
@@ -163,17 +184,16 @@ async function pay() {
   if (!invoice.value || !canPay.value) return
   saving.value = true
   try {
-    invoice.value = (await must(supabase.rpc('pos_record_payment', {
+    invoice.value = (await must(supabase.rpc('pos_record_payment_tips', {
       p_invoice_id: invoice.value.invoice_id,
       p_method: method.value,
       p_amount: amount.value,
       p_slip_check_id: method.value === 'CASH' ? null : slip.value!.slip_check_id,
       p_manual_reason: null,
-      p_tip_amount: 0,
-      p_tip_employee_id: null,
+      p_tips: tips.value,
       p_idempotency_key: payKey,
     }))) as unknown as InvoiceView
-    // จ่ายครบ: กล่องเขียว "จ่ายครบแล้ว" บอกอยู่แล้ว → ค้างไว้ 3 วินาทีแล้วกลับหน้าร้าน (POS)
+    // จ่ายครบ: กล่องเขียว "จ่ายครบแล้ว" บอกอยู่แล้ว → ค้างไว้ 3 วินาทีแล้วกลับหน้าคิว
     if (invoice.value.status === 'PAID') startBackCountdown()
     else ok('บันทึกการรับเงินแล้ว')
     resetPayment()
@@ -184,7 +204,7 @@ async function pay() {
   }
 }
 
-// หลังรับเงินครบ: นับถอยหลัง 3 วินาทีแล้วกลับหน้าร้าน (เฉพาะตอนเพิ่งจ่าย ไม่ใช่ตอนเปิดดูบิลที่จ่ายแล้ว)
+// หลังรับเงินครบ: นับถอยหลัง 3 วินาทีแล้วกลับหน้าคิว (เฉพาะตอนเพิ่งจ่าย ไม่ใช่ตอนเปิดดูบิลที่จ่ายแล้ว)
 const backCountdown = ref(0)
 let backTimer: ReturnType<typeof setInterval> | null = null
 function stopBackCountdown() {
@@ -199,7 +219,7 @@ function startBackCountdown() {
     backCountdown.value--
     if (backCountdown.value <= 0) {
       stopBackCountdown()
-      navigateTo('/pos')
+      navigateTo('/queue')
     }
   }, 1000)
 }
@@ -238,11 +258,11 @@ async function submitVoid() {
       p_invoice_id: id, p_reason: voidReason.value.trim(), p_idempotency_key: voidKey,
     })))) as unknown as InvoiceView
     voidDialog.value = false
-    // ทุกคิวจบแล้ว → ระบบยกเลิกรายการกลุ่มนี้ด้วย (หายจาก "ยังไม่จ่าย") → กลับหน้าร้าน
+    // ทุกคิวจบแล้ว → ระบบยกเลิกรายการกลุ่มนี้ด้วย (หายจากคิวที่รอชำระ) → กลับหน้าคิว
     const { data: order } = await supabase.from('service_orders').select('status').eq('id', orderId.value).maybeSingle()
     if (order?.status === 'CANCELLED') {
       ok('ยกเลิกบิลและรายการนี้แล้ว')
-      await navigateTo('/pos')
+      await navigateTo('/queue')
       return
     }
     ok('ยกเลิกบิลแล้ว ยังมีคิวที่ยังไม่เสร็จ ออกบิลใหม่ได้ด้วยปุ่ม “ออกบิลใหม่”')
@@ -289,7 +309,7 @@ async function submitRefund() {
   <!-- ทางเดียวจากบนลงล่าง: ยอดที่ต้องจ่าย → รายการ → วิธีจ่าย → ปุ่มยืนยัน · ประวัติการรับเงิน/ยกเลิกบิลอยู่ท้ายหน้า -->
   <div class="mx-auto grid max-w-2xl gap-5">
     <div class="flex items-center gap-2">
-      <Button as-child variant="ghost" size="icon" aria-label="กลับหน้าชำระเงิน"><NuxtLink to="/payments"><ArrowLeft class="size-5" /></NuxtLink></Button>
+      <Button as-child variant="ghost" size="icon" aria-label="กลับหน้าคิว"><NuxtLink to="/queue"><ArrowLeft class="size-5" /></NuxtLink></Button>
       <h1 class="m-0 min-w-0 flex-1 truncate text-lg font-semibold">{{ invoice?.customer_name ?? 'ลูกค้าทั่วไป' }}</h1>
     </div>
 
@@ -304,7 +324,7 @@ async function submitRefund() {
           <p class="m-0 text-lg font-semibold">จ่ายครบแล้ว <span class="num">{{ formatBaht(Number(invoice.total)) }}</span></p>
           <p v-if="invoice.receipt_number" class="m-0 text-sm">ใบเสร็จ <span class="num">{{ invoice.receipt_number }}</span></p>
           <p v-if="backCountdown > 0" class="m-0 mt-1 text-sm">
-            กลับหน้าร้านใน <span class="num font-semibold">{{ backCountdown }}</span> วินาที…
+            กลับหน้าคิวใน <span class="num font-semibold">{{ backCountdown }}</span> วินาที…
             <button type="button" class="ml-1 font-medium underline underline-offset-2" @click="stopBackCountdown">อยู่หน้านี้ต่อ</button>
           </p>
         </div>
@@ -367,9 +387,36 @@ async function submitRefund() {
           </button>
         </div>
 
-        <p v-if="method === 'CASH'" class="m-0 text-[15px] text-muted-foreground">รับเงินสด <span class="num font-semibold text-heading">{{ formatBaht(amount) }}</span> จากลูกค้า แล้วกดปุ่มด้านล่าง</p>
+        <!-- ทิป: แยกรายหมอ (ให้หลายคนในบิลเดียวได้) -->
+        <fieldset v-if="therapists.length" class="m-0 grid gap-2 rounded-lg border border-border p-3">
+          <legend class="px-1 text-[15px] font-semibold">ทิป <span class="font-normal text-muted-foreground">(ถ้ามี · ใส่เฉพาะคนที่ได้)</span></legend>
+          <div v-for="t in therapists" :key="t.employee_id" class="grid grid-cols-[minmax(0,1fr)_8.5rem] items-center gap-3">
+            <label :for="`tip-${t.employee_id}`" class="min-w-0">
+              <span class="block truncate text-[15px] font-medium text-heading">{{ t.nickname }}</span>
+              <span v-if="t.services" class="block truncate text-xs text-muted-foreground">{{ t.services }}</span>
+            </label>
+            <TextField
+              :id="`tip-${t.employee_id}`"
+              v-model="tipInput[t.employee_id]"
+              inputmode="decimal"
+              placeholder="0"
+              suffix="บาท"
+              :aria-label="`ทิปของ ${t.nickname}`"
+            />
+          </div>
+          <p v-if="tipTotal > 0" class="m-0 flex justify-between border-t border-border pt-2 text-sm">
+            <span class="text-muted-foreground">รวมทิป</span><span class="num font-semibold text-heading">{{ formatBaht(tipTotal) }}</span>
+          </p>
+          <p v-if="tipBad" class="m-0 text-sm text-danger-ink">ยอดทิปต้องไม่ติดลบ</p>
+        </fieldset>
+
+        <p v-if="method === 'CASH'" class="m-0 text-[15px] text-muted-foreground">
+          รับเงินสด <span class="num font-semibold text-heading">{{ formatBaht(grandTotal) }}</span> จากลูกค้า<template v-if="tipTotal > 0"> (ค่าบริการ <span class="num">{{ formatBaht(amount) }}</span> + ทิป <span class="num">{{ formatBaht(tipTotal) }}</span>)</template> แล้วกดปุ่มด้านล่าง
+        </p>
         <div v-else class="grid gap-3">
-          <p class="m-0 text-[15px] text-muted-foreground">ให้ลูกค้าโอน <span class="num font-semibold text-heading">{{ formatBaht(amount) }}</span> แล้วถ่ายรูปสลิป</p>
+          <p class="m-0 text-[15px] text-muted-foreground">
+            ให้ลูกค้าโอน <span class="num font-semibold text-heading">{{ formatBaht(grandTotal) }}</span><template v-if="tipTotal > 0"> (รวมทิป <span class="num">{{ formatBaht(tipTotal) }}</span>)</template> แล้วถ่ายรูปสลิป
+          </p>
           <label
             v-if="!slip"
             class="flex cursor-pointer items-center justify-center gap-2 rounded-lg border-2 border-dashed border-input px-4 py-4 text-[15px] font-medium text-heading hover:bg-muted focus-within:ring-3 focus-within:ring-ring/50"
@@ -390,7 +437,7 @@ async function submitRefund() {
         </div>
 
         <Button size="lg" class="h-12 w-full text-base" :disabled="!canPay || saving" @click="pay">
-          <Check /> {{ saving ? 'กำลังบันทึก…' : `ได้รับเงินแล้ว ${formatBaht(amount)}` }}
+          <Check /> {{ saving ? 'กำลังบันทึก…' : `ได้รับเงินแล้ว ${formatBaht(grandTotal)}${tipTotal > 0 ? ' (รวมทิป)' : ''}` }}
         </Button>
       </section>
 

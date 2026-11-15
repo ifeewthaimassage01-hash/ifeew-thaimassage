@@ -3,7 +3,7 @@
 //   หน้าหลักมี 2 ทางเลือกชัด ๆ (รับลูกค้าใหม่ / ลูกค้าที่จองไว้) + รายชื่อลูกค้าวันนี้ (แต่ละคนมีปุ่มหลักปุ่มเดียว)
 //   รับลูกค้า = ทำทีละขั้น: 1) ใครมา → 2) เลือกบริการ (การ์ด ไม่ใช่ dropdown) → 3) เลือกเวลา + ยืนยัน → เลขคิว
 // กะเปิดอัตโนมัติ (migration 031) · ร้านไม่มีเครื่องพิมพ์: แจ้งเลขคิวที่แสดงบนจอแก่ลูกค้า
-import { ArrowLeft, Banknote, CalendarCheck, Check, ChevronRight, CircleCheck, Clock, Plus, UserPlus, X } from '@lucide/vue'
+import { ArrowLeft, CalendarCheck, Check, ChevronRight, Clock, Plus, UserPlus, X } from '@lucide/vue'
 import {
   bangkokTime,
   formatBaht,
@@ -12,12 +12,11 @@ import {
   newIdempotencyKey,
   type AvailableSlot,
   type Database,
-  type FinanceBoard,
   type PosOrder,
   type StaffBookingRow,
+  type StaffDashboard,
 } from '@ifeew/shared'
 
-const { confirm } = useDialog()
 type CatalogRow = Database['public']['Views']['v_public_branch_services']['Row']
 
 const supabase = useSupabaseClient()
@@ -62,39 +61,25 @@ async function goToQueue() {
 onBeforeUnmount(stopCountdown)
 
 // ---------------------------------------------------------------------------
-// การเงินหน้าร้าน (สถานะบิล, ทิปเงินสดที่ยังไม่จ่าย)
+// ลูกค้าวันนี้ที่ยังนวดไม่เสร็จ — หน้าร้านไม่มีเรื่องเงิน (นวดเสร็จแล้วไปเก็บเงินที่หน้าคิว)
 // ---------------------------------------------------------------------------
-const finance = ref<FinanceBoard | null>(null)
-async function loadFinance() {
+// เตียงและอุปกรณ์ตอนนี้ (ข้อมูลเดียวกับแดชบอร์ด) — โหลดใหม่เมื่อกระดานคิวเปลี่ยน (realtime) และทุก 30 วินาที
+//   (เตียงที่จองล่วงหน้าเริ่ม "ใช้อยู่" เองเมื่อถึงเวลา โดยไม่มีอะไรเปลี่ยนใน DB)
+const resources = ref<StaffDashboard['resources'] | null>(null)
+async function loadResources() {
   if (!activeBranch.value) return
-  const { data } = await supabase.rpc('pos_finance_board', { p_branch_id: activeBranch.value.branch_id })
-  finance.value = (data ?? null) as unknown as FinanceBoard | null
+  const { data } = await supabase.rpc('staff_dashboard', { p_branch_id: activeBranch.value.branch_id })
+  if (data) resources.value = (data as unknown as StaffDashboard).resources
 }
-watch(() => [board.value?.orders.length, activeBranch.value?.branch_id], loadFinance, { immediate: true })
-const invoiceOf = (orderId: string) => finance.value?.invoices.find((i) => i.service_order_id === orderId && i.status !== 'VOID')
+watch(() => [board.value, activeBranch.value?.branch_id], loadResources, { immediate: true })
+useLiveInterval(loadResources, 30_000)
 
-async function payOutTips(t: FinanceBoard['unpaid_cash_tips'][number]) {
-  if (!activeBranch.value || !(await confirm({ title: `จ่ายทิปให้ ${t.nickname}?`, description: `จ่ายเงินสด ${formatBaht(Number(t.amount))}`, confirmText: 'จ่ายทิป' }))) return
-  try {
-    await must(supabase.rpc('pos_pay_out_tips', { p_branch_id: activeBranch.value.branch_id, p_employee_id: t.employee_id }))
-    message.value = { type: 'success', text: `จ่ายทิปให้ ${t.nickname} แล้ว` }
-    await Promise.all([loadFinance(), load()])
-  } catch (e) {
-    fail(e)
-  }
-}
-
-const activeOrders = computed(() => [...(board.value?.orders ?? [])].reverse().filter((o) => o.status !== 'CANCELLED'))
-const canPay = (o: PosOrder) => o.items.some((i) => ['IN_SERVICE', 'COMPLETED'].includes(i.queue_status))
-const isPaid = (o: PosOrder) => invoiceOf(o.order_id)?.status === 'PAID'
-// รายการที่ยังนับ (ไม่รวมคิวที่ยกเลิก) · ยอด = ยอดค้างในบิล หรือราคารวมถ้ายังไม่ออกบิล
+// รายการที่ยังนับ (ไม่รวมคิวที่ยกเลิก)
 const liveItems = (o: PosOrder) => o.items.filter((i) => i.queue_status !== 'CANCELLED')
-const dueOf = (o: PosOrder) => {
-  const inv = invoiceOf(o.order_id)
-  return inv ? Number(inv.balance) : liveItems(o).reduce((s, i) => s + Number(i.unit_price), 0)
-}
-const unpaidOrders = computed(() => activeOrders.value.filter((o) => !isPaid(o) && liveItems(o).length))
-const paidOrders = computed(() => activeOrders.value.filter((o) => isPaid(o)))
+const inProgress = (o: PosOrder) => o.items.some((i) => ['WAITING', 'CALLED', 'ACCEPTED', 'IN_SERVICE'].includes(i.queue_status))
+const activeOrders = computed(() =>
+  [...(board.value?.orders ?? [])].reverse().filter((o) => o.status !== 'CANCELLED' && inProgress(o)),
+)
 const itemChip = (i: PosOrder['items'][number]) =>
   i.queue_status === 'IN_SERVICE'
     ? { label: 'กำลังนวด', cls: 'bg-success-soft text-success-ink' }
@@ -375,7 +360,6 @@ async function submitWalkIn() {
   <div class="mx-auto max-w-4xl">
     <PageHeader v-if="screen === 'home'" title="หน้าร้าน" description="กด “รับลูกค้าใหม่” เมื่อลูกค้าเดินเข้าร้าน หรือ “ลูกค้าที่จองไว้” เพื่อเช็กอิน" />
     <h1 v-else class="sr-only">หน้าร้าน {{ activeBranch?.name }}</h1>
-    <PendingSlipBanner v-if="screen === 'home'" />
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
     <Alert v-if="error" variant="destructive" class="mb-4"><AlertDescription>{{ error }}</AlertDescription></Alert>
     <LoadingBar v-if="loading" class="mb-4" />
@@ -409,29 +393,23 @@ async function submitWalkIn() {
         </button>
       </div>
 
-      <!-- ทิปเงินสดที่ยังไม่จ่ายหมอ (แสดงเมื่อมีเท่านั้น) -->
-      <div v-if="finance?.unpaid_cash_tips.length" class="flex flex-wrap items-center gap-2 rounded-xl bg-pending-soft px-4 py-3">
-        <span class="mr-1 text-[15px] font-medium text-pending-ink">ทิปเงินสดที่ยังไม่จ่ายหมอ:</span>
-        <Button v-for="t in finance.unpaid_cash_tips" :key="t.employee_id" size="sm" variant="outline" @click="payOutTips(t)">
-          จ่าย {{ t.nickname }} <span class="num">{{ formatBaht(Number(t.amount)) }}</span>
-        </Button>
-      </div>
+      <!-- เตียงและอุปกรณ์ตอนนี้ -->
+      <ResourceGrid :resources="resources" :loading="!resources" />
 
-      <!-- ลูกค้าวันนี้ -->
+      <!-- ลูกค้าวันนี้ที่ยังนวดไม่เสร็จ -->
       <section aria-labelledby="today-h" class="grid gap-3">
-        <h2 id="today-h" class="m-0 text-base font-semibold">ลูกค้าวันนี้ <span class="num font-normal text-muted-foreground">{{ activeOrders.length }} กลุ่ม</span></h2>
+        <h2 id="today-h" class="m-0 text-base font-semibold">ลูกค้าตอนนี้ <span class="num font-normal text-muted-foreground">{{ activeOrders.length }} กลุ่ม</span></h2>
         <p v-if="!activeOrders.length" class="m-0 rounded-xl border border-dashed border-input px-4 py-8 text-center text-[15px] text-muted-foreground">
           ยังไม่มีลูกค้า — กด “รับลูกค้าใหม่” เพื่อเริ่ม
         </p>
 
-        <!-- ยังไม่จ่าย: การ์ดเต็ม (หัว = ชื่อ+ยอด · กลาง = ตารางคิว · ล่าง = ปุ่มตำแหน่งเดิมเสมอ) -->
-        <article v-for="o in unpaidOrders" :key="o.order_id" class="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
+        <!-- การ์ดลูกค้า (หัว = ชื่อ · กลาง = ตารางคิว · ล่าง = เพิ่มบริการ) -->
+        <article v-for="o in activeOrders" :key="o.order_id" class="overflow-hidden rounded-xl border border-border bg-card shadow-soft">
           <header class="flex items-baseline justify-between gap-3 px-4 pt-3.5 pb-2">
             <p class="m-0 min-w-0 truncate text-[15px] font-semibold text-heading">
               {{ o.customer_name ?? 'ลูกค้าทั่วไป' }}
               <span class="font-normal text-muted-foreground">· {{ liveItems(o).length }} คน</span>
             </p>
-            <p class="num m-0 shrink-0 text-[15px] font-semibold text-heading">{{ formatBaht(dueOf(o)) }}</p>
           </header>
           <ul class="m-0 grid list-none px-4 pb-2">
             <li v-for="i in liveItems(o)" :key="i.queue_id" class="grid grid-cols-[3.25rem_minmax(0,1fr)_auto] items-center gap-2 border-t border-border/60 py-2 text-sm">
@@ -444,31 +422,9 @@ async function submitWalkIn() {
           </ul>
           <footer class="flex items-center justify-between gap-2 border-t border-border bg-muted/40 px-3 py-2">
             <Button variant="ghost" size="sm" @click="startWalkIn(o)"><Plus /> เพิ่มบริการ</Button>
-            <Button v-if="canPay(o)" as-child size="sm">
-              <NuxtLink :to="`/checkout/${o.order_id}`"><Banknote /> รับเงิน</NuxtLink>
-            </Button>
-            <span v-else class="px-2 text-sm text-muted-foreground">รับเงินได้เมื่อเริ่มนวด</span>
+            <Button as-child variant="ghost" size="sm"><NuxtLink to="/queue">ดูคิว <ChevronRight /></NuxtLink></Button>
           </footer>
         </article>
-
-        <!-- จ่ายแล้ว: แถวสั้น -->
-        <div v-if="paidOrders.length" class="overflow-hidden rounded-xl border border-border bg-card">
-          <p class="m-0 border-b border-border bg-muted/40 px-4 py-2 text-sm font-medium text-muted-foreground">จ่ายแล้ว · <span class="num">{{ paidOrders.length }}</span> กลุ่ม</p>
-          <NuxtLink
-            v-for="o in paidOrders"
-            :key="o.order_id"
-            :to="`/checkout/${o.order_id}`"
-            class="flex items-center gap-3 border-b border-border px-4 py-2.5 text-sm text-foreground no-underline last:border-0 hover:bg-muted"
-          >
-            <CircleCheck class="size-4 shrink-0 text-success-ink" />
-            <span class="min-w-0 flex-1 truncate">
-              <span class="font-medium text-heading">{{ o.customer_name ?? 'ลูกค้าทั่วไป' }}</span>
-              <span class="num text-muted-foreground"> · คิว {{ liveItems(o).map((i) => formatQueueNumber(i.queue_number)).join(', ') }}</span>
-            </span>
-            <span class="num shrink-0 font-medium text-heading">{{ formatBaht(Number(invoiceOf(o.order_id)?.total ?? dueOf(o))) }}</span>
-            <ChevronRight class="size-4 shrink-0 text-muted-soft" />
-          </NuxtLink>
-        </div>
       </section>
     </div>
 

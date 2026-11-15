@@ -487,15 +487,24 @@ export interface WorkHistory {
 }
 
 export interface TherapistSummaryRow {
-  employee_id: string
-  employee_code: string
+  /** null = หมอวิ่ง (ไม่มีบัญชีพนักงาน) */
+  employee_id: string | null
+  employee_code: string | null
   nickname: string
+  /** REGULAR = หมอประจำ · WALK_IN = หมอวิ่ง (migration 075) */
+  kind?: 'REGULAR' | 'WALK_IN'
   services: number
   worked_minutes: number
   off_shift_count: number
   handover_count: number
+  /** ค่ามือจากงาน (commissions SERVICE) */
   fee_estimate: number
+  /** เงินเติมประกันมือ (commissions GUARANTEE) */
+  guarantee: number
+  /** รายการปรับ (+/−) */
+  adjustments: number
   tips: number
+  /** ค่าแรงรวม = ค่ามือ + ประกันมือ + ปรับ + ทิป */
   pay_total: number
 }
 
@@ -504,6 +513,10 @@ export interface TherapistPayDay {
   date: string
   services: number
   fee: number
+  guarantee: number
+  /** ยอดประกันมือของวันนั้น (เช่น 400) · null = ไม่ได้ประกัน */
+  guarantee_base: number | null
+  adjustments: number
   tips: number
   total: number
   jobs: Array<{ time: string | null; service_name: string; minutes: number; fee: number; handover: boolean }>
