@@ -2,6 +2,9 @@
 // ค่าทั้งหมดตั้งจากแอปพนักงาน (/settings/line) → private.line_settings + Supabase Vault
 // อ่านด้วย public.line_secret (service_role เท่านั้น)
 import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
+import { buildLineMessage, type FlexData } from './lineFlex.ts'
+
+export type { FlexData } from './lineFlex.ts'
 
 const API = 'https://api.line.me'
 
@@ -33,14 +36,24 @@ async function lineFetch(token: string, path: string, init: RequestInit = {}): P
   })
 }
 
-/** ส่ง push message (นับโควตาของ LINE OA) · คืน HTTP status */
-export async function linePush(token: string, to: string, text: string): Promise<number> {
+async function pushOnce(token: string, to: string, message: Record<string, unknown>): Promise<number> {
   const res = await lineFetch(token, '/v2/bot/message/push', {
     method: 'POST',
-    body: JSON.stringify({ to, messages: [{ type: 'text', text: text.slice(0, 5000) }] }),
+    body: JSON.stringify({ to, messages: [message] }),
   })
-  if (!res.ok) console.error('line push', res.status, await res.text().catch(() => ''))
+  if (!res.ok) console.error('line push', message.type, res.status, await res.text().catch(() => ''))
   return res.status
+}
+
+/**
+ * ส่ง push message (นับโควตาของ LINE OA) · คืน HTTP status
+ * flex = ข้อมูลการ์ด (ดู lineFlex.ts) → ส่งเป็นการ์ด · LINE ไม่รับการ์ด (400) → ส่งข้อความธรรมดาแทนอัตโนมัติ
+ */
+export async function linePush(token: string, to: string, text: string, flex?: FlexData | null): Promise<number> {
+  const message = buildLineMessage(text, flex)
+  const status = await pushOnce(token, to, message)
+  if (status === 400 && message.type === 'flex') return await pushOnce(token, to, { type: 'text', text: text.slice(0, 5000) })
+  return status
 }
 
 /** ตอบกลับข้อความ (ฟรี ไม่นับโควตา) ด้วย replyToken จาก webhook */

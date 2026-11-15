@@ -1,0 +1,197 @@
+// การ์ด LINE (Flex Message) โทน Warm Cream ของร้าน — DESIGN.md
+//   confirm  = ยืนยันการจอง (ถึงลูกค้า)
+//   reminder = เตือนก่อนถึงนัด (ถึงลูกค้า)
+//   staff    = แจ้งเตือนกลุ่มพนักงาน (จองใหม่ / สลิป / ยกเลิก / หน้าร้าน / บริการเสร็จ)
+// ข้อมูลมาจาก SQL (private.line_booking_data / push_claim.line_flex) · altText = ข้อความธรรมดาเดิม
+
+const TEAK = '#93704F' // ปุ่มหลัก/หัวการ์ด
+const COFFEE = '#514337' // หัวข้อ/ตัวเลข
+const INK = '#66594D' // ตัวหนังสือ
+const DRIFT = '#7A6E61' // ตัวหนังสือรอง
+const LINEN = '#FFFCF8'
+const BORDER = '#EDE4DA'
+const ON_TEAK = '#F6EEE5'
+const TONES = {
+  teak: { bg: TEAK, fg: '#FFFFFF', sub: ON_TEAK },
+  pending: { bg: '#F2E6D6', fg: '#72543E', sub: '#72543E' },
+  success: { bg: '#E6EEE6', fg: '#557560', sub: '#557560' },
+  danger: { bg: '#F6E5E1', fg: '#9E5149', sub: '#9E5149' },
+  beige: { bg: '#EDE0D2', fg: COFFEE, sub: INK },
+} as const
+
+export interface FlexBooking {
+  customer_name: string
+  branch_name: string
+  branch_phone: string | null
+  map_url: string | null
+  booking_code: string | null
+  date_label: string
+  time_label: string
+  short_label: string
+  people: number
+  total: number
+  deposit_required: number
+  deposit_status: string
+  hold_until: string | null
+  items: Array<{ name: string; minutes: number }>
+}
+
+export type FlexData =
+  | { kind: 'confirm' | 'reminder'; booking: FlexBooking | null; link: string | null }
+  | {
+      kind: 'staff'
+      event: string
+      title: string
+      body: string
+      link: string | null
+      booking: FlexBooking | null
+      slip_amount: number | null
+    }
+
+type Json = Record<string, unknown>
+
+const baht = (n: number | string | null | undefined) => `฿${Math.round(Number(n ?? 0)).toLocaleString('en-US')}`
+const duration = (m: number) =>
+  m % 60 === 0 ? `${m / 60} ชม.` : m > 60 ? `${Math.floor(m / 60)} ชม. ${m % 60} นาที` : `${m} นาที`
+const text = (t: string, o: Json = {}): Json => ({ type: 'text', text: t || ' ', wrap: true, color: INK, size: 'sm', ...o })
+const row = (label: string, value: string, o: Json = {}): Json => ({
+  type: 'box',
+  layout: 'horizontal',
+  spacing: 'md',
+  contents: [text(label, { color: DRIFT, flex: 3 }), text(value, { align: 'end', flex: 2, color: COFFEE, ...o })],
+})
+const sep = (): Json => ({ type: 'separator', color: BORDER, margin: 'md' })
+const isUri = (u: string | null | undefined): u is string => !!u && /^(https:\/\/|tel:)/.test(u) && u.length <= 1000
+const tel = (p: string | null) => (p ? `tel:${p.replace(/[^0-9+]/g, '')}` : null)
+const button = (label: string, uri: string, primary = false): Json => ({
+  type: 'button',
+  height: 'sm',
+  style: primary ? 'primary' : 'secondary',
+  ...(primary ? { color: TEAK } : {}),
+  action: { type: 'uri', label: label.slice(0, 20), uri },
+})
+
+function header(title: string, sub: string | null, tone: keyof typeof TONES): Json {
+  const t = TONES[tone]
+  return {
+    type: 'box',
+    layout: 'vertical',
+    backgroundColor: t.bg,
+    paddingAll: '16px',
+    spacing: 'xs',
+    contents: [text(title, { color: t.fg, weight: 'bold', size: 'lg' }), ...(sub ? [text(sub, { color: t.sub, size: 'xs' })] : [])],
+  }
+}
+
+function itemRows(b: FlexBooking): Json[] {
+  return b.items.map((i, idx) => row(b.items.length > 1 ? `คนที่ ${idx + 1} ${i.name}` : i.name, duration(i.minutes), { color: INK }))
+}
+
+function depositBox(b: FlexBooking): Json | null {
+  const box = (tone: keyof typeof TONES, title: string, note?: string): Json => ({
+    type: 'box',
+    layout: 'vertical',
+    backgroundColor: TONES[tone].bg,
+    cornerRadius: '10px',
+    paddingAll: '12px',
+    margin: 'md',
+    spacing: 'xs',
+    contents: [text(title, { color: TONES[tone].fg, weight: 'bold' }), ...(note ? [text(note, { color: TONES[tone].fg, size: 'xs' })] : [])],
+  })
+  switch (b.deposit_status) {
+    case 'AWAITING_PAYMENT':
+      return box(
+        'pending',
+        `ชำระมัดจำ ${baht(b.deposit_required)}${b.hold_until ? ` ภายใน ${b.hold_until} น.` : ''}`,
+        'ไม่เช่นนั้นการจองจะถูกยกเลิกอัตโนมัติ',
+      )
+    case 'PENDING_REVIEW':
+      return box('pending', 'ได้รับสลิปมัดจำแล้ว', 'รอร้านตรวจสอบ จะแจ้งยืนยันโดยเร็วที่สุด')
+    case 'PAID':
+      return box('success', `ชำระมัดจำ ${baht(b.deposit_required)} แล้ว`)
+    default:
+      return null
+  }
+}
+
+function contactButtons(b: FlexBooking): Json[] {
+  const out: Json[] = []
+  if (isUri(b.map_url)) out.push(button('แผนที่', b.map_url))
+  const t = tel(b.branch_phone)
+  if (isUri(t)) out.push(button('โทรหาร้าน', t))
+  return out.length ? [{ type: 'box', layout: 'horizontal', spacing: 'sm', contents: out }] : []
+}
+
+function customerBubble(kind: 'confirm' | 'reminder', b: FlexBooking, link: string | null): Json {
+  const deposit = kind === 'confirm' ? depositBox(b) : null
+  const body: Json[] = [
+    text(b.date_label, { color: DRIFT }),
+    text(b.time_label, { size: 'xxl', weight: 'bold', color: COFFEE }),
+    text(kind === 'confirm' ? `คุณ${b.customer_name} ขอบคุณที่จองกับเรา` : `คุณ${b.customer_name} มีนัดนวดกับเรา`, { margin: 'sm' }),
+    sep(),
+    { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: itemRows(b) },
+    sep(),
+    row(`รวม ${b.people} คน`, baht(b.total), { weight: 'bold', size: 'md' }),
+    ...(b.booking_code ? [row('รหัสการจอง', b.booking_code, { size: 'xs', color: DRIFT })] : []),
+    ...(deposit ? [deposit] : []),
+    ...(kind === 'reminder' ? [text('กรุณามาก่อนเวลาประมาณ 10 นาที ถ้ามาไม่ได้รบกวนแจ้งร้านล่วงหน้า', { color: DRIFT, size: 'xs', margin: 'md' })] : []),
+  ]
+  const primaryLabel =
+    kind === 'reminder' ? 'ตรวจสอบการจอง' : b.deposit_status === 'AWAITING_PAYMENT' ? 'ชำระมัดจำ / ดูสถานะ' : 'ดูสถานะการจอง'
+  const footer: Json[] = [...(isUri(link) ? [button(primaryLabel, link, true)] : []), ...contactButtons(b)]
+  return {
+    type: 'bubble',
+    header: header(kind === 'confirm' ? 'ได้รับการจองแล้ว' : 'แจ้งเตือนนัดหมาย', b.branch_name, 'teak'),
+    body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', backgroundColor: LINEN, contents: body },
+    ...(footer.length ? { footer: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '12px', contents: footer } } : {}),
+    styles: { footer: { separator: true, separatorColor: BORDER } },
+  }
+}
+
+const STAFF_TONE: Record<string, keyof typeof TONES> = {
+  NEW_BOOKING: 'teak',
+  DEPOSIT_SLIP: 'pending',
+  BOOKING_CANCELLED: 'danger',
+  WALK_IN: 'beige',
+  SERVICE_DONE: 'success',
+}
+
+function staffBubble(d: Extract<FlexData, { kind: 'staff' }>): Json {
+  const [title, branch] = d.title.split(' · ')
+  const b = d.booking
+  const body: Json[] = b
+    ? [
+        text(`คุณ${b.customer_name}`, { size: 'md', weight: 'bold', color: COFFEE }),
+        text(`${b.date_label} ${b.time_label}`, { color: DRIFT }),
+        sep(),
+        { type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md', contents: itemRows(b) },
+        sep(),
+        row(`รวม ${b.people} คน`, baht(b.total), { weight: 'bold' }),
+        ...(d.event === 'DEPOSIT_SLIP' ? [row('โอนมัดจำ', `${baht(d.slip_amount)} รอตรวจ`, { color: TONES.pending.fg, weight: 'bold' })] : []),
+        ...(d.event === 'NEW_BOOKING' && Number(b.deposit_required) > 0 ? [row('มัดจำ', baht(b.deposit_required))] : []),
+      ]
+    : [text(d.body, { color: INK })]
+  return {
+    type: 'bubble',
+    size: 'kilo',
+    header: header(title ?? d.title, branch ?? null, STAFF_TONE[d.event] ?? 'beige'),
+    body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '14px', backgroundColor: LINEN, contents: body },
+    ...(isUri(d.link) ? { footer: { type: 'box', layout: 'vertical', paddingAll: '10px', contents: [button('เปิดในระบบ', d.link, true)] } } : {}),
+  }
+}
+
+/** สร้างข้อความ LINE: การ์ดถ้าข้อมูลพอ ไม่งั้นข้อความธรรมดา */
+export function buildLineMessage(altText: string, flex: FlexData | null | undefined): Json {
+  const plain = { type: 'text', text: altText.slice(0, 5000) }
+  if (!flex) return plain
+  try {
+    let contents: Json | null = null
+    if (flex.kind === 'staff') contents = staffBubble(flex)
+    else if (flex.booking) contents = customerBubble(flex.kind, flex.booking, flex.link)
+    if (!contents) return plain
+    return { type: 'flex', altText: altText.replace(/\s+/g, ' ').slice(0, 400), contents }
+  } catch (e) {
+    console.error('buildLineMessage', e)
+    return plain
+  }
+}

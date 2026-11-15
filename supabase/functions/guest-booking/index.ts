@@ -16,7 +16,7 @@ import {
   UUID_RE,
   verifyTurnstile,
 } from '../_shared/http.ts'
-import { linePush, lineSecret, lineVerifyIdToken } from '../_shared/line.ts'
+import { linePush, lineSecret, lineVerifyIdToken, type FlexData } from '../_shared/line.ts'
 
 declare const EdgeRuntime: { waitUntil(p: Promise<unknown>): void } | undefined
 
@@ -34,7 +34,8 @@ async function confirmViaLine(companyCode: string, idToken: string, trackingToke
       p_site_url: siteUrl,
     })
     if (error) throw error
-    if (typeof data === 'string' && data) await linePush(cfg.access_token, userId, data)
+    const msg = data as { text: string; flex: FlexData | null } | null // null = ร้านปิดข้อความยืนยันไว้
+    if (msg?.text) await linePush(cfg.access_token, userId, msg.text, msg.flex)
   } catch (e) {
     console.error('guest-booking line confirm', e)
   }

@@ -46,8 +46,8 @@ interface LineGroup {
 }
 
 const EVENTS = [
-  { key: 'NEW_BOOKING', label: 'มีการจองใหม่', hint: 'ลูกค้าจองผ่านเว็บหรือ LINE' },
-  { key: 'DEPOSIT_SLIP', label: 'ลูกค้าส่งสลิปมัดจำ', hint: 'รอพนักงานตรวจสลิป' },
+  { key: 'NEW_BOOKING', label: 'มีการจองใหม่', hint: 'การจองที่ต้องมัดจำ ส่งตอนลูกค้าส่งสลิป' },
+  { key: 'DEPOSIT_SLIP', label: 'ลูกค้าส่งสลิปมัดจำ', hint: 'พร้อมรายละเอียดการจอง รอพนักงานตรวจ' },
   { key: 'BOOKING_CANCELLED', label: 'ลูกค้ายกเลิกการจอง', hint: 'ยกเลิกเองจากลิงก์ติดตาม' },
   { key: 'WALK_IN', label: 'รับลูกค้าหน้าร้าน', hint: 'เกิดบ่อย ใช้โควตามาก' },
   { key: 'SERVICE_DONE', label: 'บริการเสร็จ', hint: 'เกิดบ่อย ใช้โควตามาก' },
@@ -381,7 +381,7 @@ const previewText = computed<string | null>(() => {
     if (!e) return null
     const lines: Record<EventKey, [string, string, string]> = {
       NEW_BOOKING: ['การจองใหม่', `คุณสมใจ · ${sampleShort} น. · 2 คน · ฿900`, '/bookings'],
-      DEPOSIT_SLIP: ['ลูกค้าส่งสลิปมัดจำ', `คุณสมใจ โอน ฿200 · นัด ${sampleShort} น. · รอตรวจสลิป`, '/bookings'],
+      DEPOSIT_SLIP: ['จองใหม่ + สลิปมัดจำ', `คุณสมใจ · ${sampleShort} น. · 2 คน · ฿900 · มัดจำ ฿200 รอตรวจสลิป`, '/bookings'],
       BOOKING_CANCELLED: ['ลูกค้ายกเลิกการจอง', `คุณสมใจ · นัด ${sampleShort} น.`, '/bookings'],
       WALK_IN: ['รับลูกค้าหน้าร้าน', '1 คน · นวดไทย 60 นาที', '/queue'],
       SERVICE_DONE: ['บริการเสร็จแล้ว', 'คิว 012 · นวดไทย 60 นาที · หมอแนน · รอชำระเงิน', '/payments'],

@@ -3,7 +3,7 @@
 // body: { token, action: 'cancel', reason? } -> ลูกค้ายกเลิกการจองเอง (กติกาเวลาตรวจใน DB)
 // body: { token, action: 'line_link', id_token } -> ผูกการจองกับ LINE ของลูกค้า (LIFF ID token) → ส่งยืนยัน + เตือนนัด
 import { adminClient, clientIp, corsHeaders, json, preflight, rateLimit } from '../_shared/http.ts'
-import { linePush, lineSecret, lineVerifyIdToken } from '../_shared/line.ts'
+import { linePush, lineSecret, lineVerifyIdToken, type FlexData } from '../_shared/line.ts'
 
 const TOKEN_RE = /^trk_[0-9a-f]{64}$/
 
@@ -55,13 +55,14 @@ Deno.serve(async (req) => {
       }
       const userId = await lineVerifyIdToken(cfg.login_channel_id, typeof body.id_token === 'string' ? body.id_token : '')
       if (!userId) return json(req, 400, { error_code: 'INVALID', message: 'ยืนยันบัญชี LINE ไม่สำเร็จ กรุณากดเชื่อม LINE อีกครั้ง' })
-      const { data: text, error: attErr } = await admin.rpc('line_attach_booking', {
+      const { data: attached, error: attErr } = await admin.rpc('line_attach_booking', {
         p_token: token,
         p_line_user_id: userId,
         p_site_url: corsHeaders(req)['Access-Control-Allow-Origin'] ?? '',
       })
       if (attErr) throw attErr
-      if (typeof text === 'string' && text) await linePush(cfg.access_token, userId, text)
+      const msg = attached as { text: string; flex: FlexData | null } | null // null = ร้านปิดข้อความยืนยันไว้
+      if (msg?.text) await linePush(cfg.access_token, userId, msg.text, msg.flex)
       return json(req, 200, { line_linked: true })
     }
 

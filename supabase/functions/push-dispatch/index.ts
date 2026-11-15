@@ -8,7 +8,7 @@
 // LINE: token ของบริษัทจาก public.line_secret (ตั้งในแอปพนักงาน /settings/line · ไม่ตั้ง = ข้าม LINE)
 import webpush from 'npm:web-push@3.6.7'
 import { adminClient, UUID_RE } from '../_shared/http.ts'
-import { linePush, lineSecret } from '../_shared/line.ts'
+import { linePush, lineSecret, type FlexData } from '../_shared/line.ts'
 
 interface Claim {
   company_id: string
@@ -19,6 +19,8 @@ interface Claim {
   subscriptions: Array<{ endpoint: string; p256dh: string; auth: string }>
   line_to?: string[]
   line_text?: string | null
+  /** ข้อมูลการ์ด Flex (migration 069) · ไม่มี = ส่งข้อความธรรมดา */
+  line_flex?: FlexData | null
 }
 
 const reply = (status: number, body: unknown = {}) =>
@@ -34,7 +36,7 @@ async function sendLine(admin: ReturnType<typeof adminClient>, claim: Claim): Pr
   await Promise.all(
     to.map(async (target) => {
       try {
-        const status = await linePush(token, target, claim.line_text!)
+        const status = await linePush(token, target, claim.line_text!, claim.line_flex)
         if (status === 200) sent++
         else if (status === 400 && target.startsWith('C')) gone.push(target) // บอทไม่ได้อยู่ในกลุ่มนี้แล้ว
       } catch (e) {
