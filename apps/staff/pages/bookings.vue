@@ -53,10 +53,11 @@ const reviewCount = computed(() => rows.value.filter((r) => r.deposit_status ===
 
 const countReview = (list: StaffBookingRow[]) => list.filter((r) => r.deposit_status === 'PENDING_REVIEW').length
 
-async function load() {
+/** silent = โหลดเบื้องหลัง (Realtime) ไม่แสดงแถบโหลด/ไม่ล้างรายการ */
+async function load(silent = false) {
   if (!activeBranch.value) return
   const branchId = activeBranch.value.branch_id
-  loading.value = true
+  if (!silent) loading.value = true
   try {
     const upcoming = () => must(supabase.rpc('staff_bookings_upcoming', { p_branch_id: branchId })) as Promise<unknown> as Promise<StaffBookingRow[]>
     if (scope.value === 'all') {
@@ -77,7 +78,14 @@ async function load() {
   }
 }
 
-watch([scope, date, () => activeBranch.value?.branch_id], load, { immediate: true })
+watch([scope, date, () => activeBranch.value?.branch_id], () => load(), { immediate: true })
+
+// Realtime: การจองของสาขาเปลี่ยน (จองใหม่ออนไลน์ · ลูกค้าส่งสลิป/ยกเลิก · เครื่องอื่นตรวจสลิป) → รายการอัปเดตเอง
+useRealtimeReload(
+  'bookings-page',
+  () => (activeBranch.value ? [{ table: 'bookings', filter: `branch_id=eq.${activeBranch.value.branch_id}` }] : null),
+  () => load(true),
+)
 
 function showReview() {
   scope.value = 'all'

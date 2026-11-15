@@ -43,6 +43,27 @@ async function load() {
 }
 onMounted(load)
 
+// Realtime: บิลนี้เปลี่ยนจากเครื่องอื่น (รับเงิน / ยกเลิกบิล / คืนเงิน) → แสดงยอดล่าสุด ไม่ให้รับเงินซ้ำ
+// โหลดด้วย pos_invoice (อ่านอย่างเดียว) — pos_create_invoice จะสร้างบิลใหม่ถ้าบิลเดิมถูกยกเลิก
+async function reloadFromOtherDevice() {
+  if (!invoice.value || saving.value) return
+  const before = invoice.value.status
+  try {
+    const fresh = (await must(supabase.rpc('pos_invoice', { p_invoice_id: invoice.value.invoice_id }))) as unknown as InvoiceView
+    if (saving.value) return // เครื่องนี้กำลังบันทึกอยู่ ผลของมันจะอัปเดตเอง
+    invoice.value = fresh
+    if (fresh.status !== before && fresh.status === 'PAID') message.value = { type: 'info', text: 'บิลนี้รับเงินครบแล้วจากเครื่องอื่น' }
+    else if (fresh.status !== before && fresh.status === 'VOID') message.value = { type: 'info', text: 'บิลนี้ถูกยกเลิกจากเครื่องอื่นแล้ว' }
+  } catch {
+    // เงียบไว้: Realtime เป็นตัวช่วย ไม่ใช่เส้นทางหลัก
+  }
+}
+useRealtimeReload(
+  'checkout',
+  () => (invoice.value ? [{ table: 'invoices', filter: `id=eq.${invoice.value.invoice_id}` }] : null),
+  reloadFromOtherDevice,
+)
+
 const isDraft = computed(() => invoice.value?.status === 'DRAFT')
 const payable = computed(() => ['ISSUED', 'PARTIALLY_PAID'].includes(invoice.value?.status ?? ''))
 

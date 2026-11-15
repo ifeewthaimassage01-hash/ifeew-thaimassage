@@ -1,6 +1,7 @@
 <script setup lang="ts">
 // แถบ "มีสลิปมัดจำรอตรวจ N รายการ · ตรวจเลย" — ตรวจสลิปให้ลูกค้าได้เร็ว
-// - ไม่ส่ง count: นับเอง (สาขาที่เลือกอยู่ · ทุกวัน) ทุก 60 วินาทีขณะเปิดหน้า แล้วกดไปหน้าการจองที่กรองรอตรวจไว้
+// - ไม่ส่ง count: นับเอง (สาขาที่เลือกอยู่ · ทุกวัน) อัปเดตทันทีผ่าน Realtime เมื่อการจองของสาขาเปลี่ยน
+//   (ลูกค้าส่งสลิป / พนักงานตรวจแล้ว) + สำรองทุก 60 วินาที แล้วกดไปหน้าการจองที่กรองรอตรวจไว้
 // - ส่ง count (หน้าการจอง): ใช้ตัวเลขที่หน้าโหลดมาแล้ว และส่ง event open ให้หน้าเปลี่ยนตัวกรองเอง
 import { ReceiptText } from '@lucide/vue'
 
@@ -23,8 +24,13 @@ async function refresh() {
     .eq('deposit_status', 'PENDING_REVIEW')
   if (!error) own.value = count ?? 0
 }
+// Realtime: การจองของสาขาเปลี่ยน (ลูกค้าส่งสลิป / ตรวจแล้ว) → นับใหม่ · หน้าการจองส่ง count มาเอง ไม่ต้องฟัง
 watch(() => activeBranch.value?.branch_id, refresh, { immediate: true })
-useLiveInterval(refresh, 60_000)
+useRealtimeReload(
+  'pending-slips',
+  () => (props.count === undefined && activeBranch.value ? [{ table: 'bookings', filter: `branch_id=eq.${activeBranch.value.branch_id}` }] : null),
+  refresh,
+)
 
 function open() {
   if (props.count !== undefined) emit('open')
