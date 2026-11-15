@@ -1,5 +1,7 @@
+import type { BookingView } from '@ifeew/shared'
+
 /**
- * เข้าสู่ระบบด้วย LINE (LIFF) — ไม่ใช่ระบบสมาชิก ใช้เพื่อส่งยืนยันการจอง/เตือนนัดเข้า LINE ของลูกค้า
+ * เข้าสู่ระบบด้วย LINE (LIFF) — ไม่ต้องสมัคร ใช้ส่งยืนยันการจอง/เตือนนัดเข้า LINE และดู "การจองของฉัน"
  * - ค่า LIFF ID / ลิงก์เพิ่มเพื่อน ตั้งในแอปพนักงาน /settings/line → public.line_public_config
  * - Endpoint URL ของ LIFF = หน้าแรกของเว็บ (Rich Menu ใช้ https://liff.line.me/<LIFF ID>/book)
  * - โหลด SDK ทางการจาก CDN ของ LINE เฉพาะเมื่อ: เปิดในแอป LINE · เคยเข้าสู่ระบบในเครื่องนี้ · กดเข้าสู่ระบบ
@@ -24,6 +26,13 @@ interface LinePublicConfig {
 export interface LineUser {
   name: string
   picture: string | null
+}
+
+/** การจองของฉัน (line-my-bookings) — รายการมี tracking_token อายุ 30 นาที */
+export interface MyBookings {
+  bookings: Array<BookingView & { tracking_token: string }>
+  profile: { first_name: string; last_name: string | null; phone: string | null } | null
+  at: number
 }
 
 /** token การจองที่กำลังเชื่อม LINE (เก็บก่อนไปหน้าเข้าสู่ระบบ LINE) */
@@ -84,6 +93,9 @@ export function useLiff() {
   /** null = ไม่รู้ · false = ยังไม่ได้เพิ่มเพื่อน OA (จะไม่ได้รับข้อความ) */
   const isFriend = useState<boolean | null>('liff-friend', () => null)
   const connected = computed(() => !!user.value)
+  /** ผลล่าสุดของ "การจองของฉัน" (ล้างเมื่อออกจากระบบ) */
+  const mine = useState<MyBookings | null>('liff-mine', () => null)
+  const { call } = useEdgeFunction()
 
   const inLineApp = () => import.meta.client && /\bLine\//i.test(navigator.userAgent)
 
@@ -186,6 +198,7 @@ export function useLiff() {
     if (liff?.isLoggedIn()) liff.logout()
     user.value = null
     isFriend.value = null
+    mine.value = null
     remember(false)
   }
 
@@ -196,6 +209,19 @@ export function useLiff() {
     const token = freshToken(liff)
     if (!token) await refreshState(liff)
     return token
+  }
+
+  /**
+   * การจองของฉัน (เฉพาะที่ผูกกับ LINE นี้) + ชื่อ/เบอร์จากการจองล่าสุด — Edge Function line-my-bookings
+   * เก็บผลไว้ 25 นาที (token เปิดรายละเอียดอายุ 30 นาที) · null = ยังไม่ได้เข้าสู่ระบบ
+   */
+  async function myBookings(force = false): Promise<MyBookings | null> {
+    if (!force && mine.value && Date.now() - mine.value.at < 25 * 60_000) return mine.value
+    const token = await idToken()
+    if (!token) return null
+    const res = await call<Omit<MyBookings, 'at'>>('line-my-bookings', { company_code: companyCode, id_token: token })
+    mine.value = { bookings: res.bookings ?? [], profile: res.profile ?? null, at: Date.now() }
+    return mine.value
   }
 
   /** ปุ่ม "เชื่อม LINE" ของการจองหนึ่งรายการ: ได้ token ทันทีถ้าเข้าสู่ระบบอยู่ ไม่งั้นพาไปเข้าสู่ระบบ */
@@ -225,6 +251,8 @@ export function useLiff() {
     logout,
     idToken,
     loginOrToken,
+    mine,
+    myBookings,
     inLineApp,
   }
 }

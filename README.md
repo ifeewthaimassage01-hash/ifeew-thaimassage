@@ -46,7 +46,7 @@ pnpm db:reset
 |---|---|---|
 | `apps/customer/.env` | `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_KEY`, `NUXT_PUBLIC_COMPANY_CODE` | Publishable key เท่านั้น, company code = `companies.code` |
 | `apps/staff/.env` | `NUXT_PUBLIC_SUPABASE_URL`, `NUXT_PUBLIC_SUPABASE_KEY`, `NUXT_PUBLIC_FUNCTIONS_URL` (ไม่บังคับ) | Publishable key เท่านั้น |
-| `supabase/functions/.env` | `ALLOWED_ORIGINS`, `TURNSTILE_SECRET_KEY`, `SLIPOK_API_KEY` | origin ของทั้งสองแอป, Turnstile secret, SlipOK API key (ว่าง = พนักงานตรวจสลิปเอง) |
+| `supabase/functions/.env` | `ALLOWED_ORIGINS`, `SLIPOK_API_KEY` | origin ของทั้งสองแอป, SlipOK API key (ว่าง = พนักงานตรวจสลิปเอง) |
 
 คัดลอกจากไฟล์ `.env.example` ในแต่ละโฟลเดอร์ **ห้ามใส่ Secret/Service Role Key ในแอป Nuxt**
 
@@ -84,7 +84,7 @@ pnpm dev:customer
 - Staff App เมนู “บริการและราคา” (OWNER): เปลี่ยนราคาทันที/ล่วงหน้า (ขอ TOTP ซ้ำ), ประวัติราคา
 
 ขั้นตอนทดสอบ Phase 4:
-- Customer App “จอง”: เลือกสาขา/บริการ/วันเวลา → จองแบบ Guest (Turnstile test key ผ่านอัตโนมัติ) → หน้า `/t/<token>` แสดง QR PromptPay → อัปโหลดสลิป
+- Customer App “จอง”: เลือกสาขา/บริการ/วันเวลา → จองแบบ Guest → หน้า `/t/<token>` แสดง QR PromptPay → อัปโหลดสลิป
 - ถ้ายังไม่ตั้ง `SLIPOK_API_KEY` หรือ SlipOK Branch ID ของสาขา สลิปจะไปที่ Staff App เมนู “การจอง” → แท็บ “รอตรวจสลิป”
 - Staff App เมนู “เตียงและอุปกรณ์” (OWNER): จำนวนต่อสาขา, บริการใช้อะไร, บัญชีรับมัดจำ + SlipOK Branch ID
 

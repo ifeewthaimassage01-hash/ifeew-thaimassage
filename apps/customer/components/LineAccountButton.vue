@@ -2,7 +2,7 @@
 // หัวเว็บ: เข้าสู่ระบบด้วย LINE (ไม่ใช่สมาชิก — ใช้รับยืนยันการจอง/เตือนนัดทาง LINE)
 // ยังไม่เข้าสู่ระบบ → ปุ่ม · เข้าสู่ระบบแล้ว → รูป + ชื่อ LINE พร้อมเมนูออกจากระบบ
 // แสดงเมื่อร้านเปิดใช้ LINE แล้วเท่านั้น
-import { LogOut, MessageCircle, UserPlus } from '@lucide/vue'
+import { CalendarCheck, LogOut, MessageCircle, UserPlus } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
 const line = useLiff()
@@ -41,7 +41,7 @@ async function logout() {
       </DropdownMenuTrigger>
       <DropdownMenuContent align="end" class="w-72 p-3">
         <p class="m-0 truncate text-[15px] font-semibold text-heading">{{ line.user.value.name }}</p>
-        <p class="m-0 mt-0.5 text-sm text-muted-foreground">การจองจากเครื่องนี้จะได้ข้อความยืนยันและเตือนนัดทาง LINE</p>
+        <p class="m-0 mt-0.5 text-sm text-muted-foreground">การจองตอนเข้าสู่ระบบจะได้ข้อความยืนยันและเตือนนัดทาง LINE และดูได้ที่ "การจองของฉัน"</p>
         <a
           v-if="line.isFriend.value === false && line.addFriendUrl.value"
           :href="line.addFriendUrl.value"
@@ -50,6 +50,7 @@ async function logout() {
           <UserPlus class="size-4 shrink-0" aria-hidden="true" /> เพิ่มเพื่อน LINE ของร้านก่อน จึงจะได้รับข้อความ
         </a>
         <DropdownMenuSeparator class="my-3" />
+        <DropdownMenuItem @select="navigateTo('/check-booking')"><CalendarCheck /> การจองของฉัน</DropdownMenuItem>
         <DropdownMenuItem class="text-danger-ink" @select="logout"><LogOut /> ออกจากระบบ LINE</DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

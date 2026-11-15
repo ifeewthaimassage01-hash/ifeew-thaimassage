@@ -13,7 +13,6 @@
 | --- | --- |
 | Supabase 2 โปรเจกต์: `ifeew-staging`, `ifeew-production` (Region: Southeast Asia - Singapore) | supabase.com |
 | Vercel 2 โปรเจกต์ต่อสภาพแวดล้อม: Customer App, Staff App | vercel.com |
-| Cloudflare Turnstile: site key + secret key (ใส่โดเมน `*.vercel.app` ของ Customer App) | dash.cloudflare.com |
 | SlipOK: API Key + Branch ID ของบัญชีรับเงินแต่ละสาขา | slipok.com |
 | (ไม่บังคับ) Sentry: DSN ของ 2 แอป | sentry.io |
 
@@ -60,7 +59,7 @@ pnpm exec supabase functions deploy device-staff-list staff-pin-login staff-crea
 ```
 
 ```bash
-pnpm exec supabase secrets set ALLOWED_ORIGINS=https://ifeew.vercel.app,https://ifeew-staff.vercel.app TURNSTILE_SECRET_KEY=<secret> SLIPOK_API_KEY=<key>
+pnpm exec supabase secrets set ALLOWED_ORIGINS=https://ifeew.vercel.app,https://ifeew-staff.vercel.app SLIPOK_API_KEY=<key>
 ```
 
 `device-staff-list`, `staff-pin-login`, `guest-booking`, `booking-tracking`, `booking-deposit-slip` ปิด verify JWT ไว้ใน `supabase/config.toml` แล้ว (deploy จะใช้ค่านี้)
@@ -95,7 +94,6 @@ Environment Variables
 | `NUXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` | เหมือนกัน |
 | `NUXT_PUBLIC_SUPABASE_KEY` | Publishable key | เหมือนกัน |
 | `NUXT_PUBLIC_COMPANY_CODE` | รหัสบริษัท | - |
-| `NUXT_PUBLIC_TURNSTILE_SITE_KEY` | site key จริง | - |
 | `NUXT_PUBLIC_CUSTOMER_APP_URL` | - | URL ของ Customer App |
 | `NUXT_PUBLIC_SENTRY_DSN` | (ไม่บังคับ) | (ไม่บังคับ) |
 | `NUXT_PUBLIC_APP_ENV` | `staging` / `production` | เหมือนกัน |
@@ -108,7 +106,7 @@ Environment Variables
 - [ ] OWNER: รับอีเมลเชิญ → ตั้งรหัสผ่าน → เข้าระบบได้, ลืมรหัสผ่านได้, ตั้ง PIN เจ้าของร้าน → login ด้วย PIN บนเครื่องสาขาได้
 - [ ] ตั้งเวลาทำการ, บริการ/ราคา, เตียงและอุปกรณ์, บัญชี PromptPay + SlipOK Branch ID, พนักงาน + PIN
 - [ ] ผูกแท็บเล็ตหน้าร้าน → พนักงาน login ด้วยชื่อ + PIN → ลงเวลาเข้างาน
-- [ ] ลูกค้า: สมัครสมาชิก (ได้อีเมลยืนยัน), จองแบบ Guest (Turnstile จริง) → สแกน QR โอนมัดจำจริง 1 รายการ → SlipOK ตรวจผ่าน
+- [ ] ลูกค้า: สมัครสมาชิก (ได้อีเมลยืนยัน), จองแบบ Guest → สแกน QR โอนมัดจำจริง 1 รายการ → SlipOK ตรวจผ่าน
 - [ ] หน้าร้าน: Walk-in → เรียกคิว → หมอกด PIN → จบ → ชำระ (เงินสด + QR จริง) → ปิดกะ → ปิดยอดรายวัน → OWNER อนุมัติ
 - [ ] เปิดหน้า “คิว” 2 เครื่อง: อัปเดต Realtime
 - [ ] OWNER: แดชบอร์ด, รายงาน + CSV, รอบจ่ายค่ามือ, ประกันมือ

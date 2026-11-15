@@ -1,7 +1,7 @@
 // POST /functions/v1/guest-booking   (ไม่ต้อง login)
 // body: { company_code, branch_id, starts_at, option_ids[], first_name, last_name?, phone, email?, note?,
-//         privacy_version_id, turnstile_token, idempotency_key, line_id_token? }
-// 1) Rate limit ต่อ IP และต่อเบอร์  2) Cloudflare Turnstile  3) create_guest_booking (DB ตรวจทุกอย่างซ้ำ)
+//         privacy_version_id, idempotency_key, line_id_token? }
+// 1) Rate limit ต่อ IP และต่อเบอร์  2) create_guest_booking (DB ตรวจทุกอย่างซ้ำ)
 // 4) จองจาก LIFF (มี line_id_token): ยืนยันกับ LINE → ผูกการจองกับ LINE ของลูกค้า → ส่งข้อความยืนยัน
 //    ทำเบื้องหลังหลังตอบลูกค้าแล้ว · LINE ล้มเหลวไม่ทำให้การจองล้มเหลว
 import {
@@ -14,7 +14,6 @@ import {
   rateLimit,
   sha256Hex,
   UUID_RE,
-  verifyTurnstile,
 } from '../_shared/http.ts'
 import { linePush, lineSecret, lineVerifyIdToken, type FlexData } from '../_shared/line.ts'
 
@@ -76,9 +75,6 @@ Deno.serve(async (req) => {
       (await rateLimit(admin, `guest-booking:phone:${phoneKey}`, 5, 3600))
     if (!allowed) return json(req, 429, { error_code: 'RATE_LIMITED' })
 
-    if (!(await verifyTurnstile(String(b.turnstile_token ?? ''), ip))) {
-      return json(req, 403, { error_code: 'CAPTCHA_FAILED' })
-    }
 
     const { data, error } = await admin.rpc('create_guest_booking', {
       p_company_code: String(b.company_code),

@@ -47,8 +47,6 @@ export default defineNuxtConfig({
       companyCode: 'IFEEW',
       // URL ของ Edge Functions (ว่าง = {SUPABASE_URL}/functions/v1)
       functionsUrl: '',
-      // Cloudflare Turnstile site key (ค่าเริ่มต้นคือ test key ของ Cloudflare ที่ผ่านเสมอ)
-      turnstileSiteKey: '1x00000000000000000000AA',
       // รูปหน้าแรก (URL หรือ path ใน public/ เช่น /images/hero.jpg) — ว่าง = ใช้รูปบริการจากระบบแทน
       heroImage: '/images/hero-massage.png',
       // รูปหน้าร้านในส่วน "สาขาของเรา" — ว่าง = ใช้รูปบริการจากระบบแทน
