@@ -59,16 +59,12 @@ function barPath(i: number, v: number): string {
       />
     </div>
 
-    <div v-if="showTable" class="max-h-72 overflow-auto rounded-lg border border-border">
-      <Table>
-        <TableBody>
-          <TableRow v-for="p in points" :key="p.label">
-            <TableCell class="py-2">{{ p.label }}</TableCell>
-            <TableCell class="num py-2 text-right text-heading">{{ format(p.value) }}</TableCell>
-          </TableRow>
-        </TableBody>
-      </Table>
-    </div>
+    <ul v-if="showTable" class="m-0 grid max-h-72 list-none divide-y divide-border overflow-auto rounded-lg border border-border p-0 text-sm">
+      <li v-for="p in points" :key="p.label" class="flex items-baseline justify-between gap-3 px-3 py-2">
+        <span>{{ p.label }}</span>
+        <span class="num text-heading">{{ format(p.value) }}</span>
+      </li>
+    </ul>
 
     <div v-else class="relative">
       <svg :viewBox="`0 0 ${W} ${H}`" class="block h-auto w-full" role="img" :aria-label="title" @mouseleave="hover = null">

@@ -397,36 +397,24 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
     </template>
 
     <SectionCard v-else title="คำขอลบข้อมูล (PDPA)" flush>
-      <div class="overflow-x-auto">
-        <Table stack>
-          <TableHeader>
-            <TableRow class="hover:bg-transparent">
-              <TableHead>วันที่ขอ</TableHead><TableHead>ลูกค้า</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
-              <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="r in requests" :key="r.id">
-              <TableCell class="num">{{ new Date(r.requested_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }) }}</TableCell>
-              <TableCell class="text-heading">{{ r.customer ? `${r.customer.first_name} ${r.customer.last_name}` : '—' }}</TableCell>
-              <TableCell class="max-w-64 whitespace-normal">{{ r.reason || '—' }}</TableCell>
-              <TableCell>
-                <Badge dot :variant="r.status === 'COMPLETED' ? 'success' : r.status === 'REJECTED' ? 'neutral' : 'pending'">{{ statusLabel[r.status] }}</Badge>
-                <span v-if="r.response_note" class="mt-1 block text-sm whitespace-normal text-muted-foreground">{{ r.response_note }}</span>
-              </TableCell>
-              <TableCell class="text-right">
-                <div v-if="r.status === 'PENDING'" class="flex justify-end gap-2">
-                  <Button variant="ghost" size="sm" @click="processRequest(r, false)">ปฏิเสธ</Button>
-                  <Button variant="destructive" size="sm" @click="processRequest(r, true)">ลบข้อมูล</Button>
-                </div>
-              </TableCell>
-            </TableRow>
-            <TableRow v-if="!requests.length" class="hover:bg-transparent">
-              <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ไม่มีคำขอ</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+      <p v-if="!requests.length" class="m-0 px-4 py-10 text-center text-sm text-muted-foreground">ไม่มีคำขอลบข้อมูล</p>
+      <ul v-else class="m-0 grid list-none divide-y divide-border p-0">
+        <li v-for="r in requests" :key="r.id" class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-4 py-4 sm:px-5">
+          <div class="grid min-w-0 flex-1 basis-64 gap-1">
+            <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="font-semibold text-heading">{{ r.customer ? `${r.customer.first_name} ${r.customer.last_name}` : 'ลูกค้าที่ลบแล้ว' }}</span>
+              <Badge dot :variant="r.status === 'COMPLETED' ? 'success' : r.status === 'REJECTED' ? 'neutral' : 'pending'">{{ statusLabel[r.status] }}</Badge>
+            </p>
+            <p class="num m-0 text-[13px] text-muted-foreground">ขอเมื่อ {{ new Date(r.requested_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }) }}</p>
+            <p v-if="r.reason" class="m-0 text-sm text-foreground">เหตุผล: {{ r.reason }}</p>
+            <p v-if="r.response_note" class="m-0 text-sm text-muted-foreground">ตอบกลับ: {{ r.response_note }}</p>
+          </div>
+          <div v-if="r.status === 'PENDING'" class="flex gap-2">
+            <Button variant="ghost" size="sm" @click="processRequest(r, false)">ปฏิเสธ</Button>
+            <Button variant="destructive" size="sm" @click="processRequest(r, true)">ลบข้อมูล</Button>
+          </div>
+        </li>
+      </ul>
     </SectionCard>
 
     <!-- เพิ่มลูกค้า -->

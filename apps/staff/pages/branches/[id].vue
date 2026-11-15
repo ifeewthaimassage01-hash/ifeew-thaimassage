@@ -140,30 +140,22 @@ onMounted(load)
           <TimeField v-model="holidayForm.closes_at" label="ปิด" :disabled="holidayForm.is_closed" />
           <Button type="submit" :disabled="savingHoliday"><Plus /> เพิ่ม</Button>
         </form>
-        <div class="overflow-x-auto">
-          <Table stack>
-            <TableHeader>
-              <TableRow class="hover:bg-transparent">
-                <TableHead>วันที่</TableHead><TableHead>ชื่อ</TableHead><TableHead>เวลา</TableHead><TableHead>สถานะ</TableHead>
-                <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="h in holidays" :key="h.id" :class="h.is_active ? '' : 'text-muted-foreground'">
-                <TableCell class="text-heading">{{ new Date(`${h.holiday_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}</TableCell>
-                <TableCell>{{ h.name }}</TableCell>
-                <TableCell class="num">{{ h.is_closed ? 'ปิดทั้งวัน' : `${hhmm(h.opens_at)}–${hhmm(h.closes_at)}` }}</TableCell>
-                <TableCell><Badge :variant="h.is_active ? 'success' : 'neutral'" dot>{{ h.is_active ? 'ใช้งาน' : 'ยกเลิกแล้ว' }}</Badge></TableCell>
-                <TableCell class="text-right">
-                  <Button v-if="h.is_active" variant="ghost" size="sm" class="text-danger-ink" @click="deactivateHoliday(h)">ยกเลิก</Button>
-                </TableCell>
-              </TableRow>
-              <TableRow v-if="!holidays.length" class="hover:bg-transparent">
-                <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ยังไม่มีวันหยุด</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+        <p v-if="!holidays.length" class="m-0 px-4 py-10 text-center text-sm text-muted-foreground">ยังไม่มีวันหยุด</p>
+        <ul v-else class="m-0 grid list-none divide-y divide-border p-0">
+          <li v-for="h in holidays" :key="h.id" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3.5 sm:px-5" :class="h.is_active ? '' : 'text-muted-foreground'">
+            <div class="grid min-w-0 flex-1 basis-52 gap-0.5">
+              <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span class="font-semibold" :class="h.is_active ? 'text-heading' : 'line-through'">{{ h.name }}</span>
+                <Badge v-if="!h.is_active" variant="neutral" dot>ยกเลิกแล้ว</Badge>
+              </p>
+              <p class="m-0 text-[13px]" :class="h.is_active ? 'text-muted-foreground' : ''">
+                {{ new Date(`${h.holiday_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric', timeZone: 'Asia/Bangkok' }) }}
+                <span class="num ml-2">{{ h.is_closed ? 'ปิดทั้งวัน' : `เปิด ${hhmm(h.opens_at)}–${hhmm(h.closes_at)}` }}</span>
+              </p>
+            </div>
+            <Button v-if="h.is_active" variant="ghost" size="sm" class="text-danger-ink" @click="deactivateHoliday(h)">ยกเลิกวันหยุด</Button>
+          </li>
+        </ul>
       </SectionCard>
 
       <BranchLoginLock v-if="companyId" :branch-id="branchId" :company-id="companyId" />

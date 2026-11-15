@@ -117,32 +117,35 @@ function exportCsv() {
 
     <div v-if="tab === 'finance' && report" class="grid gap-6">
       <SectionCard flush>
-        <div class="overflow-x-auto">
-          <Table stack>
-            <TableHeader>
-              <TableRow class="hover:bg-transparent">
-                <TableHead>งวด</TableHead><TableHead>สาขา</TableHead>
-                <TableHead v-for="[k, l] in cols" :key="k" class="text-right">{{ l }}</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="r in report.rows" :key="r.period + r.branch_id">
-                <TableCell class="num text-heading">{{ r.period }}</TableCell><TableCell>{{ r.branch_name }}</TableCell>
-                <TableCell v-for="[k] in cols" :key="k" class="num text-right" :class="{ 'font-semibold text-heading': k === 'net_revenue' || k === 'gross_profit' }">
-                  {{ formatBaht(Number(r[k])) }}</TableCell>
-              </TableRow>
-              <TableRow v-if="!report.rows.length" class="hover:bg-transparent">
-                <TableCell :colspan="cols.length + 2" class="py-8 text-center text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</TableCell>
-              </TableRow>
-            </TableBody>
-            <TableFooter>
-              <TableRow class="hover:bg-transparent">
-                <TableCell colspan="2" class="font-semibold text-heading">รวม</TableCell>
-                <TableCell v-for="[k] in cols" :key="k" class="num text-right font-semibold text-heading">{{ formatBaht(totals[k] ?? 0) }}</TableCell>
-              </TableRow>
-            </TableFooter>
-          </Table>
-        </div>
+        <!-- งวดละรายการ: หัว = งวด + สาขา | กำไรเบื้องต้น · ด้านล่าง = ตัวเลขย่อย (ซ่อนช่องที่เป็น 0) -->
+        <p v-if="!report.rows.length" class="m-0 px-4 py-10 text-center text-sm text-muted-foreground">ไม่มีข้อมูลในช่วงนี้</p>
+        <ul v-else class="m-0 grid list-none divide-y divide-border p-0">
+          <li v-for="r in report.rows" :key="r.period + r.branch_id" class="grid gap-3 px-4 py-4 sm:px-5">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p class="m-0"><span class="num font-semibold text-heading">{{ r.period }}</span> <span class="text-sm text-muted-foreground">{{ r.branch_name }}</span></p>
+              <p class="m-0 text-sm text-muted-foreground">กำไรเบื้องต้น <span class="num text-lg font-semibold" :class="Number(r.gross_profit) < 0 ? 'text-danger-ink' : 'text-heading'">{{ formatBaht(Number(r.gross_profit)) }}</span></p>
+            </div>
+            <dl class="m-0 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-5">
+              <div v-for="[k, l] in cols.filter(([k]) => k !== 'gross_profit' && (Number(r[k]) || k === 'net_revenue'))" :key="k" class="grid gap-0.5">
+                <dt class="text-[13px] text-muted-foreground">{{ l }}</dt>
+                <dd class="num m-0" :class="k === 'net_revenue' ? 'font-semibold text-heading' : 'text-foreground'">{{ formatBaht(Number(r[k])) }}</dd>
+              </div>
+            </dl>
+          </li>
+          <!-- รวมทั้งช่วง -->
+          <li class="grid gap-3 bg-muted/60 px-4 py-4 sm:px-5">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p class="m-0 font-semibold text-heading">รวม</p>
+              <p class="m-0 text-sm text-muted-foreground">กำไรเบื้องต้น <span class="num text-lg font-semibold" :class="(totals.gross_profit ?? 0) < 0 ? 'text-danger-ink' : 'text-heading'">{{ formatBaht(totals.gross_profit ?? 0) }}</span></p>
+            </div>
+            <dl class="m-0 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-5">
+              <div v-for="[k, l] in cols.filter(([k]) => k !== 'gross_profit' && ((totals[k] ?? 0) || k === 'net_revenue'))" :key="k" class="grid gap-0.5">
+                <dt class="text-[13px] text-muted-foreground">{{ l }}</dt>
+                <dd class="num m-0 font-semibold text-heading">{{ formatBaht(totals[k] ?? 0) }}</dd>
+              </div>
+            </dl>
+          </li>
+        </ul>
       </SectionCard>
 
       <SectionCard title="สรุปกำไร" class="max-w-xl">

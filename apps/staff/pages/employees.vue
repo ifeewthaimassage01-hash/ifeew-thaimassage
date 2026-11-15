@@ -382,66 +382,48 @@ onMounted(load)
       </template>
       <template #actions><SwitchField v-model="showResigned" label="แสดงผู้ลาออก" class="gap-3" /></template>
       <LoadingBar v-if="loading" />
-      <div class="overflow-x-auto">
-        <Table stack>
-          <TableHeader>
-            <TableRow class="hover:bg-transparent">
-              <TableHead>พนักงาน</TableHead><TableHead>สาขา</TableHead><TableHead>เริ่มงาน</TableHead><TableHead>สถานะ</TableHead>
-              <TableHead class="w-12 text-right"><span class="sr-only">จัดการ</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="item in visible" :key="item.id">
-              <TableCell>
-                <div class="flex items-center gap-3">
-                  <span class="grid size-10 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary font-semibold text-heading">
-                    <img loading="lazy" decoding="async" v-if="item.photo_path && photoUrls[item.photo_path]" :src="photoUrls[item.photo_path]" :alt="item.nickname" class="size-full object-cover">
-                    <template v-else>{{ item.nickname.slice(0, 1) }}</template>
-                  </span>
-                  <span>
-                    <span class="block font-medium text-heading">{{ item.nickname }}</span>
-                    <span class="num block text-sm text-muted-foreground">{{ item.employee_code }}</span>
-                  </span>
-                </div>
-              </TableCell>
-              <TableCell>
-                {{ branchName(currentBranch(item)) }}
-                <span v-if="pendingBranch(item)" class="block text-sm text-pending-ink">
-                  ย้ายไป {{ branchName(pendingBranch(item)!.branch_id) }} {{ fmt(pendingBranch(item)!.effective_from) }}
-                </span>
-              </TableCell>
-              <TableCell class="num">{{ new Date(`${item.start_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}</TableCell>
-              <TableCell>
-                <Badge dot :variant="item.status === 'ACTIVE' ? 'success' : item.status === 'INACTIVE' ? 'pending' : 'neutral'">{{ employeeStatusLabels[item.status as Status] }}</Badge>
-              </TableCell>
-              <TableCell class="text-right">
-                <DropdownMenu>
-                  <DropdownMenuTrigger as-child>
-                    <Button variant="ghost" size="icon-sm" :aria-label="`จัดการ ${item.nickname}`"><EllipsisVertical /></Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end" class="w-52">
-                    <DropdownMenuItem @select="openEdit(item)"><Pencil /> แก้ไขข้อมูล/รูป</DropdownMenuItem>
-                    <DropdownMenuItem v-if="item.status === 'ACTIVE'" @select="pinTarget = item; newPin = ''; pinDialog = true"><KeyRound /> ตั้ง PIN ใหม่</DropdownMenuItem>
-                    <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openTransfer(item)"><ArrowLeftRight /> ย้ายสาขา</DropdownMenuItem>
-                    <DropdownMenuItem @select="openHistory(item)"><History /> ประวัติย้ายสาขา</DropdownMenuItem>
-                    <DropdownMenuSeparator />
-                    <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openStatus(item)"><UserCog /> เปลี่ยนสถานะ</DropdownMenuItem>
-                    <DropdownMenuItem
-                      v-if="item.user_id !== currentUser?.sub"
-                      class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink [&_svg]:text-danger-ink"
-                      :disabled="deletingId === item.id"
-                      @select="removeEmployee(item)"
-                    ><Trash2 /> ลบพนักงาน</DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </TableCell>
-            </TableRow>
-            <TableRow v-if="!loading && !visible.length" class="hover:bg-transparent">
-              <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ยังไม่มีพนักงาน</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+      <p v-if="!loading && !visible.length" class="m-0 px-4 py-10 text-center text-sm text-muted-foreground">ยังไม่มีพนักงาน</p>
+      <ul v-else class="m-0 grid list-none divide-y divide-border p-0">
+        <li v-for="item in visible" :key="item.id" class="flex items-center gap-3 px-4 py-3.5 sm:px-5" :class="item.status === 'RESIGNED' ? 'opacity-60' : ''">
+          <span class="grid size-11 shrink-0 place-items-center overflow-hidden rounded-full bg-secondary font-semibold text-heading">
+            <img loading="lazy" decoding="async" v-if="item.photo_path && photoUrls[item.photo_path]" :src="photoUrls[item.photo_path]" :alt="item.nickname" class="size-full object-cover">
+            <template v-else>{{ item.nickname.slice(0, 1) }}</template>
+          </span>
+          <div class="grid min-w-0 flex-1 gap-0.5">
+            <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="truncate font-semibold text-heading">{{ item.nickname }}</span>
+              <Badge v-if="item.status !== 'ACTIVE'" dot :variant="item.status === 'INACTIVE' ? 'pending' : 'neutral'">{{ employeeStatusLabels[item.status as Status] }}</Badge>
+            </p>
+            <p class="m-0 flex flex-wrap gap-x-3 text-[13px] text-muted-foreground">
+              <span>{{ branchName(currentBranch(item)) }}</span>
+              <span class="num">รหัส {{ item.employee_code }}</span>
+              <span>เริ่มงาน <span class="num">{{ new Date(`${item.start_date}T00:00:00+07:00`).toLocaleDateString('th-TH', { dateStyle: 'medium', timeZone: 'Asia/Bangkok' }) }}</span></span>
+            </p>
+            <p v-if="pendingBranch(item)" class="m-0 text-[13px] text-pending-ink">
+              ย้ายไป {{ branchName(pendingBranch(item)!.branch_id) }} {{ fmt(pendingBranch(item)!.effective_from) }}
+            </p>
+          </div>
+          <DropdownMenu>
+            <DropdownMenuTrigger as-child>
+              <Button variant="ghost" size="icon" class="shrink-0" :aria-label="`จัดการ ${item.nickname}`"><EllipsisVertical /></Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end" class="w-52">
+              <DropdownMenuItem @select="openEdit(item)"><Pencil /> แก้ไขข้อมูล/รูป</DropdownMenuItem>
+              <DropdownMenuItem v-if="item.status === 'ACTIVE'" @select="pinTarget = item; newPin = ''; pinDialog = true"><KeyRound /> ตั้ง PIN ใหม่</DropdownMenuItem>
+              <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openTransfer(item)"><ArrowLeftRight /> ย้ายสาขา</DropdownMenuItem>
+              <DropdownMenuItem @select="openHistory(item)"><History /> ประวัติย้ายสาขา</DropdownMenuItem>
+              <DropdownMenuSeparator />
+              <DropdownMenuItem v-if="item.status !== 'RESIGNED'" @select="openStatus(item)"><UserCog /> เปลี่ยนสถานะ</DropdownMenuItem>
+              <DropdownMenuItem
+                v-if="item.user_id !== currentUser?.sub"
+                class="text-danger-ink focus:bg-danger-soft focus:text-danger-ink [&_svg]:text-danger-ink"
+                :disabled="deletingId === item.id"
+                @select="removeEmployee(item)"
+              ><Trash2 /> ลบพนักงาน</DropdownMenuItem>
+            </DropdownMenuContent>
+          </DropdownMenu>
+        </li>
+      </ul>
     </SectionCard>
 
     <!-- เพิ่มพนักงาน -->
@@ -548,35 +530,24 @@ onMounted(load)
           <DialogDescription>การย้ายที่ยังไม่ถึงวันมีผลยกเลิกได้</DialogDescription>
         </DialogHeader>
         <div class="-mx-6 overflow-auto px-6">
-          <div class="overflow-x-auto rounded-lg border border-border">
-            <Table stack>
-              <TableHeader>
-                <TableRow class="hover:bg-transparent">
-                  <TableHead>มีผล</TableHead><TableHead>จาก</TableHead><TableHead>ไป</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
-                  <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                <TableRow v-for="t in transfers" :key="t.id" :class="t.status === 'CANCELLED' ? 'text-muted-foreground' : ''">
-                  <TableCell class="num">{{ fmt(t.effective_from) }}</TableCell>
-                  <TableCell>{{ t.from_branch_id ? branchName(t.from_branch_id) : 'เริ่มงาน' }}</TableCell>
-                  <TableCell>{{ branchName(t.to_branch_id) }}</TableCell>
-                  <TableCell class="max-w-56 whitespace-normal">{{ t.status === 'CANCELLED' ? `${t.reason} (ยกเลิก: ${t.cancel_reason})` : t.reason }}</TableCell>
-                  <TableCell>
-                    <Badge :variant="t.status === 'CANCELLED' ? 'neutral' : new Date(t.effective_from) > new Date() ? 'pending' : 'success'">
-                      {{ t.status === 'CANCELLED' ? 'ยกเลิก' : new Date(t.effective_from) > new Date() ? 'รอมีผล' : 'มีผลแล้ว' }}
-                    </Badge>
-                  </TableCell>
-                  <TableCell class="text-right">
-                    <Button v-if="t.status === 'ACTIVE' && t.from_branch_id && new Date(t.effective_from) > new Date()" variant="ghost" size="sm" class="text-danger-ink" @click="cancelTransfer(t)">ยกเลิก</Button>
-                  </TableCell>
-                </TableRow>
-                <TableRow v-if="!transfers.length" class="hover:bg-transparent">
-                  <TableCell colspan="6" class="py-6 text-center text-muted-foreground">ยังไม่มีประวัติ</TableCell>
-                </TableRow>
-              </TableBody>
-            </Table>
-          </div>
+          <p v-if="!transfers.length" class="m-0 py-6 text-center text-sm text-muted-foreground">ยังไม่มีประวัติ</p>
+          <ol v-else class="m-0 grid list-none divide-y divide-border rounded-lg border border-border p-0">
+            <li v-for="t in transfers" :key="t.id" class="flex flex-wrap items-start justify-between gap-x-3 gap-y-2 px-4 py-3" :class="t.status === 'CANCELLED' ? 'text-muted-foreground' : ''">
+              <div class="grid min-w-0 flex-1 basis-48 gap-0.5">
+                <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+                  <span class="font-medium" :class="t.status === 'CANCELLED' ? 'line-through' : 'text-heading'">
+                    {{ t.from_branch_id ? branchName(t.from_branch_id) : 'เริ่มงาน' }} → {{ branchName(t.to_branch_id) }}
+                  </span>
+                  <Badge :variant="t.status === 'CANCELLED' ? 'neutral' : new Date(t.effective_from) > new Date() ? 'pending' : 'success'">
+                    {{ t.status === 'CANCELLED' ? 'ยกเลิก' : new Date(t.effective_from) > new Date() ? 'รอมีผล' : 'มีผลแล้ว' }}
+                  </Badge>
+                </p>
+                <p class="num m-0 text-[13px] text-muted-foreground">มีผล {{ fmt(t.effective_from) }}</p>
+                <p class="m-0 text-sm">{{ t.reason }}<template v-if="t.status === 'CANCELLED'"> (ยกเลิกเพราะ {{ t.cancel_reason }})</template></p>
+              </div>
+              <Button v-if="t.status === 'ACTIVE' && t.from_branch_id && new Date(t.effective_from) > new Date()" variant="ghost" size="sm" class="text-danger-ink" @click="cancelTransfer(t)">ยกเลิกการย้าย</Button>
+            </li>
+          </ol>
         </div>
         <DialogFooter><Button variant="outline" @click="historyDialog = false">ปิด</Button></DialogFooter>
       </DialogContent>

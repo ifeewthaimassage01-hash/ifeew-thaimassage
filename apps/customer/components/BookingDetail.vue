@@ -151,25 +151,27 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
         <Alert v-if="booking.deposit_status === 'PENDING_REVIEW'" variant="info">
           <AlertDescription>ได้รับสลิปแล้ว รอพนักงานตรวจสอบ เราจะยืนยันการจองโดยเร็วที่สุด</AlertDescription>
         </Alert>
-        <table class="w-full border-collapse text-[15px]">
-          <caption class="sr-only">รายการบริการ</caption>
-          <tbody>
-            <tr v-for="(i, idx) in booking.items" :key="idx" class="border-b border-border">
-              <td class="py-2 pr-3">คนที่ {{ idx + 1 }} · {{ i.service_name }} <span class="text-muted-foreground">{{ formatDuration(i.duration_minutes) }}</span></td>
-              <td class="num py-2 text-right">{{ formatBaht(Number(i.line_total)) }}</td>
-            </tr>
-          </tbody>
-          <tfoot>
-            <tr>
-              <th scope="row" class="pt-3 pr-3 text-left font-medium">รวมค่าบริการ <span class="font-normal text-muted-foreground">(ชำระที่ร้าน)</span></th>
-              <td class="num pt-3 text-right text-lg font-semibold">{{ formatBaht(Number(booking.total_amount)) }}</td>
-            </tr>
-            <tr v-if="booking.deposit_required > 0">
-              <th scope="row" class="pt-1 pr-3 text-left font-normal text-muted-foreground">มัดจำ · {{ depositStatusLabels[booking.deposit_status] }}</th>
-              <td class="num pt-1 text-right text-muted-foreground">{{ formatBaht(Number(booking.deposit_required)) }}</td>
-            </tr>
-          </tfoot>
-        </table>
+        <div class="grid gap-2 text-[15px]">
+          <ul class="m-0 grid list-none divide-y divide-border border-b border-border p-0" aria-label="รายการบริการ">
+            <li v-for="(i, idx) in booking.items" :key="idx" class="flex items-baseline justify-between gap-3 py-2.5">
+              <span class="min-w-0">
+                <span class="block text-[13px] text-muted-foreground">คนที่ {{ idx + 1 }}</span>
+                {{ i.service_name }} <span class="text-muted-foreground">{{ formatDuration(i.duration_minutes) }}</span>
+              </span>
+              <span class="num shrink-0">{{ formatBaht(Number(i.line_total)) }}</span>
+            </li>
+          </ul>
+          <dl class="m-0 grid gap-1">
+            <div class="flex items-baseline justify-between gap-3">
+              <dt class="font-medium">รวมค่าบริการ <span class="font-normal text-muted-foreground">(ชำระที่ร้าน)</span></dt>
+              <dd class="num m-0 text-lg font-semibold">{{ formatBaht(Number(booking.total_amount)) }}</dd>
+            </div>
+            <div v-if="booking.deposit_required > 0" class="flex items-baseline justify-between gap-3 text-muted-foreground">
+              <dt>มัดจำ ({{ depositStatusLabels[booking.deposit_status] }})</dt>
+              <dd class="num m-0">{{ formatBaht(Number(booking.deposit_required)) }}</dd>
+            </div>
+          </dl>
+        </div>
         <p v-if="booking.customer_note" class="m-0 text-[15px]"><span class="text-muted-foreground">หมายเหตุ:</span> {{ booking.customer_note }}</p>
         <p v-if="booking.cancel_reason" class="m-0 text-[15px] text-danger-ink">เหตุผลที่ยกเลิก: {{ booking.cancel_reason }}</p>
 

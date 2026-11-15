@@ -361,30 +361,21 @@ async function removeCategory(c: Category) {
             </div>
           </div>
 
-          <table v-if="activeOptions(s.id).length" class="mx-4 mb-3 w-[calc(100%-2rem)] border-collapse text-[15px]">
-            <thead>
-              <tr class="text-[13px] text-muted-foreground">
-                <th scope="col" class="pb-1 text-left font-medium">เวลา</th>
-                <th scope="col" class="pb-1 text-right font-medium">ราคา</th>
-                <th scope="col" class="pb-1 text-right font-medium">ค่าแรงหมอ</th>
-              </tr>
-            </thead>
-            <tbody>
-              <template v-for="o in activeOptions(s.id)" :key="o.option_id">
-                <tr class="border-t border-border/70">
-                  <td class="py-1.5 text-heading">{{ formatDuration(o.duration_minutes) }}</td>
-                  <td class="num py-1.5 text-right font-semibold text-heading">{{ formatBaht(Number(o.current!.price)) }}</td>
-                  <td class="num py-1.5 text-right text-muted-foreground">{{ formatBaht(Number(o.current!.therapist_fee)) }}</td>
-                </tr>
-                <tr v-if="o.scheduled">
-                  <td colspan="3" class="pb-1.5 text-[13px] text-pending-ink">
-                    ราคาใหม่ตั้งแต่ {{ fmt(o.scheduled.effective_from) }}: <span class="num">{{ formatBaht(Number(o.scheduled.price)) }}</span>
-                    / ค่าแรง <span class="num">{{ formatBaht(Number(o.scheduled.therapist_fee)) }}</span>
-                  </td>
-                </tr>
-              </template>
-            </tbody>
-          </table>
+          <ul v-if="activeOptions(s.id).length" class="m-0 mx-4 mb-3 grid list-none divide-y divide-border/70 p-0 text-[15px]" :aria-label="`ราคาของ ${s.name}`">
+            <li v-for="o in activeOptions(s.id)" :key="o.option_id" class="grid gap-0.5 py-2">
+              <div class="flex items-baseline justify-between gap-3">
+                <span class="text-heading">{{ formatDuration(o.duration_minutes) }}</span>
+                <span class="flex items-baseline gap-3">
+                  <span class="num text-[13px] text-muted-foreground">ค่าแรงหมอ {{ formatBaht(Number(o.current!.therapist_fee)) }}</span>
+                  <span class="num font-semibold text-heading">{{ formatBaht(Number(o.current!.price)) }}</span>
+                </span>
+              </div>
+              <p v-if="o.scheduled" class="m-0 text-[13px] text-pending-ink">
+                ราคาใหม่ตั้งแต่ {{ fmt(o.scheduled.effective_from) }}: <span class="num">{{ formatBaht(Number(o.scheduled.price)) }}</span>
+                ค่าแรง <span class="num">{{ formatBaht(Number(o.scheduled.therapist_fee)) }}</span>
+              </p>
+            </li>
+          </ul>
           <p v-else class="m-0 mx-4 mb-3 rounded-lg bg-muted px-3 py-2 text-sm text-muted-foreground">ยังไม่ได้ตั้งราคาที่สาขานี้ — กด “แก้ไข” เพื่อตั้งราคา</p>
 
           <div class="mt-auto flex items-center gap-2 border-t border-border bg-muted/40 px-3 py-2">
@@ -414,34 +405,25 @@ async function removeCategory(c: Category) {
 
     <!-- หมวดหมู่ -->
     <SectionCard v-else flush>
-      <div class="overflow-x-auto">
-        <Table stack>
-          <TableHeader>
-            <TableRow class="hover:bg-transparent">
-              <TableHead class="w-20">ลำดับ</TableHead><TableHead>ชื่อ</TableHead><TableHead>รายละเอียด</TableHead><TableHead>สถานะ</TableHead>
-              <TableHead class="text-right"><span class="sr-only">การทำงาน</span></TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            <TableRow v-for="c in categories" :key="c.id" :class="c.is_active ? '' : 'text-muted-foreground'">
-              <TableCell class="num" data-stack-hide>{{ c.sort_order }}</TableCell>
-              <TableCell class="font-medium text-heading">{{ c.name }}</TableCell>
-              <TableCell class="max-w-80 truncate">{{ c.description || '—' }}</TableCell>
-              <TableCell><Badge :variant="c.is_active ? 'success' : 'neutral'" dot>{{ c.is_active ? 'เปิดใช้งาน' : 'ปิดใช้งาน' }}</Badge></TableCell>
-              <TableCell class="text-right">
-                <Button size="sm" variant="ghost" @click="openCategory(c)">แก้ไข</Button>
-                <Button size="sm" variant="ghost" @click="toggleCategory(c)">{{ c.is_active ? 'ปิด' : 'เปิด' }}</Button>
-                <Button size="sm" variant="ghost" class="text-danger-ink hover:bg-danger-soft hover:text-danger-ink" :disabled="deletingId === c.id" @click="removeCategory(c)">
-                  {{ deletingId === c.id ? 'กำลังลบ…' : 'ลบ' }}
-                </Button>
-              </TableCell>
-            </TableRow>
-            <TableRow v-if="!categories.length" class="hover:bg-transparent">
-              <TableCell colspan="5" class="py-8 text-center text-muted-foreground">ยังไม่มีหมวดหมู่</TableCell>
-            </TableRow>
-          </TableBody>
-        </Table>
-      </div>
+      <p v-if="!categories.length" class="m-0 px-4 py-10 text-center text-sm text-muted-foreground">ยังไม่มีหมวดหมู่</p>
+      <ul v-else class="m-0 grid list-none divide-y divide-border p-0">
+        <li v-for="c in categories" :key="c.id" class="flex flex-wrap items-center justify-between gap-x-4 gap-y-2 px-4 py-3.5 sm:px-5" :class="c.is_active ? '' : 'text-muted-foreground'">
+          <div class="grid min-w-0 flex-1 basis-56 gap-0.5">
+            <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
+              <span class="font-semibold" :class="c.is_active ? 'text-heading' : ''">{{ c.name }}</span>
+              <Badge v-if="!c.is_active" variant="neutral" dot>ปิดใช้งาน</Badge>
+            </p>
+            <p v-if="c.description" class="m-0 line-clamp-2 text-sm text-muted-foreground">{{ c.description }}</p>
+          </div>
+          <div class="flex gap-1">
+            <Button size="sm" variant="ghost" @click="openCategory(c)">แก้ไข</Button>
+            <Button size="sm" variant="ghost" @click="toggleCategory(c)">{{ c.is_active ? 'ปิด' : 'เปิด' }}</Button>
+            <Button size="sm" variant="ghost" class="text-danger-ink hover:bg-danger-soft hover:text-danger-ink" :disabled="deletingId === c.id" @click="removeCategory(c)">
+              {{ deletingId === c.id ? 'กำลังลบ…' : 'ลบ' }}
+            </Button>
+          </div>
+        </li>
+      </ul>
     </SectionCard>
 
     <!-- ฟอร์มบริการ -->
@@ -535,26 +517,23 @@ async function removeCategory(c: Category) {
             <h3 class="m-0 mb-2 text-[15px] font-semibold">
               {{ formatDuration(o.duration_minutes) }} <Badge v-if="!o.is_active" variant="neutral" class="ml-1">ปิดแล้ว</Badge>
             </h3>
-            <div class="overflow-x-auto rounded-lg border border-border">
-              <Table stack>
-                <TableHeader>
-                  <TableRow class="hover:bg-transparent">
-                    <TableHead>มีผลตั้งแต่</TableHead><TableHead>ถึง</TableHead><TableHead class="text-right">ราคา</TableHead>
-                    <TableHead class="text-right">ค่าแรง</TableHead><TableHead>เหตุผล</TableHead><TableHead>สถานะ</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  <TableRow v-for="h in o.history ?? []" :key="h.id" :class="h.status === 'CANCELLED' ? 'text-muted-foreground' : ''">
-                    <TableCell class="num">{{ fmt(h.effective_from) }}</TableCell>
-                    <TableCell class="num">{{ h.effective_to ? fmt(h.effective_to) : '—' }}</TableCell>
-                    <TableCell class="num text-right">{{ formatBaht(Number(h.price)) }}</TableCell>
-                    <TableCell class="num text-right">{{ formatBaht(Number(h.therapist_fee)) }}</TableCell>
-                    <TableCell class="max-w-56 truncate">{{ h.reason }}</TableCell>
-                    <TableCell><Badge :variant="h.status === 'CANCELLED' ? 'neutral' : 'success'">{{ h.status === 'CANCELLED' ? 'ยกเลิก' : 'ใช้งาน' }}</Badge></TableCell>
-                  </TableRow>
-                </TableBody>
-              </Table>
-            </div>
+            <ol class="m-0 grid list-none divide-y divide-border rounded-lg border border-border p-0">
+              <li v-for="h in o.history ?? []" :key="h.id" class="grid gap-0.5 px-4 py-3" :class="h.status === 'CANCELLED' ? 'text-muted-foreground' : ''">
+                <div class="flex flex-wrap items-baseline justify-between gap-x-3 gap-y-1">
+                  <span class="num text-sm" :class="h.status === 'CANCELLED' ? 'line-through' : 'text-heading'">
+                    {{ fmt(h.effective_from) }}{{ h.effective_to ? ` ถึง ${fmt(h.effective_to)}` : ' เป็นต้นไป' }}
+                  </span>
+                  <span class="flex items-baseline gap-3">
+                    <span class="num text-[13px] text-muted-foreground">ค่าแรง {{ formatBaht(Number(h.therapist_fee)) }}</span>
+                    <span class="num font-semibold" :class="h.status === 'CANCELLED' ? '' : 'text-heading'">{{ formatBaht(Number(h.price)) }}</span>
+                  </span>
+                </div>
+                <p class="m-0 flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
+                  <Badge v-if="h.status === 'CANCELLED'" variant="neutral">ยกเลิก</Badge>
+                  <span v-if="h.reason">{{ h.reason }}</span>
+                </p>
+              </li>
+            </ol>
           </section>
         </div>
         <DialogFooter><Button variant="outline" @click="historyService = null">ปิด</Button></DialogFooter>

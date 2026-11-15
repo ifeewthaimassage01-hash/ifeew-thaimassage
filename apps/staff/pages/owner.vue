@@ -80,34 +80,28 @@ const monthly = computed(() => (dash.value?.monthly ?? []).map((d) => ({ label: 
       </div>
 
       <SectionCard title="เทียบสาขา (เดือนนี้)" flush>
-        <div class="overflow-x-auto">
-          <Table stack>
-            <TableHeader>
-              <TableRow class="hover:bg-transparent">
-                <TableHead>สาขา</TableHead>
-                <TableHead class="text-right">รายรับ</TableHead>
-                <TableHead class="text-right">รายจ่าย</TableHead>
-                <TableHead class="text-right">ค่ามือ</TableHead>
-                <TableHead class="text-right">กำไรเบื้องต้น</TableHead>
-                <TableHead class="text-right">ค้างชำระ</TableHead>
-                <TableHead class="text-right">ลูกค้า</TableHead>
-                <TableHead class="text-right">Walk-in / การจอง</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              <TableRow v-for="b in dash.branches" :key="b.branch_id">
-                <TableCell class="font-medium text-heading">{{ b.branch_name }}</TableCell>
-                <TableCell class="num text-right">{{ baht(b.revenue) }}</TableCell>
-                <TableCell class="num text-right">{{ baht(b.expenses) }}</TableCell>
-                <TableCell class="num text-right">{{ baht(b.commission) }}</TableCell>
-                <TableCell class="num text-right font-semibold text-heading">{{ baht(b.profit) }}</TableCell>
-                <TableCell class="num text-right">{{ baht(b.outstanding) }}</TableCell>
-                <TableCell class="num text-right">{{ b.customers }}</TableCell>
-                <TableCell class="num text-right">{{ b.walk_ins }} / {{ b.bookings }}</TableCell>
-              </TableRow>
-            </TableBody>
-          </Table>
-        </div>
+        <!-- สาขาละรายการ: หัว = ชื่อสาขา | กำไรเบื้องต้น · ด้านล่าง = ตัวเลขย่อย -->
+        <ul class="m-0 grid list-none divide-y divide-border p-0">
+          <li v-for="b in dash.branches" :key="b.branch_id" class="grid gap-3 px-4 py-4 sm:px-5">
+            <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+              <p class="m-0 font-semibold text-heading">{{ b.branch_name }}</p>
+              <p class="m-0 text-sm text-muted-foreground">กำไรเบื้องต้น <span class="num text-lg font-semibold" :class="Number(b.profit) < 0 ? 'text-danger-ink' : 'text-heading'">{{ baht(b.profit) }}</span></p>
+            </div>
+            <dl class="m-0 grid grid-cols-2 gap-x-6 gap-y-2 text-sm sm:grid-cols-3 lg:grid-cols-6">
+              <div v-for="s in [
+                { l: 'รายรับ', v: baht(b.revenue), warn: false },
+                { l: 'รายจ่าย', v: baht(b.expenses), warn: false },
+                { l: 'ค่ามือ', v: baht(b.commission), warn: false },
+                { l: 'ค้างชำระ', v: baht(b.outstanding), warn: Number(b.outstanding) > 0 },
+                { l: 'ลูกค้า', v: `${b.customers} คน`, warn: false },
+                { l: 'Walk-in / การจอง', v: `${b.walk_ins} / ${b.bookings}`, warn: false },
+              ]" :key="s.l" class="grid gap-0.5">
+                <dt class="text-[13px] text-muted-foreground">{{ s.l }}</dt>
+                <dd class="num m-0" :class="s.warn ? 'font-semibold text-pending-ink' : 'text-foreground'">{{ s.v }}</dd>
+              </div>
+            </dl>
+          </li>
+        </ul>
         <template #footer>รายจ่ายสำนักงานใหญ่เดือนนี้ <span class="num">{{ baht(dash.hq_expenses_month) }}</span> (หักในกำไรรวมด้านบน ไม่แยกสาขา) · รายรับไม่รวมทิป</template>
       </SectionCard>
     </div>
