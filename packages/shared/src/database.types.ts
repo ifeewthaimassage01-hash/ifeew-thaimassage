@@ -1247,6 +1247,10 @@ export type Database = {
         Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }
         Returns: Json
       }
+      line_owner_summary_get: { Args: { p_company_id: string }; Returns: Json }
+      line_owner_summary_save: { Args: { p_company_id: string; p_enabled: boolean; p_time: string }; Returns: undefined }
+      line_owner_summary_send_now: { Args: { p_company_id: string }; Returns: undefined }
+      line_owner_unlink: { Args: { p_company_id: string }; Returns: undefined }
       pos_invoice_therapists: { Args: { p_invoice_id: string }; Returns: Json }
       pos_record_payment_tips: {
         Args: {

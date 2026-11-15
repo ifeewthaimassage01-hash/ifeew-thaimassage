@@ -375,6 +375,7 @@ function toggleStep(i: number) {
 }
 
 // ---------------------------------------------------------------- ตัวอย่างข้อความ
+// ตัวอย่างสรุปถึงเจ้าของอยู่ในส่วน "สรุปประจำวันถึงเจ้าของร้าน" (LineOwnerSummary)
 type PreviewKind = 'group' | 'confirm' | 'reminder'
 const preview = ref<PreviewKind>('group')
 const previewItems = [
@@ -659,6 +660,20 @@ watch(companyId, loadAll)
           </li>
         </ol>
       </section>
+
+      <!-- สรุปประจำวันถึงเจ้าของร้าน (LINE ส่วนตัว) -->
+      <LineOwnerSummary
+        v-if="companyId"
+        :company-id="companyId"
+        :ready="steps[0]!.state === 'done' && steps[1]!.state === 'done'"
+        :add-friend-url="cfg.add_friend_url.trim() || null"
+        :bot-basic-id="account?.basic_id ?? null"
+        :bot-name="account?.name ?? null"
+        :bot-picture="account?.picture_url ?? null"
+        :company-name="company?.company_name ?? null"
+        :staff-url="cfg.staff_url.trim() || null"
+        :branch="sampleBranch"
+      />
 
       <!-- สิ่งที่ส่ง + ตัวอย่าง -->
       <section aria-labelledby="s-send">

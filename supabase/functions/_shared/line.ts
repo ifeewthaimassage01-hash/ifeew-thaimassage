@@ -5,7 +5,8 @@ import type { SupabaseClient } from 'npm:@supabase/supabase-js@2'
 import { buildLineMessage, type FlexData } from './lineFlex.ts'
 
 export type { FlexData } from './lineFlex.ts'
-export { noticeMessage, sampleStaffMessage } from './lineFlex.ts'
+export type { FlexSummary } from './lineFlex.ts'
+export { noticeMessage, sampleStaffMessage, summaryMessage } from './lineFlex.ts'
 type LineMessage = Record<string, unknown>
 
 const API = 'https://api.line.me'
@@ -82,6 +83,13 @@ export async function linePushMessage(token: string, to: string, message: LineMe
   const status = await pushOnce(token, to, message)
   if (status === 400 && message.type === 'flex') return await pushOnce(token, to, { type: 'text', text: String(message.altText ?? '').slice(0, 5000) || ' ' })
   return status
+}
+
+/** ชื่อที่แสดงของผู้ใช้ที่เป็นเพื่อนกับ OA (null = ดึงไม่ได้) */
+export async function lineUserName(token: string, userId: string): Promise<string | null> {
+  const res = await lineFetch(token, `/v2/bot/profile/${encodeURIComponent(userId)}`)
+  if (!res.ok) return null
+  return ((await res.json()) as { displayName?: string }).displayName ?? null
 }
 
 export async function lineGroupName(token: string, groupId: string): Promise<string | null> {

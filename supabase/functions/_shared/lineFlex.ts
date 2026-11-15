@@ -36,8 +36,32 @@ export interface FlexBooking {
   items: Array<{ name: string; minutes: number }>
 }
 
+/** สรุปประจำวันถึงเจ้าของร้าน (private.line_daily_summary_data — migration 077) */
+export interface FlexSummaryFigures {
+  revenue: number
+  expenses: number
+  therapist_pay: number
+  net: number
+  customers: number
+  from_booking: number
+  cancelled: number
+  no_show: number
+}
+export interface FlexSummary {
+  date: string
+  date_label: string
+  company_name?: string
+  total: FlexSummaryFigures
+  branches: Array<FlexSummaryFigures & { name: string }>
+  pending_slips: number
+  unpaid_bills: number
+  unpaid_amount: number
+  tomorrow_bookings: number
+}
+
 export type FlexData =
   | { kind: 'confirm' | 'reminder'; booking: FlexBooking | null; link: string | null }
+  | { kind: 'summary'; summary: FlexSummary; link: string | null }
   | {
       kind: 'staff'
       event: string
@@ -207,6 +231,74 @@ function staffBubble(d: Extract<FlexData, { kind: 'staff' }>): Json {
   }
 }
 
+// ---------------------------------------------------------------------------
+// สรุปประจำวัน (ถึงเจ้าของร้าน): ยอดสุทธิตัวใหญ่ → รายได้/รายจ่าย/ค่าแรงหมอ → ลูกค้า → เรื่องที่ต้องดู → แยกสาขา
+// ---------------------------------------------------------------------------
+const signedBaht = (n: number) => (Number(n) < 0 ? `−${baht(Math.abs(Number(n)))}` : baht(n))
+const thaiDate = (iso: string) => {
+  const d = new Date(`${iso}T00:00:00+07:00`)
+  return d.toLocaleDateString('th-TH', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'Asia/Bangkok' })
+}
+
+function summaryBubble(s: FlexSummary, link: string | null): Json {
+  const t = s.total
+  const n = (v: unknown) => Number(v) || 0
+  const netNeg = n(t.net) < 0
+  const attention: Json[] = []
+  if (n(s.pending_slips)) attention.push(row('สลิปรอตรวจ', `${n(s.pending_slips)} รายการ`, { color: TONES.pending.fg, weight: 'bold' }))
+  if (n(s.unpaid_bills)) attention.push(row('บิลค้างชำระ', `${n(s.unpaid_bills)} บิล ${baht(s.unpaid_amount)}`, { color: TONES.pending.fg, weight: 'bold' }))
+
+  const body: Json[] = [
+    text('ยอดสุทธิ', { color: DRIFT }),
+    text(signedBaht(t.net), { size: 'xxl', weight: 'bold', color: netNeg ? TONES.danger.fg : TONES.success.fg }),
+    sep(),
+    {
+      type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md',
+      contents: [
+        row('รายได้', baht(t.revenue), { color: COFFEE }),
+        row('รายจ่าย', baht(t.expenses), { color: COFFEE }),
+        row('ค่าแรงหมอ', baht(t.therapist_pay), { color: COFFEE }),
+      ],
+    },
+    sep(),
+    {
+      type: 'box', layout: 'vertical', spacing: 'sm', margin: 'md',
+      contents: [
+        row('ลูกค้าที่ใช้บริการ', `${n(t.customers)} คน`, { color: COFFEE, weight: 'bold' }),
+        ...(n(t.from_booking) ? [row('มาจากการจอง', `${n(t.from_booking)} คน`)] : []),
+        ...(n(t.cancelled) ? [row('ยกเลิกการจอง', `${n(t.cancelled)}`)] : []),
+        ...(n(t.no_show) ? [row('ไม่มาตามนัด', `${n(t.no_show)}`, { color: TONES.danger.fg })] : []),
+        row('นัดพรุ่งนี้', `${n(s.tomorrow_bookings)} การจอง`),
+      ],
+    },
+  ]
+  if (attention.length) {
+    body.push({
+      type: 'box', layout: 'vertical', spacing: 'xs', margin: 'md', paddingAll: '12px', cornerRadius: '10px',
+      backgroundColor: TONES.pending.bg,
+      contents: [text('ต้องดู', { color: TONES.pending.fg, weight: 'bold', size: 'xs' }), ...attention],
+    })
+  }
+  if (s.branches?.length) {
+    body.push(sep(), text('แยกสาขา', { color: DRIFT, size: 'xs', margin: 'md' }))
+    for (const b of s.branches) {
+      body.push(row(`${b.name} (${n(b.customers)} คน)`, signedBaht(b.net), { color: n(b.net) < 0 ? TONES.danger.fg : COFFEE, weight: 'bold' }))
+    }
+  }
+  return {
+    type: 'bubble',
+    size: 'kilo',
+    header: header(`สรุป${thaiDate(s.date)}`, s.company_name ?? null, 'teak'),
+    body: { type: 'box', layout: 'vertical', spacing: 'sm', paddingAll: '16px', backgroundColor: LINEN, contents: body },
+    ...(isUri(link) ? { footer: { type: 'box', layout: 'vertical', paddingAll: '10px', contents: [button('เปิดแดชบอร์ด', link, true)] } } : {}),
+  }
+}
+
+/** การ์ดสรุปสำหรับตอบกลับในแชท (พิมพ์ "สรุป") */
+export function summaryMessage(s: FlexSummary, link: string | null): Json {
+  return buildLineMessage(`สรุป${s.date_label} ยอดสุทธิ ${signedBaht(s.total.net)} ลูกค้า ${s.total.customers} คน`, { kind: 'summary', summary: s, link })
+}
+
 /** การ์ดประกาศสั้น (ข้อความตอบกลับของบอท / ทดสอบ) */
 export function noticeMessage(
   altText: string,
@@ -271,6 +363,7 @@ export function buildLineMessage(altText: string, flex: FlexData | null | undefi
   try {
     let contents: Json | null = null
     if (flex.kind === 'staff') contents = staffBubble(flex)
+    else if (flex.kind === 'summary') contents = summaryBubble(flex.summary, flex.link)
     else if (flex.booking) contents = customerBubble(flex.kind, flex.booking, flex.link)
     if (!contents) return plain
     return { type: 'flex', altText: altText.replace(/\s+/g, ' ').slice(0, 400), contents }
