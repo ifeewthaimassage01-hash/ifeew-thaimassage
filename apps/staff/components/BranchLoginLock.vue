@@ -3,7 +3,10 @@
 // เจ้าของร้านและเครื่องที่ผูกกับสาขาไม่ถูกล็อก
 import { LocateFixed } from '@lucide/vue'
 
-const props = defineProps<{ branchId: string; companyId: string }>()
+/** plain = ไม่มีกรอบ SectionCard (ใช้ใน popup ซึ่งมีหัวข้ออยู่แล้ว) */
+const props = defineProps<{ branchId: string; companyId: string; plain?: boolean }>()
+const emit = defineEmits<{ saved: [] }>()
+const SectionCard = resolveComponent('SectionCard')
 
 const supabase = useSupabaseClient()
 
@@ -69,6 +72,7 @@ async function save() {
     }))
     message.value = { type: 'success', text: form.enabled ? 'บันทึกแล้ว · พนักงานเข้าระบบได้เฉพาะในร้าน' : 'บันทึกแล้ว · ยังไม่ได้เปิดล็อก' }
     await load()
+    emit('saved')
   } catch (e) {
     message.value = { type: 'error', text: errorText(e, 'บันทึกไม่สำเร็จ') }
   } finally {
@@ -78,13 +82,16 @@ async function save() {
 </script>
 
 <template>
-  <SectionCard title="เข้าระบบได้เฉพาะในร้าน" description="พนักงานต้องอยู่ในรัศมีจากร้าน (ตรวจด้วย GPS ของเครื่อง) · เจ้าของร้านและเครื่องที่ผูกกับสาขาเข้าได้ทุกที่">
-    <form class="grid gap-5" @submit.prevent="save">
+  <component
+    :is="plain ? 'div' : SectionCard"
+    v-bind="plain ? {} : { title: 'เข้าระบบได้เฉพาะในร้าน', description: 'พนักงานต้องอยู่ในรัศมีจากร้าน (ตรวจด้วย GPS ของเครื่อง) · เจ้าของร้านและเครื่องที่ผูกกับสาขาเข้าได้ทุกที่' }"
+  >
+    <form class="@container grid gap-5" @submit.prevent="save">
       <MessageAlert :message="message" @close="message = null" />
       <SwitchField v-model="form.enabled" label="เปิดล็อกพื้นที่" hint="มีผลตอนเข้าระบบครั้งถัดไป · คนที่เข้าอยู่แล้วใช้งานต่อได้จนออกจากระบบ (ตี 3)" />
 
       <div class="grid gap-2">
-        <div class="grid gap-3 sm:grid-cols-3">
+        <div class="grid gap-3 @lg:grid-cols-3">
           <TextField v-model="form.lat" label="ละติจูดร้าน" inputmode="decimal" placeholder="14.882900" />
           <TextField v-model="form.lng" label="ลองจิจูดร้าน" inputmode="decimal" placeholder="103.493700" />
           <TextField v-model="form.radius" label="รัศมี" inputmode="numeric" suffix="เมตร" hint="30–2000 ม." />
@@ -100,5 +107,5 @@ async function save() {
         <Button type="submit" :disabled="saving">{{ saving ? 'กำลังบันทึก…' : 'บันทึก' }}</Button>
       </div>
     </form>
-  </SectionCard>
+  </component>
 </template>

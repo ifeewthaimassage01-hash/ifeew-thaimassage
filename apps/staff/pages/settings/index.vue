@@ -124,7 +124,7 @@ onMounted(load)
 
 <template>
   <div class="max-w-5xl">
-    <PageHeader title="ตั้งค่าบริษัท" description="ข้อมูลบริษัท กติกาการจอง มัดจำ และความปลอดภัยของพนักงาน ใช้กับทุกสาขา">
+    <PageHeader title="ตั้งค่าบริษัท" description="ข้อมูลบริษัท รายจ่าย กติกาการจองและมัดจำ และความปลอดภัยของพนักงาน ใช้กับทุกสาขา">
       <template #actions><Button :disabled="saving" @click="save">{{ saving ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า' }}</Button></template>
     </PageHeader>
     <MessageAlert :message="message" class="mb-6" @close="message = null" />
@@ -146,11 +146,10 @@ onMounted(load)
 
       <section class="grid gap-4 border-t border-border pt-8 lg:grid-cols-[260px_minmax(0,1fr)] lg:gap-10" aria-labelledby="s-expense">
         <div>
-          <h2 id="s-expense" class="m-0 text-base font-semibold">การยกเลิก รายจ่าย และค่าน้ำมัน</h2>
-          <p class="m-0 mt-1 text-sm text-muted-foreground">เงื่อนไขที่ลูกค้าและพนักงานเห็น</p>
+          <h2 id="s-expense" class="m-0 text-base font-semibold">รายจ่ายและค่าน้ำมัน</h2>
+          <p class="m-0 mt-1 text-sm text-muted-foreground">กติกาที่พนักงานเห็นตอนบันทึกรายจ่าย</p>
         </div>
         <Card class="grid gap-4 p-5 sm:grid-cols-2">
-          <TextField v-model="settings.cancellation_cutoff_hours" numeric="integer" label="ยกเลิกการจองได้ก่อนนัด" hint="0-168" suffix="ชั่วโมง" />
           <TextField v-model="settings.large_expense_threshold" type="number" label="รายจ่ายที่ต้องแนบหลักฐาน" hint="ตั้งแต่ยอดนี้ขึ้นไป" suffix="บาท" class="num" />
           <TextField
             v-model="settings.freelance_fuel_amount"
@@ -159,7 +158,7 @@ onMounted(load)
             label="ค่าน้ำมันหมอวิ่ง (ต่อครั้ง)"
             hint="ใช้ตอนเรียกคิวให้หมอวิ่งแล้วติ๊ก “มีค่าน้ำมัน” · บันทึกเป็นรายจ่ายของร้าน · 0 = ไม่ใช้"
             suffix="บาท"
-            class="num sm:col-span-2"
+            class="num"
           />
         </Card>
       </section>
@@ -177,6 +176,7 @@ onMounted(load)
           <TextField v-model="settings.booking_max_items" numeric="integer" label="จำนวนคนต่อการจอง" hint="1-10" suffix="คน" />
           <TextField v-model="settings.deposit_per_person" type="number" label="มัดจำต่อคน" suffix="บาท" />
           <TextField v-model="settings.booking_hold_minutes" numeric="integer" label="เวลาให้ชำระมัดจำ" hint="5-60" suffix="นาที" />
+          <TextField v-model="settings.cancellation_cutoff_hours" numeric="integer" label="ยกเลิกการจองได้ก่อนนัด" hint="0-168" suffix="ชั่วโมง" />
           <TextField v-model="settings.guest_max_active_bookings" numeric="integer" label="Guest จองค้างได้ต่อเบอร์" suffix="ครั้ง" />
           <TextField v-model="settings.tracking_token_days_after" numeric="integer" label="ลิงก์ติดตามหมดอายุหลังนัด" suffix="วัน" />
           <TextField v-model="settings.no_show_grace_minutes" numeric="integer" label="บันทึกไม่มาตามนัดได้หลัง" suffix="นาที" />
