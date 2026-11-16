@@ -118,12 +118,21 @@ onMounted(load)
           <div
             v-for="r in hours"
             :key="r.id"
-            class="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-x-4 gap-y-2 border-b border-border px-5 py-3 sm:grid-cols-[120px_120px_minmax(0,1fr)_minmax(0,1fr)]"
+            class="grid gap-2.5 border-b border-border px-5 py-3 sm:grid-cols-[120px_120px_minmax(0,1fr)_minmax(0,1fr)] sm:items-center sm:gap-4"
           >
-            <span class="font-medium text-heading">{{ isoDowLabels[r.iso_dow] }}</span>
-            <CheckboxField v-model="r.is_closed" label="ปิดทั้งวัน" />
-            <TimeField v-model="r.opens_at" :disabled="r.is_closed" :aria-label="`เวลาเปิดวัน${isoDowLabels[r.iso_dow]}`" />
-            <TimeField v-model="r.closes_at" :disabled="r.is_closed" :aria-label="`เวลาปิดวัน${isoDowLabels[r.iso_dow]}`" />
+            <!-- มือถือ: ชื่อวัน + ปิดทั้งวัน แถวบน แล้วเวลาเปิด/ปิดคนละแถว (สองช่องเวลาวางคู่กันไม่พอความกว้างจอ) -->
+            <div class="flex items-center justify-between gap-4 sm:contents">
+              <span class="font-medium text-heading">{{ isoDowLabels[r.iso_dow] }}</span>
+              <CheckboxField v-model="r.is_closed" label="ปิดทั้งวัน" />
+            </div>
+            <div class="flex items-center gap-3 sm:contents">
+              <span class="w-8 shrink-0 text-sm text-muted-foreground sm:hidden" aria-hidden="true">เปิด</span>
+              <TimeField v-model="r.opens_at" :disabled="r.is_closed" :aria-label="`เวลาเปิดวัน${isoDowLabels[r.iso_dow]}`" class="min-w-0 flex-1" />
+            </div>
+            <div class="flex items-center gap-3 sm:contents">
+              <span class="w-8 shrink-0 text-sm text-muted-foreground sm:hidden" aria-hidden="true">ปิด</span>
+              <TimeField v-model="r.closes_at" :disabled="r.is_closed" :aria-label="`เวลาปิดวัน${isoDowLabels[r.iso_dow]}`" class="min-w-0 flex-1" />
+            </div>
           </div>
         </div>
         <div class="flex justify-end px-5 py-4">
