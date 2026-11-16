@@ -39,7 +39,7 @@ async function saveOwnerPin() {
 </script>
 
 <template>
-  <div class="max-w-2xl">
+  <div class="mx-auto max-w-2xl">
     <PageHeader title="PIN เจ้าของร้าน" description="ใช้เข้าระบบที่หน้าเข้าสู่ระบบ แท็บเจ้าของร้าน" />
     <MessageAlert :message="message" class="mb-6" @close="message = null" />
 

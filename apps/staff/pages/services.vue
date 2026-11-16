@@ -318,7 +318,7 @@ async function removeCategory(c: Category) {
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-4xl">
     <PageHeader title="บริการและราคา" :description="`ราคาและค่าแรงแยกตามสาขา · กำลังดู ${activeBranch?.name ?? ''}`">
       <template #actions>
         <Button v-if="tab === 'services'" @click="openService()"><Plus /> เพิ่มบริการ</Button>

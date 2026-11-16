@@ -211,7 +211,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-5xl">
     <PageHeader
       title="สาขา"
       :description="branches.length ? `${branches.length} สาขา · รับจองออนไลน์ได้ ${openCount} สาขา` : 'เพิ่มสาขา ตั้งเวลาทำการ และบัญชีรับมัดจำ'"

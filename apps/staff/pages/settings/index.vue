@@ -123,7 +123,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div class="max-w-5xl">
+  <div class="mx-auto max-w-5xl">
     <PageHeader title="ตั้งค่าบริษัท" description="ข้อมูลบริษัท รายจ่าย กติกาการจองและมัดจำ และความปลอดภัยของพนักงาน ใช้กับทุกสาขา">
       <template #actions><Button :disabled="saving" @click="save">{{ saving ? 'กำลังบันทึก…' : 'บันทึกการตั้งค่า' }}</Button></template>
     </PageHeader>

@@ -97,7 +97,7 @@ function downloadPdf() {
 
 <template>
   <div>
-    <div class="print:hidden">
+    <div class="mx-auto max-w-4xl print:hidden">
       <PageHeader title="Statement ร้าน" description="รายการเงินเข้า–ออกของร้านเรียงตามเวลา พร้อมยอดสะสม ดาวน์โหลดเป็น PDF ได้">
         <template #actions>
           <Button :disabled="!data || loading" @click="downloadPdf"><FileDown /> ดาวน์โหลด PDF</Button>

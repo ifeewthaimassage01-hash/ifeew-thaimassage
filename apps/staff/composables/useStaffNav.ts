@@ -39,6 +39,9 @@ export function useStaffNav() {
   const { isOwner } = useAccess()
   const route = useRoute()
 
+  // เรียงตามความถี่ที่ใช้: งานหน้าร้านทุกวัน → ตัวเลข/รายงาน → ข้อมูลร้านที่แก้นาน ๆ ครั้ง → ตั้งค่าระบบที่ตั้งครั้งเดียว
+  // ลำดับงานประจำวันตรงกับแถบเมนูล่างบนมือถือ (StaffBottomNav)
+
   // พนักงาน (ไม่ใช่เจ้าของร้าน): เมนูเฉพาะงานหน้าร้าน
   const staffGroups: StaffNavGroup[] = [
     {
@@ -47,9 +50,9 @@ export function useStaffNav() {
         { to: '/pos', label: 'หน้าร้าน (POS)', icon: Store },
         { to: '/queue', label: 'คิว', icon: ListOrdered },
         { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
+        { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText },
       ],
     },
-    { label: 'เงินของสาขา', items: [{ to: '/expenses', label: 'รายจ่าย', icon: ReceiptText }] },
   ]
 
   const ownerGroups: StaffNavGroup[] = [
@@ -60,34 +63,34 @@ export function useStaffNav() {
         { to: '/pos', label: 'หน้าร้าน (POS)', icon: Store },
         { to: '/queue', label: 'คิว', icon: ListOrdered },
         { to: '/bookings', label: 'การจอง', icon: CalendarCheck },
-        { to: '/customers', label: 'ลูกค้า', icon: Users },
-        { to: '/reports/therapists', label: 'ข้อมูลหมอ', icon: UserCheck },
-      ],
-    },
-    {
-      label: 'เงินของสาขา',
-      items: [
         { to: '/expenses', label: 'รายจ่าย', icon: ReceiptText },
+        { to: '/customers', label: 'ลูกค้า', icon: Users },
       ],
     },
     {
-      label: 'รายงานและบัญชี',
+      label: 'รายงาน',
       items: [
         { to: '/owner', label: 'ภาพรวมทุกสาขา', icon: ChartColumn },
         { to: '/reports/finance', label: 'รายงานการเงิน', icon: FileChartColumn },
+        { to: '/reports/therapists', label: 'ข้อมูลหมอ', icon: UserCheck },
         { to: '/reports/statement', label: 'Statement ร้าน', icon: FileText },
       ],
     },
     {
       label: 'จัดการร้าน',
       items: [
-        { to: '/services', label: 'บริการและราคา', icon: Sparkles },
-        { to: '/resources', label: 'เตียงและอุปกรณ์', icon: BedDouble },
         { to: '/employees', label: 'พนักงาน', icon: UserCog },
+        { to: '/services', label: 'บริการและราคา', icon: Sparkles },
         { to: '/branches', label: 'สาขา', icon: Building2 },
+        { to: '/resources', label: 'เตียงและอุปกรณ์', icon: BedDouble },
+      ],
+    },
+    {
+      label: 'ตั้งค่า',
+      items: [
         { to: '/settings', label: 'ตั้งค่าบริษัท', icon: Settings, exact: true },
-        { to: '/settings/devices', label: 'PIN เจ้าของร้าน', icon: KeyRound },
         { to: '/settings/line', label: 'LINE OA', icon: MessageCircle },
+        { to: '/settings/devices', label: 'PIN เจ้าของร้าน', icon: KeyRound },
       ],
     },
   ]

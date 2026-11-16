@@ -366,7 +366,7 @@ onMounted(load)
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-4xl">
     <PageHeader title="พนักงาน" description="พนักงานเข้าสู่ระบบด้วยการเลือกชื่อและกด PIN บนเครื่องประจำสาขาเท่านั้น">
       <template #actions><Button @click="openCreate"><UserPlus /> เพิ่มพนักงาน</Button></template>
     </PageHeader>

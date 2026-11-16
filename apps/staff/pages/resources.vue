@@ -180,7 +180,7 @@ const usageText = (s: Service) =>
 </script>
 
 <template>
-  <div>
+  <div class="mx-auto max-w-4xl">
     <PageHeader title="เตียงและอุปกรณ์" :description="`${activeBranch?.name ?? ''} · จำนวนต่อสาขา และทรัพยากรที่แต่ละบริการใช้`" />
     <MessageAlert :message="message" class="mb-6" @close="message = null" />
 

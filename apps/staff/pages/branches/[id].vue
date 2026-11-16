@@ -17,7 +17,7 @@ onMounted(async () => {
 </script>
 
 <template>
-  <div class="max-w-5xl">
+  <div class="mx-auto max-w-4xl">
     <PageHeader :title="branchName || 'สาขา'" description="เวลาทำการ วันหยุด และบัญชีรับมัดจำ ใช้ในหน้าจองของลูกค้า">
       <template #actions><Button as-child variant="outline"><NuxtLink to="/branches">สาขาทั้งหมด</NuxtLink></Button></template>
     </PageHeader>

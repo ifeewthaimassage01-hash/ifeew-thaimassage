@@ -1,6 +1,5 @@
 <script setup lang="ts">
 // ลูกค้า (Guest ทั้งหมด): ค้นหาด้วยเบอร์เต็ม (ผลปิดบัง) -> เปิดดูรายละเอียด (บันทึก audit) -> แก้ไข / จับคู่
-// OWNER: คำขอลบข้อมูล (PDPA)
 import { CalendarClock, Link2, MapPin, Search, UserPlus, Users } from '@lucide/vue'
 import {
   bangkokDateLong,
@@ -14,21 +13,13 @@ import {
   thaiPhoneSchema,
   type BookingStatus,
   type CustomerDetail,
-  type Tables,
 } from '@ifeew/shared'
 
-
-
-const { confirm, prompt } = useDialog()
 type SearchRow = { customer_id: string; display_name: string; phone_masked: string; is_member: boolean; created_at: string }
-type DataRequest = Tables<'customer_data_requests'> & { customer: { first_name: string; last_name: string } | null }
 
 const supabase = useSupabaseClient()
-const { company, isOwner } = useAccess()
-const { run } = useStepUp()
-const { call } = useEdgeFunction()
+const { company } = useAccess()
 
-const tab = ref<'search' | 'requests'>('search')
 const message = ref<{ type: 'success' | 'error'; text: string } | null>(null)
 const ok = (text: string) => (message.value = { type: 'success', text })
 const fail = (e: unknown, fallback?: string) => (message.value = { type: 'error', text: errorText(e, fallback) })
@@ -230,73 +221,17 @@ async function submitCreate() {
     saving.value = false
   }
 }
-
-// ---------------------------------------------------------------------------
-// OWNER: คำขอลบข้อมูล
-// ---------------------------------------------------------------------------
-const requests = ref<DataRequest[]>([])
-
-async function loadRequests() {
-  if (!isOwner.value || !company.value) return
-  const { data, error } = await supabase
-    .from('customer_data_requests')
-    .select('*, customer:customers(first_name, last_name)')
-    .eq('company_id', company.value.company_id)
-    .order('requested_at', { ascending: false })
-    .limit(100)
-  if (error) fail(error)
-  requests.value = (data ?? []) as unknown as DataRequest[]
-}
-
-async function processRequest(r: DataRequest, approve: boolean) {
-  let note: string | null = null
-  if (approve) {
-    if (!(await confirm({ title: 'ลบข้อมูลส่วนบุคคลของลูกค้า?', description: 'ย้อนกลับไม่ได้', confirmText: 'ลบข้อมูล', destructive: true }))) return
-  } else {
-    note = await prompt({ title: 'ปฏิเสธคำขอลบข้อมูล', label: 'เหตุผล', placeholder: 'เช่น มีข้อผูกพันทางกฎหมาย', multiline: true, minLength: 3, confirmText: 'ปฏิเสธคำขอ' })
-    if (note === null) return
-  }
-  try {
-    const res = await run(() =>
-      call<{ auth_synced: boolean }>('customer-erasure', { request_id: r.id, approve, note }),
-    )
-    ok(
-      approve
-        ? res.auth_synced
-          ? 'ลบข้อมูลลูกค้าแล้ว'
-          : 'ลบข้อมูลในระบบแล้ว แต่ปิดบัญชีเข้าสู่ระบบไม่สำเร็จ กรุณาแจ้งผู้ดูแลระบบ'
-        : 'ปฏิเสธคำขอแล้ว',
-    )
-    await loadRequests()
-  } catch (e) {
-    fail(e, 'ดำเนินการไม่สำเร็จ')
-  }
-}
-
-watch(tab, (t) => {
-  if (t === 'requests') loadRequests()
-})
-
-const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: 'ลบแล้ว', REJECTED: 'ปฏิเสธ' } as const
 </script>
 
 <template>
-  <div>
+  <!-- ความกว้างเท่าหน้าการจอง (max-w-4xl กึ่งกลาง) -->
+  <div class="mx-auto max-w-4xl">
     <PageHeader title="ลูกค้า" description="ค้นหาด้วยเบอร์โทรเต็มเท่านั้น ผลลัพธ์แสดงข้อมูลบางส่วน และการเปิดดูรายละเอียดจะถูกบันทึก">
       <template #actions><Button variant="outline" @click="openCreate"><UserPlus /> เพิ่มลูกค้า</Button></template>
     </PageHeader>
 
-    <SegmentedControl
-      v-if="isOwner"
-      v-model="tab"
-      :items="[{ value: 'search', label: 'ค้นหาลูกค้า' }, { value: 'requests', label: 'คำขอลบข้อมูล (PDPA)' }]"
-      label="มุมมอง"
-      class="mb-4"
-    />
-
     <MessageAlert :message="message" class="mb-4" @close="message = null" />
 
-    <template v-if="tab === 'search'">
       <form class="mb-6 flex flex-wrap items-end gap-3 rounded-xl border border-border bg-card p-4" @submit.prevent="search">
         <TextField v-model="phone" numeric="digits" label="เบอร์โทรเต็ม" type="tel" inputmode="tel" class="num min-w-[240px] flex-1" autofocus />
         <Button type="submit" :disabled="searching"><Search /> {{ searching ? 'กำลังค้นหา…' : 'ค้นหา' }}</Button>
@@ -394,28 +329,6 @@ const statusLabel = { PENDING: 'รอดำเนินการ', COMPLETED: '
         </div>
         <EmptyState v-else-if="results.length" compact title="เลือกลูกค้าเพื่อดูรายละเอียด" />
       </div>
-    </template>
-
-    <SectionCard v-else title="คำขอลบข้อมูล (PDPA)" flush>
-      <p v-if="!requests.length" class="m-0 px-4 py-10 text-center text-sm text-muted-foreground">ไม่มีคำขอลบข้อมูล</p>
-      <ul v-else class="m-0 grid list-none divide-y divide-border p-0">
-        <li v-for="r in requests" :key="r.id" class="flex flex-wrap items-start justify-between gap-x-4 gap-y-3 px-4 py-4 sm:px-5">
-          <div class="grid min-w-0 flex-1 basis-64 gap-1">
-            <p class="m-0 flex flex-wrap items-center gap-x-2 gap-y-1">
-              <span class="font-semibold text-heading">{{ r.customer ? `${r.customer.first_name} ${r.customer.last_name}` : 'ลูกค้าที่ลบแล้ว' }}</span>
-              <Badge dot :variant="r.status === 'COMPLETED' ? 'success' : r.status === 'REJECTED' ? 'neutral' : 'pending'">{{ statusLabel[r.status] }}</Badge>
-            </p>
-            <p class="num m-0 text-[13px] text-muted-foreground">ขอเมื่อ {{ new Date(r.requested_at).toLocaleString('th-TH', { dateStyle: 'medium', timeStyle: 'short', timeZone: 'Asia/Bangkok' }) }}</p>
-            <p v-if="r.reason" class="m-0 text-sm text-foreground">เหตุผล: {{ r.reason }}</p>
-            <p v-if="r.response_note" class="m-0 text-sm text-muted-foreground">ตอบกลับ: {{ r.response_note }}</p>
-          </div>
-          <div v-if="r.status === 'PENDING'" class="flex gap-2">
-            <Button variant="ghost" size="sm" @click="processRequest(r, false)">ปฏิเสธ</Button>
-            <Button variant="destructive" size="sm" @click="processRequest(r, true)">ลบข้อมูล</Button>
-          </div>
-        </li>
-      </ul>
-    </SectionCard>
 
     <!-- เพิ่มลูกค้า -->
     <Dialog v-model:open="createDialog">

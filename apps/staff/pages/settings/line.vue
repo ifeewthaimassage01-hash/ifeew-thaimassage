@@ -461,7 +461,7 @@ watch(companyId, loadAll)
 </script>
 
 <template>
-  <div class="max-w-5xl">
+  <div class="mx-auto max-w-5xl">
     <PageHeader title="LINE OA" description="แจ้งเตือนพนักงานในกลุ่ม LINE และส่งยืนยันการจองกับเตือนนัดให้ลูกค้า">
       <template #actions>
         <Button variant="outline" :disabled="checking || !settings?.has_access_token" @click="runCheck">
