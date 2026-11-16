@@ -100,15 +100,41 @@ const button = (label: string, uri: string, primary = false): Json => ({
   action: { type: 'uri', label: label.slice(0, 20), uri },
 })
 
+// โลโก้ร้าน (PNG พื้นใส · HTTPS ตามข้อกำหนด LINE) — ตั้ง LINE_LOGO_URL เพื่อเปลี่ยน · ว่าง = ไม่แสดงโลโก้
+const LOGO_URL = (Deno.env.get('LINE_LOGO_URL') ?? 'https://bookingifeew.vercel.app/logo.png').trim()
+
+/** หัวการ์ด: โลโก้ในวงกลมครีม + หัวเรื่อง/บรรทัดรอง · สีพื้นบอกประเภท */
 function header(title: string, sub: string | null, tone: keyof typeof TONES): Json {
   const t = TONES[tone]
-  return {
+  const texts: Json = {
     type: 'box',
     layout: 'vertical',
+    spacing: 'xs',
+    flex: 1,
+    justifyContent: 'center',
+    contents: [text(title, { color: t.fg, weight: 'bold', size: 'lg' }), ...(sub ? [text(sub, { color: t.sub, size: 'xs' })] : [])],
+  }
+  const logo: Json | null = isUri(LOGO_URL)
+    ? {
+        type: 'box',
+        layout: 'vertical',
+        width: '44px',
+        height: '44px',
+        flex: 0,
+        cornerRadius: '22px',
+        backgroundColor: LINEN,
+        paddingAll: '5px',
+        justifyContent: 'center',
+        contents: [{ type: 'image', url: LOGO_URL, size: 'full', aspectMode: 'fit', aspectRatio: '1:1' }],
+      }
+    : null
+  return {
+    type: 'box',
+    layout: 'horizontal',
     backgroundColor: t.bg,
     paddingAll: '16px',
-    spacing: 'xs',
-    contents: [text(title, { color: t.fg, weight: 'bold', size: 'lg' }), ...(sub ? [text(sub, { color: t.sub, size: 'xs' })] : [])],
+    spacing: 'md',
+    contents: logo ? [logo, texts] : [texts],
   }
 }
 

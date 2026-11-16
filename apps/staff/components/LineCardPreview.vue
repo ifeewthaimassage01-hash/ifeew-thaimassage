@@ -70,9 +70,12 @@ const compact = computed(() => props.kind === 'group')
     :aria-label="`ตัวอย่างการ์ด LINE: ${head.title}`"
   >
     <!-- หัวการ์ด: สีบอกประเภท -->
-    <div class="grid gap-0.5 px-4 py-3" :class="TONE_CLASS[head.tone]">
-      <span class="text-base leading-snug font-bold">{{ head.title }}</span>
-      <span class="text-xs opacity-90">{{ kind === 'owner' ? (company ?? branch) : branch }}</span>
+    <div class="flex items-center gap-3 px-4 py-3" :class="TONE_CLASS[head.tone]">
+      <span class="flex size-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#FFFCF8]"><BrandMark class="size-[34px]" /></span>
+      <span class="grid min-w-0 gap-0.5">
+        <span class="text-base leading-snug font-bold">{{ head.title }}</span>
+        <span class="text-xs opacity-90">{{ kind === 'owner' ? (company ?? branch) : branch }}</span>
+      </span>
     </div>
 
     <!-- เนื้อหา: สรุปประจำวันถึงเจ้าของ -->
