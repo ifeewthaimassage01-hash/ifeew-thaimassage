@@ -8,7 +8,7 @@ import { thaiPhoneSchema, type BookingView } from '@ifeew/shared'
 import { toast } from 'vue-sonner'
 
 useHead({
-  title: "ตรวจสอบการจอง — Ifeew's Thaimassage",
+  title: "ตรวจสอบการจอง — I'FEEW THAIMASSAGE",
   meta: [{ name: 'robots', content: 'noindex' }],
 })
 

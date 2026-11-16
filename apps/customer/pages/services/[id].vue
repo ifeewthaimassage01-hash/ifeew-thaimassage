@@ -21,7 +21,7 @@ const { data: branches } = await useBranches()
 const branch = computed(() => branches.value?.find((b) => b.id === item.value?.branch_id) ?? null)
 const image = computed(() => (item.value ? serviceImageUrl(item.value.image_path) ?? fallbackServiceImage(item.value.name) : null))
 
-useHead({ title: () => `${item.value?.name ?? 'บริการ'} — Ifeew's Thaimassage` })
+useHead({ title: () => `${item.value?.name ?? 'บริการ'} — I'FEEW THAIMASSAGE` })
 </script>
 
 <template>

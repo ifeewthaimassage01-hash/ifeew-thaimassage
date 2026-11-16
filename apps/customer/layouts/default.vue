@@ -28,9 +28,9 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
       <!-- Topbar -->
       <header class="sticky top-0 z-30 border-b border-transparent bg-background/80 backdrop-blur-md">
         <div class="mx-auto flex h-[76px] w-full max-w-[1200px] items-center gap-4 px-4 md:px-8">
-          <NuxtLink to="/" class="flex shrink-0 items-center gap-2.5 text-heading no-underline" aria-label="Ifeew's Thaimassage หน้าแรก">
+          <NuxtLink to="/" class="flex shrink-0 items-center gap-2.5 text-heading no-underline" aria-label="I'FEEW THAIMASSAGE หน้าแรก">
             <BrandMark class="size-10" />
-            <span class="font-display text-[19px] leading-[1.05] font-semibold tracking-tight">Ifeew's<br>Thaimassage</span>
+            <span class="font-display text-[19px] leading-[1.05] font-semibold tracking-tight">I'FEEW<br>THAIMASSAGE</span>
           </NuxtLink>
 
           <nav aria-label="เมนูหลัก" class="mx-auto hidden lg:block">
@@ -62,7 +62,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
             <SheetContent side="right" class="w-[85vw] max-w-xs gap-0 bg-background p-0">
               <SheetHeader class="h-[76px] flex-row items-center gap-2.5 px-5">
                 <BrandMark class="size-9" />
-                <SheetTitle class="font-display text-[18px] text-heading">Ifeew's Thaimassage</SheetTitle>
+                <SheetTitle class="font-display text-[18px] text-heading">I'FEEW THAIMASSAGE</SheetTitle>
                 <SheetDescription class="sr-only">เมนูหลัก</SheetDescription>
               </SheetHeader>
               <div class="overflow-y-auto px-3 py-2"><AppSidebarNav @navigate="drawer = false" /></div>
@@ -81,7 +81,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
           <div class="grid content-start gap-3">
             <NuxtLink to="/" class="flex items-center gap-2.5 text-heading no-underline">
               <BrandMark class="size-9" />
-              <span class="font-display text-[18px] leading-tight font-semibold">Ifeew's Thaimassage</span>
+              <span class="font-display text-[18px] leading-tight font-semibold">I'FEEW THAIMASSAGE</span>
             </NuxtLink>
             <p class="m-0 max-w-sm text-[14px] text-muted-foreground">นวดไทย นวดน้ำมัน นวดประคบสมุนไพร ด้วยทีมงานมืออาชีพ จองออนไลน์ได้ทุกสาขา</p>
           </div>
@@ -101,7 +101,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
           </div>
         </div>
         <div class="border-t border-border">
-          <p class="mx-auto m-0 w-full max-w-[1200px] px-4 py-4 text-[13px] text-muted-foreground md:px-8">© Ifeew's Thaimassage</p>
+          <p class="mx-auto m-0 w-full max-w-[1200px] px-4 py-4 text-[13px] text-muted-foreground md:px-8">© I'FEEW THAIMASSAGE</p>
         </div>
       </footer>
 

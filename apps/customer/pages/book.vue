@@ -18,7 +18,7 @@ import {
   type BookingView,
 } from '@ifeew/shared'
 
-useHead({ title: "จองบริการ — Ifeew's Thaimassage" })
+useHead({ title: "จองบริการ — I'FEEW THAIMASSAGE" })
 
 const MAX_PEOPLE = 4
 const route = useRoute()

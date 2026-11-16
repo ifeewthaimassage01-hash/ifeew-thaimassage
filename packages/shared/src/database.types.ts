@@ -1269,6 +1269,7 @@ export type Database = {
         Returns: Json
       }
       staff_dashboard: { Args: { p_branch_id: string }; Returns: Json }
+      shop_statement: { Args: { p_company_id: string; p_branch_id: string | null; p_from: string; p_to: string }; Returns: Json }
       pos_create_invoice: { Args: { p_order_id: string }; Returns: Json }
       pos_set_invoice_discount: { Args: { p_invoice_item_id: string; p_amount: number; p_reason: string | null }; Returns: Json }
       pos_issue_invoice: { Args: { p_invoice_id: string }; Returns: Json }

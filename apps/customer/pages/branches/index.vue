@@ -1,5 +1,5 @@
 <script setup lang="ts">
-useHead({ title: "สาขา — Ifeew's Thaimassage" })
+useHead({ title: "สาขา — I'FEEW THAIMASSAGE" })
 
 const { data: branches, pending, error } = await useBranches()
 const branchIds = computed(() => (branches.value ?? []).map((b) => b.id))

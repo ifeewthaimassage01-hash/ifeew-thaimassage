@@ -4,7 +4,7 @@
 import { LoaderCircle } from '@lucide/vue'
 import { toast } from 'vue-sonner'
 
-useHead({ title: "เชื่อม LINE — Ifeew's Thaimassage", meta: [{ name: 'robots', content: 'noindex' }] })
+useHead({ title: "เชื่อม LINE — I'FEEW THAIMASSAGE", meta: [{ name: 'robots', content: 'noindex' }] })
 
 
 const { sdk } = useLiff()

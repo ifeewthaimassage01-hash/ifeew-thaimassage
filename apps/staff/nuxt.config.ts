@@ -17,7 +17,7 @@ export default defineNuxtConfig({
   app: {
     head: {
       htmlAttrs: { lang: 'th' },
-      title: "Ifeew's Thaimassage — Staff",
+      title: "I'FEEW THAIMASSAGE — Staff",
       meta: [
         { name: 'viewport', content: 'width=device-width, initial-scale=1, viewport-fit=cover' },
         { name: 'theme-color', content: '#f8f3ed' },

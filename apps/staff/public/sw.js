@@ -33,7 +33,7 @@ self.addEventListener('push', (event) => {
     d = { body: event.data ? event.data.text() : '' }
   }
   event.waitUntil(
-    self.registration.showNotification(d.title || "Ifeew's Thaimassage", {
+    self.registration.showNotification(d.title || "I'FEEW THAIMASSAGE", {
       body: d.body || '',
       icon: '/icons/icon-192.png',
       tag: d.tag,

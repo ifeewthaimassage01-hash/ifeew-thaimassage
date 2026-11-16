@@ -2,7 +2,7 @@
 import { Search } from '@lucide/vue'
 
 // ค้นหาบริการ: ค้นด้วยชื่อ · กรองสาขา · กรองหมวด
-useHead({ title: "บริการ — Ifeew's Thaimassage" })
+useHead({ title: "บริการ — I'FEEW THAIMASSAGE" })
 
 const { data: branches } = await useBranches()
 const ALL = 'all'

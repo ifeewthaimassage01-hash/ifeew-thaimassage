@@ -5,6 +5,7 @@ import {
   CalendarCheck,
   ChartColumn,
   FileChartColumn,
+  FileText,
   LayoutDashboard,
   ListOrdered,
   MessageCircle,
@@ -74,6 +75,7 @@ export function useStaffNav() {
       items: [
         { to: '/owner', label: 'ภาพรวมทุกสาขา', icon: ChartColumn },
         { to: '/reports/finance', label: 'รายงานการเงิน', icon: FileChartColumn },
+        { to: '/reports/statement', label: 'Statement ร้าน', icon: FileText },
       ],
     },
     {

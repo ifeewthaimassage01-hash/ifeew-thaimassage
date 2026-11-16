@@ -40,7 +40,7 @@ const tel = (p: string) => `tel:${p.replace(/\s|-/g, '')}`
 
 const image = computed(() => branchImageUrl(detail.value?.branch?.image_path))
 
-useHead({ title: () => `${detail.value?.branch?.name ?? 'สาขา'} — Ifeew's Thaimassage` })
+useHead({ title: () => `${detail.value?.branch?.name ?? 'สาขา'} — I'FEEW THAIMASSAGE` })
 </script>
 
 <template>

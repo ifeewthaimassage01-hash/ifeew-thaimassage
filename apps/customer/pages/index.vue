@@ -5,7 +5,7 @@
 import { ArrowRight, CalendarDays, Check, ChevronRight, CircleCheck, Clock, MapPin, Navigation, Phone } from '@lucide/vue'
 import { hhmm } from '~/composables/useOpenToday'
 
-useHead({ title: "Ifeew's Thaimassage — จองนวดไทยออนไลน์" })
+useHead({ title: "I'FEEW THAIMASSAGE — จองนวดไทยออนไลน์" })
 
 const config = useRuntimeConfig()
 

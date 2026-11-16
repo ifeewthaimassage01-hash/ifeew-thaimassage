@@ -5,7 +5,7 @@ import { toast } from 'vue-sonner'
 import type { BookingView } from '@ifeew/shared'
 
 useHead({
-  title: "สถานะการจอง — Ifeew's Thaimassage",
+  title: "สถานะการจอง — I'FEEW THAIMASSAGE",
   // ไม่ส่ง URL ที่มี token ไปให้เว็บอื่นผ่าน Referer และไม่ให้ search engine เก็บ
   meta: [{ name: 'referrer', content: 'no-referrer' }, { name: 'robots', content: 'noindex' }],
 })

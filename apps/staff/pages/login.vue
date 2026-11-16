@@ -237,7 +237,7 @@ onMounted(reload)
       <header class="mb-8 flex flex-col items-center gap-3 text-center">
         <BrandMark class="size-12" />
         <div>
-          <h1 class="m-0 text-2xl font-semibold tracking-tight md:text-[28px]">Ifeew's Thaimassage</h1>
+          <h1 class="m-0 text-2xl font-semibold tracking-tight md:text-[28px]">I'FEEW THAIMASSAGE</h1>
           <p class="m-0 mt-1 text-[15px] text-muted-foreground">ระบบพนักงานและเจ้าของร้าน</p>
         </div>
       </header>
